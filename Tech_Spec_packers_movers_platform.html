@@ -1,0 +1,1708 @@
+th
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Technical Specification — Packers &amp; Movers Digital Platform</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --ink: #15232b;
+      --sub: #56646d;
+      --muted: #8b98a0;
+      --line: #e1e6e8;
+      --bg: #ffffff;
+      --card: #f4f6f6;
+      --navy: #0f2a33;
+      --navy-light: #e7eeef;
+      --accent: #0f6e56;
+      --accent-light: #e1f5ee;
+      --warn: #8a5a12;
+      --warn-light: #faeeda;
+      --coral: #993c1d;
+      --coral-light: #faece7;
+      --red: #a3291b;
+      --red-light: #fbe1de;
+      --f-display: 'Space Grotesk', -apple-system, sans-serif;
+      --f-body: 'Inter', -apple-system, "Segoe UI", sans-serif;
+      --f-mono: 'IBM Plex Mono', "SF Mono", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: var(--f-body);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.65;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px 100px;
+      font-size: 16px;
+    }
+
+    /* ---- manifest ticket header ---- */
+    .doc-ticket {
+      background: var(--navy);
+      color: #fff;
+      margin: 0 -32px 32px;
+      padding: 38px 32px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 22px 32px;
+      border-bottom: 2px dashed rgba(255, 255, 255, .28);
+    }
+
+    .doc-ticket .eyebrow {
+      font-family: var(--f-mono);
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #8fb9b0;
+      margin: 0 0 10px;
+    }
+
+    .doc-ticket h1 {
+      font-family: var(--f-display);
+      font-size: 29px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 6px;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+    }
+
+    .doc-ticket .subtitle {
+      font-family: var(--f-body);
+      font-size: 15.5px;
+      color: #c7d3d6;
+      margin: 0;
+    }
+
+    .ticket-stub {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: none;
+    }
+
+    .ticket-stub .field {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .ticket-stub dt {
+      width: 74px;
+      flex: none;
+      margin: 0;
+      font-family: var(--f-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #7e9298;
+    }
+
+    .ticket-stub dd {
+      margin: 0;
+      font-family: var(--f-mono);
+      font-size: 12.5px;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    h1 {
+      font-family: var(--f-display);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 36px;
+    }
+
+    h2 {
+      font-family: var(--f-display);
+      font-size: 21px;
+      font-weight: 700;
+      margin: 54px 0 18px;
+      padding-bottom: 9px;
+      border-bottom: 2px solid var(--ink);
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .section-num {
+      font-family: var(--f-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      background: var(--navy);
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      flex: none;
+    }
+
+    h3 {
+      font-family: var(--f-display);
+      font-size: 16.5px;
+      font-weight: 600;
+      margin: 30px 0 10px;
+      color: var(--ink);
+    }
+
+    h4 {
+      font-family: var(--f-display);
+      font-size: 14.5px;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 14px;
+      padding-left: 22px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .lede {
+      font-size: 17px;
+      color: var(--sub);
+      margin-bottom: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 22px;
+      font-size: 14.5px;
+    }
+
+    th {
+      text-align: left;
+      background: var(--navy);
+      color: #fff;
+      padding: 9px 12px;
+      font-weight: 600;
+      font-size: 12.5px;
+      font-family: var(--f-display);
+      letter-spacing: .01em;
+    }
+
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background: var(--card);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--navy);
+      border-radius: 4px;
+      padding: 18px 22px;
+      margin: 16px 0;
+    }
+
+    .card>strong:first-child {
+      font-family: var(--f-display);
+    }
+
+    .figures {
+      font-family: var(--f-mono);
+      font-size: 14px;
+      line-height: 1.9;
+      display: inline-block;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-light);
+      padding: 14px 18px;
+      border-radius: 2px;
+      margin: 16px 0;
+      font-size: 15px;
+    }
+
+    .callout.warn {
+      border-left-color: var(--warn);
+      background: var(--warn-light);
+    }
+
+    .callout.coral {
+      border-left-color: var(--coral);
+      background: var(--coral-light);
+    }
+
+    .callout strong:first-child {
+      display: block;
+      margin-bottom: 4px;
+      font-family: var(--f-display);
+      font-weight: 600;
+    }
+
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .checklist li {
+      padding-left: 30px;
+      position: relative;
+      margin-bottom: 9px;
+    }
+
+    .checklist li::before {
+      content: "☐";
+      position: absolute;
+      left: 0;
+      top: -1px;
+      color: var(--accent);
+      font-size: 17px;
+    }
+
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 22px 26px;
+    }
+
+    .toc>strong {
+      font-family: var(--f-display);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--navy);
+    }
+
+    .toc ol {
+      margin: 12px 0 0;
+      padding-left: 0;
+      columns: 2;
+      column-gap: 30px;
+      list-style: none;
+      counter-reset: toc;
+    }
+
+    .toc li {
+      margin-bottom: 8px;
+      break-inside: avoid;
+      counter-increment: toc;
+      padding-left: 30px;
+      position: relative;
+      font-size: 14.5px;
+    }
+
+    .toc li::before {
+      content: counter(toc, decimal-leading-zero);
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-family: var(--f-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .tag {
+      display: inline-block;
+      font-family: var(--f-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 3px;
+      background: var(--accent-light);
+      color: var(--accent);
+      margin-right: 6px;
+    }
+
+    .tag.phase2 {
+      background: none;
+      color: var(--muted);
+      border: 1px dashed var(--muted);
+    }
+
+    /* ---- roadmap route line ---- */
+    .route-line {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      position: relative;
+      margin: 26px 0 6px;
+      padding: 0 4px;
+    }
+
+    .route-line::before {
+      content: "";
+      position: absolute;
+      top: 6px;
+      left: 8%;
+      right: 8%;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .route-stop {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 23%;
+      text-align: center;
+    }
+
+    .route-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--navy);
+      border: 2px solid var(--navy);
+      margin-bottom: 9px;
+    }
+
+    .route-stop.future .route-dot {
+      background: #fff;
+      border-color: var(--muted);
+      border-style: solid;
+      border-width: 2px;
+    }
+
+    .route-tag {
+      font-family: var(--f-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+
+    .route-stop.future .route-tag {
+      color: var(--muted);
+    }
+
+    .route-sub {
+      font-size: 11.5px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    code {
+      background: var(--card);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 13.5px;
+      font-family: var(--f-mono);
+    }
+
+    .footer-note {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .small {
+      font-size: 13.5px;
+      color: var(--sub);
+    }
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .persona-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--navy);
+      border-radius: 4px;
+      padding: 16px 18px;
+    }
+
+    .persona-card.household {
+      border-top-color: var(--accent);
+    }
+
+    .persona-card.business {
+      border-top-color: var(--warn);
+    }
+
+    .persona-card.vendor {
+      border-top-color: var(--coral);
+    }
+
+    .persona-card .role {
+      color: var(--muted);
+      font-family: var(--f-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .persona-card h4 {
+      font-size: 15.5px;
+    }
+
+    .story {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--navy);
+      border-radius: 4px;
+      padding: 12px 16px;
+      margin: 10px 0;
+    }
+
+    .story .as {
+      font-style: italic;
+      color: var(--sub);
+      margin-bottom: 8px;
+    }
+
+    .story .ac {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--f-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+
+    .badge-high {
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .badge-med {
+      background: var(--warn-light);
+      color: var(--warn);
+    }
+
+    .badge-low {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .state {
+      display: inline-block;
+      font-family: var(--f-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 3px;
+      background: var(--navy);
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+
+    .glossary dt {
+      font-family: var(--f-mono);
+      font-weight: 600;
+      margin-top: 10px;
+      color: var(--navy);
+    }
+
+    .glossary dd {
+      margin: 2px 0 0;
+      color: var(--sub);
+    }
+
+    @media (max-width:640px) {
+      body {
+        padding: 0 18px 60px;
+      }
+
+      .doc-ticket {
+        margin: 0 -18px 26px;
+        padding: 28px 18px 20px;
+      }
+
+      .persona-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toc ol {
+        columns: 1;
+      }
+
+      .route-sub {
+        display: none;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0 10px 20px;
+      }
+
+      .doc-ticket {
+        background: #fff;
+        color: var(--ink);
+        margin: 0 0 20px;
+        border-bottom: 2px solid var(--ink);
+      }
+
+      .doc-ticket .eyebrow,
+      .doc-ticket .subtitle,
+      .ticket-stub dt {
+        color: var(--sub);
+      }
+
+      .doc-ticket h1,
+      .ticket-stub dd {
+        color: var(--ink);
+      }
+
+      .toc ol {
+        columns: 1;
+      }
+
+      h2 {
+        break-after: avoid;
+      }
+
+      .persona-card,
+      .story {
+        break-inside: avoid;
+      }
+
+      th {
+        background: var(--navy);
+        color: #fff;
+      }
+    }
+
+    /* ---- architecture diagram ---- */
+    .arch-diagram {
+      margin: 22px 0 8px;
+    }
+
+    .arch-layer-label {
+      font-family: var(--f-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .arch-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 10px;
+      margin-bottom: 4px;
+    }
+
+    .arch-node {
+      background: var(--navy);
+      color: #fff;
+      font-family: var(--f-mono);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 10px 14px;
+      text-align: center;
+      flex: 1 1 150px;
+    }
+
+    .arch-node.data {
+      background: var(--card);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .arch-node.ext {
+      background: var(--coral-light);
+      color: var(--coral);
+      border: 1px dashed var(--coral);
+    }
+
+    .arch-arrow {
+      text-align: center;
+      color: var(--muted);
+      font-family: var(--f-mono);
+      font-size: 11.5px;
+      padding: 6px 0;
+      letter-spacing: .04em;
+    }
+
+    /* ---- folder tree ---- */
+    .tree {
+      background: var(--navy);
+      color: #d7e3e5;
+      font-family: var(--f-mono);
+      font-size: 12.8px;
+      padding: 20px 24px;
+      border-radius: 4px;
+      line-height: 1.75;
+      overflow-x: auto;
+      margin: 14px 0 22px;
+      white-space: pre;
+    }
+
+    .tree .c {
+      color: #7fa39b;
+    }
+
+    /* ---- API method badges ---- */
+    .method {
+      display: inline-block;
+      font-family: var(--f-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+      min-width: 52px;
+      text-align: center;
+    }
+
+    .method.get {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .method.post {
+      background: var(--navy-light);
+      color: var(--navy);
+    }
+
+    .method.patch,
+    .method.put {
+      background: var(--warn-light);
+      color: var(--warn);
+    }
+
+    .method.delete {
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .endpoint {
+      font-family: var(--f-mono);
+      font-size: 13.5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="doc-ticket">
+    <div>
+      <p class="eyebrow">Technical Specification</p>
+      <h1>Digital Packers &amp; Movers Platform</h1>
+      <p class="subtitle">System design, algorithms, APIs &amp; folder structure — no implementation code</p>
+    </div>
+    <div class="ticket-stub">
+      <div class="field">
+        <dt>Companion to</dt>
+        <dd>PRD v0.4</dd>
+      </div>
+      <div class="field">
+        <dt>Draft</dt>
+        <dd>v1.0</dd>
+      </div>
+      <div class="field">
+        <dt>Prepared</dt>
+        <dd>21 Aug 2026</dd>
+      </div>
+      <div class="field">
+        <dt>Status</dt>
+        <dd>Design</dd>
+      </div>
+    </div>
+  </header>
+
+  <div class="callout warn">
+    <strong>Scope of this document</strong>
+    This is the engineering design companion to the PRD (v0.4) — system architecture, data model, core algorithms, API
+    surface, and folder structure. It assumes the stack decided in PRD Section 9: Next.js (web), React Native/Expo
+    (Customer &amp; Vendor mobile), Express/TypeScript (backend), PostgreSQL + Prisma, Redis + BullMQ, Socket.io. No
+    implementation code is included — every section below is design, not code, by request.
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li>Scope &amp; relationship to the PRD</li>
+      <li>System architecture</li>
+      <li>Monorepo &amp; folder structure</li>
+      <li>Data model</li>
+      <li>Core algorithms</li>
+      <li>API specification</li>
+      <li>WebSocket event specification</li>
+      <li>Background job specification</li>
+      <li>Third-party integrations</li>
+      <li>Auth &amp; security design</li>
+      <li>Environment &amp; configuration</li>
+      <li>Deployment topology</li>
+      <li>Open technical decisions</li>
+    </ol>
+  </div>
+
+  <h2><span class="section-num">1.</span> Scope &amp; relationship to the PRD</h2>
+  <p>The PRD (v0.4) defines <em>what</em> the product does and <em>why</em> — personas, functional requirements, the
+    pricing model's shape, and the business/compliance context. This document defines <em>how</em> it's built: the
+    concrete system architecture, the algorithms behind Section 8's pricing engine and Section 11's booking lifecycle,
+    the API surface every client (web, customer mobile, vendor mobile) talks to, and the repository layout. Anywhere
+    this document and the PRD could drift, the PRD's product decisions win — this document exists to implement them, not
+    to reopen them.</p>
+  <p class="small">Section references like "PRD §8.2" point back to the PRD; references like "§5.2" without "PRD" point
+    within this document.</p>
+
+  <h2><span class="section-num">2.</span> System architecture</h2>
+  <p>Three client types talk to one backend service over HTTPS (REST) and WSS (real-time). The backend is a single
+    Express process in Phase 1 (with an optional split into API + worker processes — see §12), backed by PostgreSQL for
+    durable state and Redis for transient state (locks, cache, job queues).</p>
+
+  <div class="arch-diagram">
+    <div class="arch-layer-label">Clients</div>
+    <div class="arch-row">
+      <div class="arch-node">Web — Next.js<br><span class="c">Customer + Admin</span></div>
+      <div class="arch-node">Mobile — Customer<br><span class="c">React Native / Expo</span></div>
+      <div class="arch-node">Mobile — Vendor<br><span class="c">React Native / Expo</span></div>
+    </div>
+    <div class="arch-arrow">↓ HTTPS (REST) + WSS (Socket.io)</div>
+
+    <div class="arch-layer-label">API layer — Express (TypeScript)</div>
+    <div class="arch-row">
+      <div class="arch-node">REST API<br><span class="c">/api/v1/*</span></div>
+      <div class="arch-node">Socket.io Gateway<br><span class="c">availability &amp; booking events</span></div>
+    </div>
+    <div class="arch-arrow">↓</div>
+
+    <div class="arch-layer-label">Service modules (§3 folder structure)</div>
+    <div class="arch-row">
+      <div class="arch-node">Auth &amp; RBAC</div>
+      <div class="arch-node">Booking &amp; Pricing Engine</div>
+      <div class="arch-node">Vendor Assignment</div>
+      <div class="arch-node">Availability</div>
+      <div class="arch-node">Payments</div>
+      <div class="arch-node">Notifications</div>
+      <div class="arch-node">Revisions &amp; Audit</div>
+    </div>
+    <div class="arch-arrow">↓</div>
+
+    <div class="arch-layer-label">Data &amp; queue infrastructure</div>
+    <div class="arch-row">
+      <div class="arch-node data">PostgreSQL<br><span class="c">Prisma ORM — durable state</span></div>
+      <div class="arch-node data">Redis<br><span class="c">BullMQ queues, checkout locks, cache</span></div>
+    </div>
+    <div class="arch-arrow">↔ (Service modules call out to)</div>
+
+    <div class="arch-layer-label">External integrations</div>
+    <div class="arch-row">
+      <div class="arch-node ext">Razorpay<br><span class="c">payments + webhook</span></div>
+      <div class="arch-node ext">Geocoding / Distance API<br><span class="c">zone &amp; distance resolution</span></div>
+      <div class="arch-node ext">WhatsApp / SMS<br><span class="c">MSG91 or Twilio</span></div>
+      <div class="arch-node ext">Expo Push<br><span class="c">mobile notifications</span></div>
+    </div>
+  </div>
+
+  <p class="small">The dashed, coral-tinted boxes mark the system's trust boundary — every external integration is
+    called from inside a service module (never directly from a client), so credentials never reach the browser/app and
+    every third-party call can be retried, logged, and idempotency-checked centrally.</p>
+
+  <h3>2.1 Why one backend service, not several</h3>
+  <p>With one vendor, three vehicles, and a Phase 1 scope this small, splitting into microservices would add deployment
+    and consistency overhead with no corresponding benefit — the double-booking risk (PRD §16) specifically needs strong
+    consistency between the availability check and the booking write, which is far simpler inside one service/one
+    database than across service boundaries. The modular folder structure (§3) keeps the option to extract a service
+    later (e.g. a standalone matching engine in Phase 2) without requiring it now.</p>
+
+  <h2><span class="section-num">3.</span> Monorepo &amp; folder structure</h2>
+  <p>A single monorepo (pnpm workspaces + Turborepo) holds all four apps and the shared packages between them, per PRD
+    §9.4's "shared code, not shared apps" principle.</p>
+  <pre class="tree">packers-movers/
+<span class="c"># --- apps: one folder per deployable ---</span>
+├── apps/
+│   ├── web/                          <span class="c"># Next.js — customer web + admin dashboard</span>
+│   │   ├── app/
+│   │   │   ├── (customer)/           <span class="c"># quote, booking, payment, trust page routes</span>
+│   │   │   ├── (admin)/              <span class="c"># pricing rules, zones, items, bookings, reports</span>
+│   │   │   └── api/                  <span class="c"># thin BFF routes only — not the system-of-record API</span>
+│   │   ├── components/
+│   │   ├── lib/                      <span class="c"># API client, socket client, formatting helpers</span>
+│   │   └── middleware.ts             <span class="c"># route-group auth guard</span>
+│   │
+│   ├── mobile-customer/              <span class="c"># Expo app</span>
+│   │   ├── app/                      <span class="c"># estimate, checklist, availability, payment, revisions</span>
+│   │   ├── components/
+│   │   └── lib/                      <span class="c"># API client, socket client (online-first)</span>
+│   │
+│   ├── mobile-vendor/                <span class="c"># Expo app</span>
+│   │   ├── app/                      <span class="c"># job calendar, status update, add-item/revision</span>
+│   │   ├── components/
+│   │   └── lib/                      <span class="c"># API client, socket client, offline action queue (PRD §12)</span>
+│   │
+│   └── backend/                      <span class="c"># Express API service</span>
+│       ├── src/
+│       │   ├── modules/
+│       │   │   ├── auth/             <span class="c"># OTP issue/verify, JWT issue/refresh, RBAC middleware</span>
+│       │   │   ├── booking/          <span class="c"># booking CRUD, state machine, quote engine (§5.1-5.2)</span>
+│       │   │   ├── pricing/          <span class="c"># zones, rates, items, pricing rules, audit log</span>
+│       │   │   ├── vendor-assign/    <span class="c"># pluggable module — §5.8</span>
+│       │   │   ├── availability/     <span class="c"># Redis lock logic + Socket.io room broadcasts — §5.5</span>
+│       │   │   ├── payments/         <span class="c"># Razorpay order creation + webhook handling</span>
+│       │   │   ├── notifications/    <span class="c"># template rendering + provider dispatch (queued)</span>
+│       │   │   └── revisions/        <span class="c"># on-site revision flow — §5.7</span>
+│       │   ├── websocket/            <span class="c"># Socket.io server setup, room auth, event contracts (§7)</span>
+│       │   ├── jobs/                 <span class="c"># BullMQ queue definitions + processors (§8)</span>
+│       │   ├── middleware/           <span class="c"># auth guard, RBAC guard, rate limiter, error handler</span>
+│       │   ├── config/               <span class="c"># env loading/validation (§11)</span>
+│       │   └── server.ts             <span class="c"># app bootstrap — HTTP + WS server</span>
+│       └── prisma/
+│           ├── schema.prisma         <span class="c"># §4 data model, as source of truth</span>
+│           └── migrations/
+│
+<span class="c"># --- packages: shared between apps, never duplicated ---</span>
+├── packages/
+│   ├── shared-types/                 <span class="c"># API request/response types, kept in sync with backend routes</span>
+│   ├── shared-validation/            <span class="c"># Zod schemas — same validation client- and server-side</span>
+│   ├── pricing-preview/              <span class="c"># Layer-1 estimate logic, shared web+mobile</span>
+│   └── config/                       <span class="c"># shared ESLint/TS config</span>
+│
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json</pre>
+  <p class="small">Rule of thumb: if a piece of logic needs to produce the <em>same</em> answer on two different clients
+    (quote preview, validation, formatting), it lives in <code>packages/</code>. If it's specific to how one client
+    presents that answer, it stays in that client's own <code>app/</code> or <code>components/</code>.</p>
+
+  <h2><span class="section-num">4.</span> Data model</h2>
+  <p>Expands PRD §10 into concrete types and constraints. PostgreSQL via Prisma; <code>uuid</code> primary keys
+    throughout; money stored as <code>numeric(10,2)</code>, never floats; all "versioned" tables use
+    <code>effective_from</code>/<code>effective_to</code> (open-ended = current) rather than in-place edits, per the
+    PRD's non-retroactive pricing guarantee.</p>
+
+  <h3>4.1 Identity &amp; auth</h3>
+  <table>
+    <tr>
+      <th style="width:20%">Entity</th>
+      <th>Fields</th>
+    </tr>
+    <tr>
+      <td>Customer</td>
+      <td>id uuid pk, name varchar, phone varchar unique, email varchar nullable, saved_addresses jsonb, created_at
+        timestamptz</td>
+    </tr>
+    <tr>
+      <td>Vendor</td>
+      <td>id uuid pk, name varchar, phone varchar unique, status enum(active/suspended), service_areas jsonb (zone id
+        list), created_at timestamptz</td>
+    </tr>
+    <tr>
+      <td>AdminUser</td>
+      <td>id uuid pk, name varchar, phone varchar unique, created_at timestamptz <span class="small">— Phase 1: exactly
+          one row, same person as the Vendor row</span></td>
+    </tr>
+    <tr>
+      <td>OtpChallenge</td>
+      <td>id uuid pk, phone varchar, otp_hash varchar, purpose enum(login), attempts int default 0, expires_at
+        timestamptz, verified_at timestamptz nullable, created_at timestamptz <span class="small">— indexed on (phone,
+          expires_at)</span></td>
+    </tr>
+    <tr>
+      <td>Session</td>
+      <td>id uuid pk, user_id uuid, user_role enum(customer/vendor/admin), refresh_token_hash varchar, expires_at
+        timestamptz, revoked_at timestamptz nullable, created_at timestamptz</td>
+    </tr>
+  </table>
+
+  <h3>4.2 Fleet &amp; pricing configuration</h3>
+  <table>
+    <tr>
+      <th style="width:20%">Entity</th>
+      <th>Fields</th>
+    </tr>
+    <tr>
+      <td>Vehicle</td>
+      <td>id uuid pk, vendor_id uuid fk, type varchar, capacity_cft numeric, registration_number varchar unique,
+        permit_expiry date, fitness_cert_expiry date, active boolean default true</td>
+    </tr>
+    <tr>
+      <td>LocationZone</td>
+      <td>id uuid pk, name varchar, zone_type enum(core/extended), pincodes jsonb (or boundary geojson), created_by
+        uuid, created_at timestamptz</td>
+    </tr>
+    <tr>
+      <td>ZoneRate</td>
+      <td>id uuid pk, from_zone_id uuid fk nullable, to_zone_id uuid fk nullable, distance_band varchar nullable <span
+          class="small">(used when zone-pair is absent — e.g. "10-25km")</span>, rate numeric(10,2), effective_from
+        timestamptz, effective_to timestamptz nullable, created_by uuid <span class="small">— indexed on (from_zone_id,
+          to_zone_id, effective_to)</span></td>
+    </tr>
+    <tr>
+      <td>Item</td>
+      <td>id uuid pk, name varchar, category varchar, default_cft numeric, default_weight_kg numeric, base_handling_rate
+        numeric(10,2), active boolean, effective_from timestamptz, effective_to timestamptz nullable, created_by uuid
+      </td>
+    </tr>
+    <tr>
+      <td>PricingRule</td>
+      <td>id uuid pk, rule_type enum(packing_tier_multiplier/labour_threshold/surcharge/addon), config_key varchar <span
+          class="small">(e.g. "standard_tier", "no_lift_per_floor")</span>, value numeric, effective_from timestamptz,
+        effective_to timestamptz nullable, created_by uuid</td>
+    </tr>
+    <tr>
+      <td>PricingAuditLog</td>
+      <td>id uuid pk, entity_type varchar (zone_rate/item/pricing_rule), entity_id uuid, field_changed varchar,
+        old_value varchar, new_value varchar, changed_by uuid fk→AdminUser, reason text nullable, changed_at timestamptz
+        <span class="small">— satisfies PRD §12 auditability; append-only, never updated or deleted</span></td>
+    </tr>
+  </table>
+
+  <h3>4.3 Booking &amp; transaction records</h3>
+  <table>
+    <tr>
+      <th style="width:20%">Entity</th>
+      <th>Fields</th>
+    </tr>
+    <tr>
+      <td>Booking</td>
+      <td>id uuid pk, customer_id uuid fk, vendor_id uuid fk nullable <span class="small">(set at Assigned)</span>,
+        vehicle_id uuid fk nullable, status enum <span class="small">(PRD §11 state table)</span>, pickup_address text,
+        drop_address text, pickup_zone_id uuid fk, drop_zone_id uuid fk, distance_km numeric, configuration_type
+        varchar, floor_number int, lift_available boolean, scheduled_date date, scheduled_slot varchar,
+        base_quote_amount numeric(10,2), final_amount numeric(10,2), pricing_snapshot jsonb <span
+          class="small">(rule/rate versions used — §5.2 step 8)</span>, created_at timestamptz</td>
+    </tr>
+    <tr>
+      <td>BookingItem</td>
+      <td>id uuid pk, booking_id uuid fk, item_id uuid fk nullable, custom_name varchar nullable, quantity int,
+        packing_tier enum(lite/standard/premium), unit_price_applied numeric(10,2), line_total numeric(10,2),
+        is_revision boolean default false <span class="small">(true for on-site additions — §5.7)</span></td>
+    </tr>
+    <tr>
+      <td>Revision</td>
+      <td>id uuid pk, booking_id uuid fk, description text, amount_delta numeric(10,2), logged_by uuid fk→Vendor, status
+        enum(pending/approved/declined), approved_by uuid fk→Customer nullable, approved_at timestamptz nullable,
+        created_at timestamptz</td>
+    </tr>
+    <tr>
+      <td>Payment</td>
+      <td>id uuid pk, booking_id uuid fk, razorpay_order_id varchar, razorpay_payment_id varchar nullable unique, amount
+        numeric(10,2), status enum(created/captured/failed/refunded), type enum(advance/final/refund), idempotency_key
+        varchar unique, created_at timestamptz</td>
+    </tr>
+    <tr>
+      <td>Notification</td>
+      <td>id uuid pk, booking_id uuid fk nullable, recipient_role enum(customer/vendor/admin), channel
+        enum(sms/whatsapp/push), template varchar, status enum(queued/sent/failed), attempts int, sent_at timestamptz
+        nullable, created_at timestamptz</td>
+    </tr>
+  </table>
+  <p class="small"><code>Booking.pricing_snapshot</code> is the mechanism that makes rate changes non-retroactive: at
+    quote time, the exact <code>ZoneRate</code>/<code>Item</code>/<code>PricingRule</code> row versions used are copied
+    into this column, so a later admin rate edit can never silently alter an existing booking's total — even a re-render
+    of the same booking always recomputes identically.</p>
+
+  <h3>4.4 Not modeled as Postgres tables (by design)</h3>
+  <ul>
+    <li><strong>Checkout locks</strong> — Redis keys, TTL-based, never persisted relationally (§5.5). Durability isn't
+      the goal; automatic expiry is.</li>
+    <li><strong>Layer-1 instant-estimate reference table</strong> — a Redis-cached or materialized-view lookup,
+      periodically rebuilt from real Layer-2 <code>Booking</code> outcomes (PRD §8 Display strategy), not a
+      hand-maintained table.</li>
+  </ul>
+
+  <h2><span class="section-num">5.</span> Core algorithms</h2>
+  <p class="small">Written as numbered procedures, not code — implementation language/library choices are free as long
+    as the behaviour and guarantees below hold.</p>
+
+  <h3>5.1 Instant estimate (Layer 1)</h3>
+  <p><strong>Purpose:</strong> a sub-500ms price range from just property type + pickup/drop (PRD §5, §8 Display
+    strategy).</p>
+  <ol>
+    <li>Resolve pickup and drop coordinates to a <code>LocationZone</code> each (pincode match, or point-in-polygon if
+      boundaries are geojson).</li>
+    <li>Look up the pre-computed reference row for (configuration_type × zone_pair) in the Layer-1 cache.</li>
+    <li>If that exact zone-pair isn't covered yet, fall back to a distance-band-only reference row (coarser, still
+      fast).</li>
+    <li>Return <code>{low, high, zone_pair}</code> with a plain-language "estimate only" disclaimer.</li>
+  </ol>
+  <p class="small">This never touches <code>PricingRule</code>/<code>Item</code> directly — it's a fast reference
+    lookup, rebuilt periodically (§8, job <code>reconciliation-layer1-refresh</code>) from real Layer-2 outcomes so it
+    doesn't drift from what customers actually end up paying.</p>
+
+  <h3>5.2 Itemized quote engine (Layer 2)</h3>
+  <p><strong>Purpose:</strong> the authoritative, line-itemized quote once the inventory checklist is submitted (PRD
+    §8.1–8.4). This is the single function both the initial quote <em>and</em> every on-site revision (§5.7) call.</p>
+  <ol>
+    <li><strong>Zone charge:</strong> look up the active <code>ZoneRate</code> for (pickup_zone, drop_zone) as of now;
+      if no direct zone-pair row exists, fall back to the distance-band rate computed from the geocoded distance (§5.3).
+      Apply any active zone surcharge.</li>
+    <li><strong>Goods subtotal:</strong> for each declared line item, resolve the <code>Item</code> record (or the
+      generic CFT-based fallback rate for a free-text item), then
+      <code>line_total = base_handling_rate × quantity × packing_tier_multiplier</code>. Sum all lines.</li>
+    <li><strong>Total CFT:</strong> <code>Σ(item.default_cft × quantity)</code>, using any customer-declared override
+      for free-text items.</li>
+    <li><strong>Labour charge:</strong> read the active <code>labour_threshold</code> and
+      <code>per_extra_laborer_rate</code> <code>PricingRule</code>s.
+      <code>extra_laborers = ceil(max(0, total_cft − baseline_threshold) / threshold_block_size)</code>;
+      <code>labour_charge = extra_laborers × per_extra_laborer_rate</code>.</li>
+    <li><strong>Surcharges:</strong> evaluate each active surcharge rule against booking context — floor_number with
+      lift_available=false, scheduled_date inside the configured monsoon window, parking-distance beyond threshold
+      (parking distance is a vendor-confirmed on-site field, not customer-declared, so this specific surcharge is
+      typically applied as a §5.7 revision rather than at initial quote time).</li>
+    <li><strong>Add-ons:</strong> sum any customer-selected add-on rules (carpenter, electrician, carton retention).
+    </li>
+    <li><strong>Total:</strong> <code>zone_charge + goods_subtotal + labour_charge + Σsurcharges + Σaddons</code>.</li>
+    <li><strong>Snapshot:</strong> persist the exact <code>ZoneRate</code>/<code>Item</code>/<code>PricingRule</code>
+      row IDs and values used into <code>Booking.pricing_snapshot</code> (§4.3) — this is what makes a later admin rate
+      edit non-retroactive.</li>
+    <li>Return the full itemized breakdown (one line per component) for the "locked itemized quote" UI, plus the
+      vehicle-capacity check (§5.5 note below).</li>
+  </ol>
+  <p class="small"><strong>Vehicle-capacity edge case:</strong> if <code>total_cft</code> exceeds every available
+    vehicle's <code>capacity_cft</code>, the engine adds a second-trip line item rather than silently under-quoting (PRD
+    §8 Edge cases).</p>
+
+  <h3>5.3 Zone / distance resolution</h3>
+  <ol>
+    <li>Geocode the pickup and drop addresses via the Distance Matrix provider (§9); cache the geocode result per
+      normalized address string to avoid repeat calls for common buildings/societies.</li>
+    <li>Match each resolved lat/lng to a <code>LocationZone</code>.</li>
+    <li>Return <code>{pickup_zone_id, drop_zone_id, distance_km}</code> to the caller (§5.1 or §5.2).</li>
+    <li>If the geocoding provider errors or times out, do not guess — return a clear "can't calculate distance right
+      now" error and let the client retry, rather than falling back to a possibly-wrong estimate.</li>
+  </ol>
+
+  <h3>5.4 Vehicle availability &amp; double-booking prevention</h3>
+  <p><strong>Purpose:</strong> guarantee only one booking can ever hold a given vehicle + date/slot — the PRD's
+    top-severity risk (§16).</p>
+  <ol>
+    <li>Customer's availability calendar reads a REST snapshot on load, then subscribes to the WebSocket room
+      <code>availability:{vehicleId}:{date}</code> for live updates (§7).</li>
+    <li>On "start checkout": backend attempts <code>SETNX lock:vehicle:{vehicleId}:{date} = draftBookingId</code> with a
+      10-minute TTL (PRD §5 AC).</li>
+    <li>If the lock is acquired: broadcast <code>slot_locked</code> to the room, so every other customer viewing that
+      vehicle/date sees it go unavailable in real time.</li>
+    <li>If payment completes inside the TTL: inside a single DB transaction, create/confirm the <code>Booking</code> row
+      and delete the Redis lock key; broadcast <code>slot_confirmed</code>.</li>
+    <li>If the TTL expires unpaid: the Redis key auto-expires; a keyspace-notification listener broadcasts
+      <code>slot_released</code> so the slot reopens without any polling.</li>
+    <li>Vendor-entered phone/walk-in bookings (PRD §6) go through this <em>same</em> lock→confirm path server-side —
+      there is no separate code path that could let a phone booking silently conflict with an app booking.</li>
+  </ol>
+  <p class="small"><strong>Failure mode:</strong> PostgreSQL is the durable source of truth for confirmed bookings;
+    Redis only ever holds transient holds. A Redis outage can't lose a confirmed booking — it can only block new locks,
+    in which case the system should fail closed (reject new checkouts with a retry message) rather than risk a
+    double-book by skipping the lock.</p>
+
+  <h3>5.5 Booking state machine</h3>
+  <p>The PRD §11 state table is enforced as a strict finite state machine: every transition is checked against an
+    explicit allowed-transitions map server-side; anything not on that map is rejected (HTTP 409), regardless of which
+    client or role requested it. Every successful transition writes an entry to a lightweight status-history log
+    (booking_id, from_state, to_state, actor, timestamp) so the full lifecycle of any booking is reconstructable for
+    support/disputes.</p>
+
+  <h3>5.6 On-site revision approval flow</h3>
+  <ol>
+    <li>Vendor app's add-item screen reads the same live <code>Item</code> catalog the customer saw at booking time.
+    </li>
+    <li>Vendor selects item(s) + quantity → backend runs the goods-subtotal portion of §5.2 (steps 2–3) against these
+      new lines only, using rates <em>effective now</em> — deliberately not the original booking's snapshot, since a
+      revision is genuinely new scope being added today, not a re-quote of the original items.</li>
+    <li><code>Booking.status → Revision Pending</code>; a <code>Revision</code> row is created (status=pending);
+      customer is notified instantly via push/WebSocket, with SMS/WhatsApp as a fallback channel (§8, §9).</li>
+    <li>Work on the affected step pauses until the customer responds.</li>
+    <li><strong>Approve:</strong> <code>Revision.status → approved</code>, its <code>BookingItem</code> rows are marked
+      <code>is_revision=true</code>, <code>Booking.final_amount</code> is recalculated as
+      <code>base_quote_amount + Σ(approved revisions)</code>, status returns to <code>In Progress</code>.</li>
+    <li><strong>Decline:</strong> <code>Revision.status → declined</code>, <code>Booking.status → Disputed</code>,
+      surfaced in the Admin dispute queue for manual resolution (PRD §11 — not automated in Phase 1).</li>
+  </ol>
+
+  <h3>5.7 Vendor assignment (pluggable module)</h3>
+  <p><strong>Phase 1:</strong> <code>assignVendor(booking)</code> always returns the single configured
+    <code>vendor_id</code>, and picks the smallest active <code>Vehicle</code> whose <code>capacity_cft</code> ≥ the
+    booking's declared total CFT (falling back to the largest vehicle, or flagging a second trip, if none is big enough
+    alone).</p>
+  <p><strong>Phase 2:</strong> the same function signature —
+    <code>(bookingContext) → {vendorId, vehicleId} | NoMatch</code> — gets a real implementation (nearby vendors by
+    <code>service_areas</code>, load- and rating-weighted scoring). Because every caller only ever depends on that
+    input/output contract, Phase 2 genuinely only touches this one module, per PRD §9.3.</p>
+
+  <h3>5.8 Notification dispatch</h3>
+  <ol>
+    <li>A domain event (booking confirmed, revision logged, status changed, payment captured, etc.) enqueues a job on
+      the <code>notifications</code> BullMQ queue with
+      <code>{bookingId, recipientRole, template, preferredChannel}</code>.</li>
+    <li>Worker renders the template and calls the provider: WhatsApp first (primary channel for this market), SMS as
+      automatic fallback on WhatsApp delivery failure, Expo push for users with the mobile app installed.</li>
+    <li>Retry: exponential backoff, max 3 attempts, then the job moves to a dead-letter queue for manual review rather
+      than retrying forever.</li>
+    <li>Final status (sent/failed) is written to the <code>Notification</code> row for Admin visibility (PRD §7).</li>
+  </ol>
+
+  <h2><span class="section-num">6.</span> API specification</h2>
+  <p><strong>Base URL:</strong> <code>/api/v1</code>. <strong>Auth:</strong>
+    <code>Authorization: Bearer &lt;JWT&gt;</code> except where marked Public. <strong>Errors:</strong>
+    <code>{ "error": { "code", "message", "details?" } }</code> with a matching HTTP status.
+    <strong>Pagination:</strong> <code>?page&amp;pageSize</code> query params; list responses shaped
+    <code>{ data, page, pageSize, total }</code>.</p>
+
+  <h3>6.1 Auth</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/auth/otp/request</td>
+      <td>Public</td>
+      <td>Send a login OTP to a phone number</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/auth/otp/verify</td>
+      <td>Public</td>
+      <td>Verify OTP; returns access + refresh JWT; creates the Customer/Vendor record on first login</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/auth/refresh</td>
+      <td>Refresh token</td>
+      <td>Rotate access token</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/auth/logout</td>
+      <td>Authenticated</td>
+      <td>Revoke the current refresh token/session</td>
+    </tr>
+  </table>
+
+  <h3>6.2 Quotes &amp; catalog (public / customer)</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/quotes/instant-estimate</td>
+      <td>Public</td>
+      <td>Layer 1 range estimate (§5.1) from property type + pickup/drop</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/quotes/itemized</td>
+      <td>Customer</td>
+      <td>Layer 2 full itemized quote (§5.2) from a submitted checklist; creates a draft Booking in
+        <code>Requested</code>/<code>Quoted</code> status</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/catalog/items</td>
+      <td>Public</td>
+      <td>Current item rate card, for the checklist UI</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/catalog/zones</td>
+      <td>Public</td>
+      <td>Zone list/boundaries, for address/service-area validation</td>
+    </tr>
+  </table>
+
+  <h3>6.3 Bookings</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/bookings/:id/confirm</td>
+      <td>Customer</td>
+      <td>Move a Quoted draft to Confirmed (called after payment webhook succeeds — §6.5)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/bookings</td>
+      <td>Customer</td>
+      <td>List the caller's own bookings</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/bookings/:id</td>
+      <td>Customer / Vendor / Admin <span class="small">(role-scoped)</span></td>
+      <td>Booking detail, including itemized breakdown and status history</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/bookings/:id/cancel</td>
+      <td>Customer</td>
+      <td>Cancel per the policy in PRD §8 Edge cases</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/bookings/:id/invoice</td>
+      <td>Customer</td>
+      <td>GST-compliant invoice PDF (post-completion)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/bookings/:id/hold</td>
+      <td>Customer <span class="small">(internal — called at checkout start)</span></td>
+      <td>Acquire the Redis availability lock (§5.4)</td>
+    </tr>
+  </table>
+
+  <h3>6.4 Vendor</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/vendor/jobs?date=</td>
+      <td>Vendor</td>
+      <td>Calendar of assigned jobs, grouped by vehicle (PRD §6)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method patch">PATCH</span></td>
+      <td class="endpoint">/vendor/jobs/:id/status</td>
+      <td>Vendor</td>
+      <td>Update job status — en route / arrived / in progress / complete</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/vendor/bookings/manual</td>
+      <td>Vendor</td>
+      <td>Create a phone/walk-in booking through the same lock→confirm path (§5.4)</td>
+    </tr>
+  </table>
+
+  <h3>6.5 Payments</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/payments/create-order</td>
+      <td>Customer</td>
+      <td>Create a Razorpay order for a booking's advance or final amount</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/webhooks/razorpay</td>
+      <td>Public <span class="small">(signature-verified)</span></td>
+      <td>Payment status webhook — the only source of truth for "paid" (PRD §5, never trust a client-side redirect)</td>
+    </tr>
+  </table>
+
+  <h3>6.6 Revisions</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/bookings/:id/revisions</td>
+      <td>Vendor</td>
+      <td>Log an on-site revision (§5.6)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/bookings/:id/revisions/:revisionId/approve</td>
+      <td>Customer</td>
+      <td>Approve a pending revision</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method post">POST</span></td>
+      <td class="endpoint">/bookings/:id/revisions/:revisionId/decline</td>
+      <td>Customer</td>
+      <td>Decline → booking moves to Disputed</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/bookings/:id/revisions</td>
+      <td>Customer / Vendor / Admin</td>
+      <td>Full revision history for a booking</td>
+    </tr>
+  </table>
+
+  <h3>6.7 Admin — pricing</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span> <span class="method post">POST</span></td>
+      <td class="endpoint">/admin/zones</td>
+      <td>Admin</td>
+      <td>Manage LocationZone records</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span> <span class="method post">POST</span></td>
+      <td class="endpoint">/admin/zone-rates</td>
+      <td>Admin</td>
+      <td>Manage versioned ZoneRate records (PRD §7 story)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span> <span class="method post">POST</span></td>
+      <td class="endpoint">/admin/items</td>
+      <td>Admin</td>
+      <td>Manage the versioned item rate card</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span> <span class="method post">POST</span></td>
+      <td class="endpoint">/admin/pricing-rules</td>
+      <td>Admin</td>
+      <td>Manage packing-tier multipliers, labour thresholds, surcharges, add-ons</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/admin/pricing-audit-log</td>
+      <td>Admin</td>
+      <td>Read the append-only PricingAuditLog (§4.2)</td>
+    </tr>
+  </table>
+
+  <h3>6.8 Admin — operations</h3>
+  <table>
+    <tr>
+      <th style="width:14%">Method</th>
+      <th style="width:34%">Path</th>
+      <th style="width:14%">Auth</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/admin/bookings</td>
+      <td>Admin</td>
+      <td>All bookings with filters (status, date range, vendor)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/admin/revisions?status=disputed</td>
+      <td>Admin</td>
+      <td>Dispute queue for manual resolution (PRD §11)</td>
+    </tr>
+    <tr>
+      <td class="endpoint"><span class="method get">GET</span></td>
+      <td class="endpoint">/admin/reports/metrics</td>
+      <td>Admin</td>
+      <td>Success-metrics dashboard data (PRD §13)</td>
+    </tr>
+  </table>
+
+  <h2><span class="section-num">7.</span> WebSocket event specification</h2>
+  <p>Socket.io, mounted on the same Express HTTP server (PRD §9.2). JWT passed at handshake; room subscription is
+    authorized server-side per role — customers may only subscribe to their own booking's room, vendors to their
+    assigned jobs, admin to everything.</p>
+  <table>
+    <tr>
+      <th style="width:22%">Direction</th>
+      <th style="width:26%">Event</th>
+      <th>Payload / purpose</th>
+    </tr>
+    <tr>
+      <td>Client → Server</td>
+      <td class="endpoint">subscribe_availability</td>
+      <td><code>{vehicleId, date}</code> — join the availability room for that vehicle/date</td>
+    </tr>
+    <tr>
+      <td>Client → Server</td>
+      <td class="endpoint">subscribe_booking</td>
+      <td><code>{bookingId}</code> — join updates for one booking</td>
+    </tr>
+    <tr>
+      <td>Server → Client</td>
+      <td class="endpoint">slot_locked</td>
+      <td>A checkout hold started on this vehicle/date (§5.4)</td>
+    </tr>
+    <tr>
+      <td>Server → Client</td>
+      <td class="endpoint">slot_released</td>
+      <td>A hold expired unpaid; slot is open again</td>
+    </tr>
+    <tr>
+      <td>Server → Client</td>
+      <td class="endpoint">slot_confirmed</td>
+      <td>Payment completed; slot is now a durable Booking</td>
+    </tr>
+    <tr>
+      <td>Server → Client</td>
+      <td class="endpoint">booking_status_changed</td>
+      <td><code>{bookingId, from, to}</code> — any state-machine transition (§5.5)</td>
+    </tr>
+    <tr>
+      <td>Server → Client</td>
+      <td class="endpoint">revision_logged</td>
+      <td>New on-site revision awaiting customer approval (§5.6)</td>
+    </tr>
+    <tr>
+      <td>Server → Client</td>
+      <td class="endpoint">revision_resolved</td>
+      <td>Customer approved or declined a revision</td>
+    </tr>
+  </table>
+
+  <h2><span class="section-num">8.</span> Background job specification</h2>
+  <p>Redis + BullMQ, framework-agnostic (PRD §9.2). One or more worker processes consume these queues — see §12 for
+    whether that's the same process as the API server.</p>
+  <table>
+    <tr>
+      <th style="width:22%">Queue</th>
+      <th style="width:24%">Trigger</th>
+      <th style="width:22%">Payload</th>
+      <th>Retry policy</th>
+    </tr>
+    <tr>
+      <td class="endpoint">notifications</td>
+      <td>Any domain event (§5.8)</td>
+      <td><code>{bookingId, role, template, channel}</code></td>
+      <td>3 attempts, exponential backoff, then dead-letter</td>
+    </tr>
+    <tr>
+      <td class="endpoint">invoice-generation</td>
+      <td>Booking → Completed</td>
+      <td><code>{bookingId}</code></td>
+      <td>3 attempts; failure alerts Admin</td>
+    </tr>
+    <tr>
+      <td class="endpoint">payment-webhook-retry</td>
+      <td>Webhook handler failure (5xx from our side)</td>
+      <td><code>{rawPayload, signature}</code></td>
+      <td>Backoff up to Razorpay's own retry window; idempotency key prevents double-processing</td>
+    </tr>
+    <tr>
+      <td class="endpoint">reconciliation-layer1-refresh</td>
+      <td>Nightly cron</td>
+      <td>— (batch job)</td>
+      <td>Recomputes the Layer-1 estimate reference table from recent Layer-2 outcomes (§5.1); non-critical, alerts on
+        repeated failure rather than retrying aggressively</td>
+    </tr>
+  </table>
+  <p class="small">Slot-lock expiry (§5.4) deliberately does <em>not</em> go through a polling job — Redis TTL +
+    keyspace notifications handle it natively, which is simpler and has no missed-poll window.</p>
+
+  <h2><span class="section-num">9.</span> Third-party integrations</h2>
+  <table>
+    <tr>
+      <th style="width:22%">Provider</th>
+      <th style="width:20%">Used for</th>
+      <th>Integration notes</th>
+    </tr>
+    <tr>
+      <td>Razorpay</td>
+      <td>Payments</td>
+      <td>Server-side order creation; webhook is the only trusted confirmation source; idempotency key stored per
+        <code>Payment</code> row (§4.3)</td>
+    </tr>
+    <tr>
+      <td>Geocoding / Distance Matrix <span class="small">(provider TBD — §13)</span></td>
+      <td>Address → coordinates, zone resolution (§5.3)</td>
+      <td>Results cached per normalized address to control API cost and latency</td>
+    </tr>
+    <tr>
+      <td>WhatsApp Business API <span class="small">(via MSG91 or Twilio — TBD)</span></td>
+      <td>Primary customer/vendor notification channel</td>
+      <td>Dispatched only through the <code>notifications</code> queue (§8), never inline in a request</td>
+    </tr>
+    <tr>
+      <td>SMS <span class="small">(same provider as WhatsApp, typically)</span></td>
+      <td>Fallback channel on WhatsApp delivery failure</td>
+      <td>Automatic fallback, not a separate user-facing setting</td>
+    </tr>
+    <tr>
+      <td>Expo Push Notification service</td>
+      <td>Mobile app push (both Customer and Vendor apps)</td>
+      <td>Device push tokens stored against the Customer/Vendor record at app login</td>
+    </tr>
+    <tr>
+      <td>Object storage <span class="small">(S3 or Cloudinary — TBD)</span></td>
+      <td>Vendor/vehicle trust-page photos (PRD §5)</td>
+      <td>Not yet load-bearing for Phase 1a; needed before the trust page (Phase 1b)</td>
+    </tr>
+  </table>
+
+  <h2><span class="section-num">10.</span> Auth &amp; security design</h2>
+  <ul>
+    <li><strong>Login:</strong> phone + OTP, no passwords — matches the norm for this market and avoids password-reset
+      support burden for a small operator.</li>
+    <li><strong>Tokens:</strong> short-lived JWT access token (~15 min) + longer-lived refresh token, rotated on each
+      use and stored hashed in <code>Session</code> (§4.1) so any refresh token can be individually revoked (e.g. "log
+      out this device").</li>
+    <li><strong>RBAC:</strong> every route declares its allowed role(s); a shared middleware checks the JWT's role claim
+      before the handler runs — enforced at the API layer, not just hidden in the UI (PRD §12).</li>
+    <li><strong>Rate limiting:</strong> OTP request/verify and the public quote endpoints are rate-limited per phone
+      number/IP to prevent abuse (OTP spam, quote-scraping).</li>
+    <li><strong>Webhook integrity:</strong> the Razorpay webhook route verifies the provider's signature header before
+      processing anything, and is idempotent via the stored <code>razorpay_payment_id</code> — replays or duplicate
+      deliveries never double-charge or double-confirm a booking.</li>
+    <li><strong>Transport &amp; storage:</strong> TLS everywhere; no card data ever stored locally (Razorpay tokenizes);
+      customer PII encrypted at rest (PRD §12).</li>
+  </ul>
+
+  <h2><span class="section-num">11.</span> Environment &amp; configuration</h2>
+  <table>
+    <tr>
+      <th style="width:32%">Variable</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td class="endpoint">DATABASE_URL</td>
+      <td>PostgreSQL connection string</td>
+    </tr>
+    <tr>
+      <td class="endpoint">REDIS_URL</td>
+      <td>Redis connection string — locks, BullMQ, Layer-1 cache</td>
+    </tr>
+    <tr>
+      <td class="endpoint">JWT_ACCESS_SECRET / JWT_REFRESH_SECRET</td>
+      <td>Token signing — separate secrets so refresh compromise doesn't imply access compromise</td>
+    </tr>
+    <tr>
+      <td class="endpoint">RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET</td>
+      <td>Razorpay API credentials</td>
+    </tr>
+    <tr>
+      <td class="endpoint">RAZORPAY_WEBHOOK_SECRET</td>
+      <td>Webhook signature verification (§10)</td>
+    </tr>
+    <tr>
+      <td class="endpoint">GEOCODING_API_KEY</td>
+      <td>Distance/zone resolution provider (§9)</td>
+    </tr>
+    <tr>
+      <td class="endpoint">MSG91_API_KEY <span class="small">or</span> TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN</td>
+      <td>WhatsApp/SMS provider (§9) — one set, depending on §13's decision</td>
+    </tr>
+    <tr>
+      <td class="endpoint">EXPO_ACCESS_TOKEN</td>
+      <td>Push notification dispatch (§9)</td>
+    </tr>
+    <tr>
+      <td class="endpoint">NODE_ENV / PORT / CORS_ORIGINS</td>
+      <td>Standard service bootstrap config</td>
+    </tr>
+  </table>
+  <p class="small">All env vars are validated at process startup (fail fast on a missing/malformed value) rather than
+    failing later mid-request.</p>
+
+  <h2><span class="section-num">12.</span> Deployment topology</h2>
+  <table>
+    <tr>
+      <th style="width:22%">Component</th>
+      <th style="width:30%">Hosting</th>
+      <th>Notes</th>
+    </tr>
+    <tr>
+      <td>Web (Next.js)</td>
+      <td>Vercel</td>
+      <td>Near-zero-ops; preview deployments per PR</td>
+    </tr>
+    <tr>
+      <td>Mobile apps</td>
+      <td>Expo EAS Build → App Store / Play Store</td>
+      <td>OTA channel for JS-only fixes (PRD §16)</td>
+    </tr>
+    <tr>
+      <td>Backend API + worker</td>
+      <td>Railway or Render, persistent container(s)</td>
+      <td>Phase 1a: API server and BullMQ worker can run as one process for simplicity. Split into two deployables (API
+        vs. worker) once job volume or memory pressure justifies it — no code change required, just a deploy-config
+        change, since jobs already live in their own <code>src/jobs/</code> folder (§3)</td>
+    </tr>
+    <tr>
+      <td>PostgreSQL</td>
+      <td>Managed — Supabase or Neon</td>
+      <td>Automated daily backups, 30-day retention (PRD §12)</td>
+    </tr>
+    <tr>
+      <td>Redis</td>
+      <td>Managed — Upstash or Redis Cloud</td>
+      <td>Needs keyspace notifications enabled for §5.4's slot-release mechanism</td>
+    </tr>
+  </table>
+  <p class="small"><strong>Environments:</strong> separate staging and production for both the database and the backend
+    service — no pricing-rule or code change reaches production untested (PRD §12). <strong>CI/CD (conceptual):</strong>
+    typecheck/lint/test on every PR; deploy web on merge to main; deploy backend on merge to main after tests pass;
+    mobile builds triggered on version tag.</p>
+
+  <h2><span class="section-num">13.</span> Open technical decisions</h2>
+  <ul class="checklist">
+    <li>Geocoding/Distance Matrix provider — Google Maps Platform vs. Mapbox, decided on cost-at-projected-volume, not
+      just feature fit</li>
+    <li>WhatsApp/SMS provider — MSG91 vs. Twilio, decided on India deliverability and per-message cost</li>
+    <li>Object storage for trust-page photos — S3 vs. Cloudinary, needed before Phase 1b, not Phase 1a</li>
+    <li>Whether the backend splits into separate API and worker deployables from day one, or starts combined (§12) —
+      recommend starting combined and splitting only when justified by real load</li>
+    <li>Exact JWT access/refresh TTLs and OTP expiry window — security/UX trade-off, not yet fixed</li>
+    <li>Whether the Admin app is a separate Next.js route-group inside the same web app (as currently structured, §3) or
+      a fully separate deployable — current recommendation is route-group, revisit only if admin and customer web start
+      needing very different release cadences</li>
+  </ul>
+
+  <div class="footer-note">
+    Draft v1.0 — first version of the technical specification, written against PRD v0.4's architecture decisions
+    (Express backend, React Native/Expo mobile, dynamic zone + item-wise pricing). No code has been written against this
+    spec yet; §13's open decisions should be closed before implementation starts.
+  </div>
+
+
+</body>
+
+</html>

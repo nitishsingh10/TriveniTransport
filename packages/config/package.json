@@ -1,0 +1,6 @@
+{
+  "name": "@triveni/config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared ESLint and TypeScript config"
+}

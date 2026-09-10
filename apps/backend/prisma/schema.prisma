@@ -1,0 +1,481 @@
+// ============================================================
+// Triveni Transports — Packers & Movers Platform
+// Prisma Schema v1.0
+// 
+// Key design decisions:
+//  - UUID primary keys throughout
+//  - money as Decimal(10,2) — never Float
+//  - versioned tables use effective_from / effective_to (open-ended = null = current)
+//  - pricing_snapshot JSONB makes rate changes non-retroactive
+//  - PricingAuditLog is append-only (no delete/update allowed in app code)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// §4.1 — Identity & Auth
+// ─────────────────────────────────────────────────────────────────
+
+model Customer {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String    @db.VarChar(150)
+  phone          String    @unique @db.VarChar(15)
+  email          String?   @db.VarChar(254)
+  savedAddresses Json      @default("[]") @map("saved_addresses")
+  pushToken      String?   @map("push_token") @db.VarChar(500)
+  /// WhatsApp opt-in (default true — primary channel for this market)
+  whatsappOptIn  Boolean   @default(true) @map("whatsapp_opt_in")
+  pushOptIn      Boolean   @default(true) @map("push_opt_in")
+  emailOptIn     Boolean   @default(true) @map("email_opt_in")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  bookings      Booking[]
+  sessions      Session[]
+  notifications Notification[]
+
+  @@map("customers")
+}
+
+model Vendor {
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String       @db.VarChar(150)
+  phone        String       @unique @db.VarChar(15)
+  status       VendorStatus @default(active)
+  /// JSON array of LocationZone IDs this vendor services
+  serviceAreas Json         @default("[]") @map("service_areas")
+  pushToken    String?      @map("push_token") @db.VarChar(500)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  vehicles      Vehicle[]
+  bookings      Booking[]
+  sessions      Session[]
+  notifications Notification[]
+  revisions     Revision[]
+
+  @@map("vendors")
+}
+
+model AdminUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(150)
+  phone     String   @unique @db.VarChar(15)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sessions         Session[]
+  notifications    Notification[]
+  pricingAuditLogs PricingAuditLog[]
+  zonesCreated     LocationZone[]
+  zoneRates        ZoneRate[]
+  itemsCreated     Item[]
+  pricingRules     PricingRule[]
+
+  @@map("admin_users")
+}
+
+/// Stores a single OTP challenge per request. Indexed on (phone, expires_at).
+model OtpChallenge {
+  id         String     @id @default(uuid()) @db.Uuid
+  phone      String     @db.VarChar(15)
+  otpHash    String     @map("otp_hash") @db.VarChar(255)
+  purpose    OtpPurpose @default(login)
+  attempts   Int        @default(0)
+  expiresAt  DateTime   @map("expires_at")
+  verifiedAt DateTime?  @map("verified_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([phone, expiresAt], map: "idx_otp_phone_expiry")
+  @@map("otp_challenges")
+}
+
+/// Hashed refresh tokens — supports per-device revocation.
+/// Uses separate nullable FK columns per role to avoid polymorphic FK conflicts.
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userRole         UserRole  @map("user_role")
+  refreshTokenHash String    @map("refresh_token_hash") @db.VarChar(255)
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  // One nullable FK per role — only the matching one is set
+  customerId  String?   @map("customer_id") @db.Uuid
+  vendorId    String?   @map("vendor_id") @db.Uuid
+  adminUserId String?   @map("admin_user_id") @db.Uuid
+
+  customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor    Vendor?    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, userRole])
+  @@index([vendorId, userRole])
+  @@index([adminUserId, userRole])
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// §4.2 — Fleet & Pricing Configuration
+// ─────────────────────────────────────────────────────────────────
+
+model Vehicle {
+  id                   String   @id @default(uuid()) @db.Uuid
+  vendorId             String   @map("vendor_id") @db.Uuid
+  type                 String   @db.VarChar(50) // e.g. "Tata Ace", "407", "Eicher 17ft"
+  capacityCft          Decimal  @map("capacity_cft") @db.Decimal(8, 2)
+  registrationNumber   String   @unique @map("registration_number") @db.VarChar(20)
+  permitExpiry         DateTime @map("permit_expiry") @db.Date
+  fitnessCertExpiry    DateTime @map("fitness_cert_expiry") @db.Date
+  active               Boolean  @default(true)
+
+  vendor   Vendor    @relation(fields: [vendorId], references: [id])
+  bookings Booking[]
+
+  @@index([vendorId, active])
+  @@map("vehicles")
+}
+
+model LocationZone {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  zoneType  ZoneType @map("zone_type")
+  /// JSON array of 6-digit pincodes, or GeoJSON boundary object
+  pincodes  Json     @default("[]")
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator        AdminUser  @relation(fields: [createdBy], references: [id])
+  fromZoneRates  ZoneRate[] @relation("FromZone")
+  toZoneRates    ZoneRate[] @relation("ToZone")
+  pickupBookings Booking[]  @relation("PickupZone")
+  dropBookings   Booking[]  @relation("DropZone")
+
+  @@map("location_zones")
+}
+
+/// Versioned zone rate — never updated in place. A new row with a new effective_from is inserted.
+/// Indexed on (from_zone_id, to_zone_id, effective_to) for fast "current rate" lookups.
+model ZoneRate {
+  id           String    @id @default(uuid()) @db.Uuid
+  fromZoneId   String?   @map("from_zone_id") @db.Uuid
+  toZoneId     String?   @map("to_zone_id") @db.Uuid
+  /// Used when no zone-pair row exists — e.g. "10-25km"
+  distanceBand String?   @map("distance_band") @db.VarChar(30)
+  rate         Decimal   @db.Decimal(10, 2)
+  effectiveFrom DateTime @map("effective_from")
+  /// NULL = currently active row
+  effectiveTo  DateTime? @map("effective_to")
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  fromZone LocationZone? @relation("FromZone", fields: [fromZoneId], references: [id])
+  toZone   LocationZone? @relation("ToZone", fields: [toZoneId], references: [id])
+  creator  AdminUser     @relation(fields: [createdBy], references: [id])
+
+  @@index([fromZoneId, toZoneId, effectiveTo], map: "idx_zone_rate_lookup")
+  @@index([distanceBand, effectiveTo], map: "idx_zone_rate_band_lookup")
+  @@map("zone_rates")
+}
+
+/// Versioned item catalog — never updated in place.
+model Item {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String    @db.VarChar(150)
+  category         String    @db.VarChar(80)
+  defaultCft       Decimal   @map("default_cft") @db.Decimal(8, 2)
+  defaultWeightKg  Decimal   @map("default_weight_kg") @db.Decimal(8, 2)
+  baseHandlingRate Decimal   @map("base_handling_rate") @db.Decimal(10, 2)
+  active           Boolean   @default(true)
+  effectiveFrom    DateTime  @map("effective_from")
+  /// NULL = currently active
+  effectiveTo      DateTime? @map("effective_to")
+  createdBy        String    @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  creator      AdminUser     @relation(fields: [createdBy], references: [id])
+  bookingItems BookingItem[]
+
+  @@index([active, effectiveTo])
+  @@map("items")
+}
+
+/// Versioned pricing rules — packing tier multipliers, labour thresholds, surcharges, add-ons.
+model PricingRule {
+  id            String          @id @default(uuid()) @db.Uuid
+  ruleType      PricingRuleType @map("rule_type")
+  /// e.g. "standard_tier", "no_lift_per_floor", "monsoon_surcharge", "carpenter_addon"
+  configKey     String          @map("config_key") @db.VarChar(100)
+  value         Decimal         @db.Decimal(10, 4) // 4dp for multipliers like 1.35
+  effectiveFrom DateTime        @map("effective_from")
+  effectiveTo   DateTime?       @map("effective_to")
+  createdBy     String          @map("created_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  creator AdminUser @relation(fields: [createdBy], references: [id])
+
+  @@index([ruleType, configKey, effectiveTo])
+  @@map("pricing_rules")
+}
+
+/// Append-only audit log for all pricing configuration changes.
+/// Application code MUST NEVER delete or update rows in this table.
+model PricingAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String   @map("entity_type") @db.VarChar(50) // "zone_rate" | "item" | "pricing_rule"
+  entityId    String   @map("entity_id") @db.Uuid
+  fieldChanged String  @map("field_changed") @db.VarChar(100)
+  oldValue    String   @map("old_value") @db.Text
+  newValue    String   @map("new_value") @db.Text
+  changedBy   String   @map("changed_by") @db.Uuid
+  /// Admin-entered reason for the change (optional but encouraged)
+  reason      String?  @db.Text
+  changedAt   DateTime @default(now()) @map("changed_at")
+
+  admin AdminUser @relation(fields: [changedBy], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([changedAt])
+  @@map("pricing_audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// §4.3 — Booking & Transaction Records
+// ─────────────────────────────────────────────────────────────────
+
+model Booking {
+  id                String        @id @default(uuid()) @db.Uuid
+  customerId        String        @map("customer_id") @db.Uuid
+  /// Set at ASSIGNED state
+  vendorId          String?       @map("vendor_id") @db.Uuid
+  vehicleId         String?       @map("vehicle_id") @db.Uuid
+  status            BookingStatus @default(REQUESTED)
+  pickupAddress     String        @map("pickup_address") @db.Text
+  dropAddress       String        @map("drop_address") @db.Text
+  pickupZoneId      String        @map("pickup_zone_id") @db.Uuid
+  dropZoneId        String        @map("drop_zone_id") @db.Uuid
+  distanceKm        Decimal       @map("distance_km") @db.Decimal(8, 2)
+  configurationType String        @map("configuration_type") @db.VarChar(30)
+  floorNumber       Int           @default(0) @map("floor_number")
+  liftAvailable     Boolean       @default(false) @map("lift_available")
+  scheduledDate     DateTime      @map("scheduled_date") @db.Date
+  scheduledSlot     String        @map("scheduled_slot") @db.VarChar(30) // e.g. "morning", "afternoon"
+  baseQuoteAmount   Decimal       @map("base_quote_amount") @db.Decimal(10, 2)
+  finalAmount       Decimal       @map("final_amount") @db.Decimal(10, 2)
+  /// JSONB snapshot of exact ZoneRate/Item/PricingRule IDs and values used at quote time.
+  /// This is the mechanism that makes admin rate changes non-retroactive.
+  pricingSnapshot   Json          @map("pricing_snapshot")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  customer      Customer              @relation(fields: [customerId], references: [id])
+  vendor        Vendor?               @relation(fields: [vendorId], references: [id])
+  vehicle       Vehicle?              @relation(fields: [vehicleId], references: [id])
+  pickupZone    LocationZone          @relation("PickupZone", fields: [pickupZoneId], references: [id])
+  dropZone      LocationZone          @relation("DropZone", fields: [dropZoneId], references: [id])
+  items         BookingItem[]
+  revisions     Revision[]
+  payments      Payment[]
+  statusHistory BookingStatusHistory[]
+  notifications Notification[]
+
+  @@index([customerId, status])
+  @@index([vendorId, scheduledDate])
+  @@index([status, scheduledDate])
+  @@index([vehicleId, scheduledDate])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id               String      @id @default(uuid()) @db.Uuid
+  bookingId        String      @map("booking_id") @db.Uuid
+  /// NULL for free-text custom items
+  itemId           String?     @map("item_id") @db.Uuid
+  customName       String?     @map("custom_name") @db.VarChar(150)
+  quantity         Int
+  packingTier      PackingTier @map("packing_tier")
+  unitPriceApplied Decimal     @map("unit_price_applied") @db.Decimal(10, 2)
+  lineTotal        Decimal     @map("line_total") @db.Decimal(10, 2)
+  /// True for items added as on-site revisions (§5.6)
+  isRevision       Boolean     @default(false) @map("is_revision")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  item    Item?   @relation(fields: [itemId], references: [id])
+
+  @@index([bookingId])
+  @@map("booking_items")
+}
+
+/// Full booking state machine transition log — every state change is recorded.
+/// Enables full lifecycle reconstruction for support and disputes.
+model BookingStatusHistory {
+  id        String        @id @default(uuid()) @db.Uuid
+  bookingId String        @map("booking_id") @db.Uuid
+  fromState BookingStatus? @map("from_state") // NULL for initial creation
+  toState   BookingStatus @map("to_state")
+  actorId   String        @map("actor_id") @db.Uuid
+  actorRole UserRole      @map("actor_role")
+  timestamp DateTime      @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, timestamp])
+  @@map("booking_status_history")
+}
+
+/// On-site revision proposed by vendor, approved or declined by customer.
+model Revision {
+  id          String         @id @default(uuid()) @db.Uuid
+  bookingId   String         @map("booking_id") @db.Uuid
+  description String         @db.Text
+  amountDelta Decimal        @map("amount_delta") @db.Decimal(10, 2)
+  loggedBy    String         @map("logged_by") @db.Uuid
+  status      RevisionStatus @default(pending)
+  approvedBy  String?        @map("approved_by") @db.Uuid
+  approvedAt  DateTime?      @map("approved_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vendor  Vendor  @relation(fields: [loggedBy], references: [id])
+
+  @@index([bookingId, status])
+  @@map("revisions")
+}
+
+/// Razorpay payment record — idempotency_key prevents double-charging.
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  bookingId         String        @map("booking_id") @db.Uuid
+  razorpayOrderId   String        @map("razorpay_order_id") @db.VarChar(100)
+  /// NULL until webhook confirms capture
+  razorpayPaymentId String?       @unique @map("razorpay_payment_id") @db.VarChar(100)
+  amount            Decimal       @db.Decimal(10, 2)
+  status            PaymentStatus @default(created)
+  type              PaymentType
+  /// Unique per payment attempt — prevents duplicate processing on webhook replay
+  idempotencyKey    String        @unique @map("idempotency_key") @db.VarChar(200)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@map("payments")
+}
+
+/// Notification delivery record — one row per dispatch attempt.
+/// Uses separate nullable FK columns per role to avoid polymorphic FK conflicts.
+model Notification {
+  id            String               @id @default(uuid()) @db.Uuid
+  bookingId     String?              @map("booking_id") @db.Uuid
+  recipientRole UserRole             @map("recipient_role")
+  channel       NotificationChannel
+  template      String               @db.VarChar(100)
+  /// Rendered payload for the channel (JSON)
+  payload       Json                 @default("{}")
+  status        NotificationStatus  @default(queued)
+  attempts      Int                  @default(0)
+  sentAt        DateTime?            @map("sent_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  // One nullable FK per role
+  customerId  String?   @map("customer_id") @db.Uuid
+  vendorId    String?   @map("vendor_id") @db.Uuid
+  adminUserId String?   @map("admin_user_id") @db.Uuid
+
+  booking   Booking?   @relation(fields: [bookingId], references: [id])
+  customer  Customer?  @relation(fields: [customerId], references: [id])
+  vendor    Vendor?    @relation(fields: [vendorId], references: [id])
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id])
+
+  @@index([bookingId])
+  @@index([status, createdAt])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  customer
+  vendor
+  admin
+}
+
+enum VendorStatus {
+  active
+  suspended
+}
+
+enum ZoneType {
+  core
+  extended
+}
+
+enum PackingTier {
+  lite
+  standard
+  premium
+}
+
+enum BookingStatus {
+  REQUESTED
+  QUOTED
+  CONFIRMED
+  ASSIGNED
+  EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  REVISION_PENDING
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum RevisionStatus {
+  pending
+  approved
+  declined
+}
+
+enum PaymentStatus {
+  created
+  captured
+  failed
+  refunded
+}
+
+enum PaymentType {
+  advance
+  final
+  refund
+}
+
+enum NotificationChannel {
+  sms
+  whatsapp
+  push
+  email
+}
+
+enum NotificationStatus {
+  queued
+  sent
+  failed
+}
+
+enum OtpPurpose {
+  login
+}
+
+enum PricingRuleType {
+  packing_tier_multiplier
+  labour_threshold
+  surcharge
+  addon
+}
