@@ -1,25 +1,21 @@
 import { Router } from 'express';
+import { BookingController } from './controller';
+import { authGuard } from '../../middleware/authGuard';
+import { requireRole } from '../../middleware/rbacGuard';
 
 const router: Router = Router();
 
-router.get('/', (req, res) => {
-  res.json({ message: 'List bookings (mock)' });
-});
+// All booking endpoints require at least customer auth
+router.use(authGuard);
 
-router.get('/:id', (req, res) => {
-  res.json({ message: 'Booking detail (mock)' });
-});
+router.post('/', requireRole('customer'), BookingController.createDraft);
+router.post('/:id/hold', requireRole('customer'), BookingController.holdSlot);
+router.post('/:id/cancel', requireRole('customer'), BookingController.cancel);
 
-router.post('/:id/hold', (req, res) => {
-  res.json({ message: 'Booking held (mock)' });
-});
+// Webhook typically confirms, but keeping this for testing
+router.post('/:id/confirm', BookingController.confirm);
 
-router.post('/:id/confirm', (req, res) => {
-  res.json({ message: 'Booking confirmed (mock)' });
-});
-
-router.post('/:id/cancel', (req, res) => {
-  res.json({ message: 'Booking cancelled (mock)' });
-});
+router.get('/', requireRole('customer'), BookingController.listBookings);
+router.get('/:id', requireRole('customer'), BookingController.getDetails);
 
 export default router;

@@ -1,17 +1,17 @@
 import { Router } from 'express';
+import { VendorController } from './controller';
+import { authGuard } from '../../middleware/authGuard';
+import { requireRole } from '../../middleware/rbacGuard';
 
 const router: Router = Router();
 
-router.get('/jobs', (req, res) => {
-  res.json({ message: 'Vendor jobs (mock)' });
-});
+router.use(authGuard);
 
-router.patch('/jobs/:id/status', (req, res) => {
-  res.json({ message: 'Job status updated (mock)' });
-});
+// Vendor endpoints
+router.get('/jobs', requireRole('vendor'), VendorController.getJobs);
+router.patch('/jobs/:id/status', requireRole('vendor'), VendorController.updateStatus);
 
-router.post('/bookings/manual', (req, res) => {
-  res.json({ message: 'Manual booking created (mock)' });
-});
+// Admin / Webhook endpoints
+router.post('/auto-assign/:id', requireRole('admin'), VendorController.autoAssign);
 
 export default router;

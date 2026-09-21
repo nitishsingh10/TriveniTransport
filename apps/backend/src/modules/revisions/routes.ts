@@ -1,21 +1,17 @@
 import { Router } from 'express';
+import { RevisionController } from './controller';
+import { authGuard } from '../../middleware/authGuard';
+import { requireRole } from '../../middleware/rbacGuard';
 
 const router: Router = Router();
 
-router.get('/:bookingId/revisions', (req, res) => {
-  res.json({ message: 'List revisions (mock)' });
-});
+router.use(authGuard);
 
-router.post('/:bookingId/revisions', (req, res) => {
-  res.json({ message: 'Revision created (mock)' });
-});
+// Vendor proposes revision
+router.post('/bookings/:bookingId', requireRole('vendor'), RevisionController.propose);
 
-router.post('/:bookingId/revisions/:revisionId/approve', (req, res) => {
-  res.json({ message: 'Revision approved (mock)' });
-});
-
-router.post('/:bookingId/revisions/:revisionId/decline', (req, res) => {
-  res.json({ message: 'Revision declined (mock)' });
-});
+// Customer actions
+router.post('/:id/approve', requireRole('customer'), RevisionController.approve);
+router.post('/:id/decline', requireRole('customer'), RevisionController.decline);
 
 export default router;

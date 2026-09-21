@@ -1,17 +1,21 @@
 import { Router } from 'express';
+import { AdminController } from './controller';
+import { authGuard } from '../../middleware/authGuard';
+import { requireRole } from '../../middleware/rbacGuard';
 
 const router: Router = Router();
 
-router.get('/metrics', (req, res) => {
-  res.json({ message: 'Metrics (mock)' });
-});
+// Protect all admin routes
+router.use(authGuard);
+router.use(requireRole('admin'));
 
-router.get('/zones', (req, res) => {
-  res.json({ message: 'Zones list (mock)' });
-});
+// Metrics
+router.get('/metrics', AdminController.getMetrics);
 
-router.get('/items', (req, res) => {
-  res.json({ message: 'Items list (mock)' });
-});
+// Configuration (Pricing & Zones)
+router.post('/zones', AdminController.createZone);
+router.post('/zone-rates', AdminController.createZoneRate);
+router.post('/items', AdminController.createItem);
+router.post('/pricing-rules', AdminController.createPricingRule);
 
 export default router;

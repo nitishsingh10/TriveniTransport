@@ -1,13 +1,16 @@
 import { Router } from 'express';
+import { PricingController } from './controller';
+import { otpRateLimiter } from '../../middleware/rateLimiter';
+import { authGuard } from '../../middleware/authGuard';
 
 const router: Router = Router();
 
-router.post('/instant-estimate', (req, res) => {
-  res.json({ message: 'Instant estimate (mock)' });
-});
+// Layer-1 Instant Estimate (Public, rate limited)
+router.post('/instant-estimate', otpRateLimiter, PricingController.instantEstimate);
 
-router.post('/itemized', (req, res) => {
-  res.json({ message: 'Itemized quote (mock)' });
-});
+// Layer-2 Itemized Quote (Requires Auth, typically Customer)
+// In some flows, guests might be able to quote before authenticating,
+// but per spec, they sign up/login first for itemized quotes.
+router.post('/itemized', authGuard, otpRateLimiter, PricingController.itemizedQuote);
 
 export default router;
