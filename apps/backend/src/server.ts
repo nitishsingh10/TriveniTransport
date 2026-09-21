@@ -15,6 +15,7 @@ import vendorRoutes from './modules/vendor-assign/routes';
 import revisionRoutes from './modules/revisions/routes';
 import adminRoutes from './modules/admin/routes';
 import paymentRoutes from './modules/payments/routes';
+import customerRoutes from './modules/customer/routes';
 
 // Import background workers so they initialize
 import './jobs/workers/invoiceWorker';
@@ -71,6 +72,7 @@ async function bootstrap() {
   router.use('/quotes', pricingRoutes);
   router.use('/bookings', bookingRoutes);
   router.use('/vendor', vendorRoutes);
+  router.use('/customer', customerRoutes);
   router.use('/revisions', revisionRoutes); // often sub-routes of bookings, but can be top-level
   router.use('/admin', adminRoutes);
   router.use('/payments', paymentRoutes);

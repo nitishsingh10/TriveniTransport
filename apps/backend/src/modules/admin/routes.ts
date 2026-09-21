@@ -18,4 +18,8 @@ router.post('/zone-rates', AdminController.createZoneRate);
 router.post('/items', AdminController.createItem);
 router.post('/pricing-rules', AdminController.createPricingRule);
 
+// Notifications
+router.get('/notifications', AdminController.getNotifications);
+router.post('/notifications/:id/retry', AdminController.retryNotification);
+
 export default router;

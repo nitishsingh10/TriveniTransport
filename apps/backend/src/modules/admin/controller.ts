@@ -60,4 +60,24 @@ export class AdminController {
       next(e);
     }
   }
+
+  static async getNotifications(req: Request, res: Response, next: NextFunction) {
+    try {
+      const skip = req.query.skip ? parseInt(req.query.skip as string) : 0;
+      const take = req.query.take ? parseInt(req.query.take as string) : 50;
+      const logs = await AdminService.getNotifications(skip, take);
+      res.status(200).json(logs);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  static async retryNotification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await AdminService.retryNotification(req.params.id as string);
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
 }

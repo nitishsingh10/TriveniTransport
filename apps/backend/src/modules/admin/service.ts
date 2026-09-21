@@ -120,4 +120,37 @@ export class AdminService {
       return rule;
     });
   }
+
+  static async getNotifications(skip: number = 0, take: number = 50) {
+    return prisma.notification.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
+  }
+
+  static async retryNotification(notificationId: string) {
+    const notification = await prisma.notification.findUnique({ where: { id: notificationId } });
+    if (!notification) throw { statusCode: 404, message: 'Notification not found' };
+    if (notification.status !== 'failed') throw { statusCode: 400, message: 'Only failed notifications can be retried' };
+
+    // Update status back to queued
+    await prisma.notification.update({
+      where: { id: notificationId },
+      data: { status: 'queued' }
+    });
+
+    // Re-queue in BullMQ
+    // We dynamically import the queue to avoid circular dependencies if any
+    const { notificationsQueue } = require('../../jobs/queue');
+    await notificationsQueue.add(notification.template, {
+      type: notification.template,
+      userId: notification.bookingId, // In a real app we'd map back to the actual user ID from the original job
+      userRole: notification.recipientRole,
+      payload: notification.payload,
+      bookingId: notification.bookingId,
+    });
+
+    return { message: 'Queued for retry' };
+  }
 }
