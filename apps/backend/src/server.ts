@@ -14,6 +14,11 @@ import bookingRoutes from './modules/booking/routes';
 import vendorRoutes from './modules/vendor-assign/routes';
 import revisionRoutes from './modules/revisions/routes';
 import adminRoutes from './modules/admin/routes';
+import paymentRoutes from './modules/payments/routes';
+
+// Import background workers so they initialize
+import './jobs/workers/invoiceWorker';
+import './jobs/workers/notificationWorker';
 import { setupWebsockets } from './websocket';
 import { getRedis } from './config/redis';
 import { prisma } from './config/prisma';
@@ -68,6 +73,7 @@ async function bootstrap() {
   router.use('/vendor', vendorRoutes);
   router.use('/revisions', revisionRoutes); // often sub-routes of bookings, but can be top-level
   router.use('/admin', adminRoutes);
+  router.use('/payments', paymentRoutes);
   
   app.use('/api/v1', router);
 

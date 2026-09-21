@@ -58,6 +58,12 @@ const EnvSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
 
+  // ── AWS S3 (Invoices) ─────────────────────────────────────────
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_REGION: z.string().default('ap-south-1'),
+  AWS_S3_BUCKET_NAME: z.string().default('triveni-invoices'),
+
   // ── Admin ─────────────────────────────────────────────────────
   ADMIN_PHONE: z.string().min(10, 'ADMIN_PHONE is required — initial admin user phone number'),
 

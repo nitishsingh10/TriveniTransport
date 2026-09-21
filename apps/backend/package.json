@@ -21,6 +21,8 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1136.0",
+    "@googlemaps/google-maps-services-js": "^3.4.2",
     "@prisma/client": "^6.9.0",
     "@triveni/shared-types": "workspace:*",
     "@triveni/shared-validation": "workspace:*",
