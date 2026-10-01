@@ -1,0 +1,180 @@
+================================================================================
+                    TRIVENI TRANSPORTS - PLATFORM DOCUMENTATION
+================================================================================
+
+1. WHAT IS THE BUSINESS?
+--------------------------------------------------------------------------------
+Triveni Transports is a tech-enabled Packers and Movers business primarily serving 
+the Mumbai and Thane regions as core zones, with long-distance routes to Pune and 
+Gujarat. Unlike traditional movers who negotiate arbitrarily, Triveni Transports 
+provides transparent, itemized pricing with zero hidden charges. 
+The platform connects customers needing relocation services with vetted vendors 
+(drivers/packers) and handles the entire lifecycle: instant estimates, detailed 
+quotes, advance payments, fleet assignment, real-time tracking, on-site revisions, 
+and automated invoicing.
+
+
+2. HOW IT IS OPERATED (BUSINESS OPERATIONS)
+--------------------------------------------------------------------------------
+- Lead Generation: Customers visit the website and use an instant estimate widget.
+- Quoting: Customers select their specific inventory (e.g., 1 Sofa, 2 Beds) and a 
+  packing tier. The system algorithmically calculates a precise quote based on 
+  distance (between zones), item volume (CFT), and packing multiplier.
+- Booking: To lock in a date, the customer pays a 20% advance via Razorpay.
+- Dispatch: Admins view confirmed bookings and assign them to an available Vendor 
+  and Vehicle.
+- Execution: On the moving day, the Vendor uses the mobile app to mark statuses 
+  (En Route, Arrived, In Progress, Completed). 
+- On-Site Revisions: If the customer has more items on moving day than originally 
+  quoted, the Vendor logs a "Revision" on their app. The customer approves the 
+  new price on their phone.
+- Settlement: After successful delivery, the final balance is paid, and an 
+  automated GST invoice is emailed to the customer.
+
+
+3. ENTIRE USER FLOW
+--------------------------------------------------------------------------------
+[Customer Flow]
+1. Lands on website -> Enters pickup, drop, and home size (e.g., 2 BHK).
+2. Gets an Instant Range Estimate (Layer 1 Pricing).
+3. Proceeds to Detailed Quote -> Adds exact items from the catalog -> Selects 
+   Packing Tier (Basic/Standard/Premium).
+4. System calculates exact quote (Layer 2 Pricing).
+5. Customer enters phone number -> Authenticates via OTP.
+6. Customer pays 20% advance via Razorpay checkout.
+7. Booking status moves to CONFIRMED. Customer tracks status on web/app dashboard.
+8. Day of move: Receives WhatsApp/SMS/Push notifications as the truck arrives.
+9. End of move: Customer pays the remaining 80% balance -> Receives PDF invoice.
+
+[Vendor Flow]
+1. Logs into Vendor App (OTP).
+2. Views assigned jobs calendar.
+3. Taps a job to view pickup/drop addresses and inventory list.
+4. Marks status updates sequentially: EN_ROUTE -> ARRIVED -> IN_PROGRESS.
+5. If extra items exist: Vendor logs "Revision" -> Waits for Customer approval.
+6. Marks job as COMPLETED.
+
+[Admin Flow]
+1. Logs into Super Admin Dashboard (OTP).
+2. Manages Pricing: Creates geographic Zones, sets Zone-to-Zone Rates, adds Items 
+   to catalog, updates pricing rules (surcharges).
+3. Manages Fleet: Adds Vendors and Vehicles (with permit expiries).
+4. Dispatch: Assigns Vendors/Vehicles to CONFIRMED bookings.
+
+
+4. TECHNOLOGIES USED
+--------------------------------------------------------------------------------
+- Repository: Monorepo managed by Turborepo and PNPM Workspaces.
+- Frontend (Customer Web & Admin): Next.js 14+ (App Router), React, CSS Modules.
+- Backend API: Node.js, Express, TypeScript.
+- Mobile Apps (Future): React Native with Expo.
+- Database: PostgreSQL (managed via Prisma ORM).
+- Caching & Queues: Redis (ioredis), BullMQ (for background jobs).
+- Payments: Razorpay.
+- Notifications: 
+   - MSG91 (WhatsApp & SMS)
+   - Expo Push Notifications (Mobile)
+   - Resend (Transactional Emails)
+- Storage & Compute: AWS S3 (Invoice storage), PDFKit (Invoice generation).
+- Location: Google Maps API (Geocoding & Distance Matrix).
+
+
+5. DATABASE DESIGN (POSTGRESQL + PRISMA)
+--------------------------------------------------------------------------------
+The database uses UUIDs for primary keys and Decimal types for all currency fields.
+Key Models:
+- Users: Customer, Vendor, AdminUser
+- Auth: OtpChallenge, Session (supports refresh tokens and revoking).
+- Geography: LocationZone (Core/Long Route), ZoneRate (versioned distance pricing).
+- Catalog: Item (Cft, weight, handling rate), PricingRule (multipliers).
+- Fleet: Vehicle (Capacity, Reg No, Expiry).
+- Transactions: 
+   - Booking (Main state machine: REQUESTED -> QUOTED -> CONFIRMED -> ASSIGNED -> COMPLETED).
+   - BookingItem (Line items for the booking).
+   - Revision (On-site additions, requires dual-approval).
+   - Payment (Razorpay transactions with idempotency keys).
+   - BookingStatusHistory (Full audit trail of state changes).
+- Background: Notification (Delivery statuses for Email/SMS/Push).
+
+
+6. TECHNICAL INFRASTRUCTURE & KEY API ENDPOINTS
+--------------------------------------------------------------------------------
+Architecture: Monolithic API with async background workers (BullMQ) for heavy tasks 
+like invoice generation and notification fallback chains.
+
+Core API Endpoints (Prefix: /api/v1):
+[Auth]
+- POST /auth/otp/request : Generate and send OTP via MSG91.
+- POST /auth/otp/verify : Verify OTP and issue JWT access/refresh tokens.
+- POST /auth/refresh : Issue new access token.
+
+[Pricing & Quotes]
+- POST /quotes/instant-estimate : Fast, unauthenticated heuristic quote.
+- POST /quotes/itemized : Algorithmic quote based on items, generates draft booking.
+- GET  /quotes/catalog : Fetch active item lists for the UI.
+
+[Bookings]
+- GET  /bookings : List user's bookings.
+- GET  /bookings/:id : Real-time tracking and details.
+- POST /bookings/:id/confirm : Finalize quote and initiate payment intent.
+
+[Vendor]
+- GET  /vendor/jobs : List assigned jobs for the logged-in driver.
+- POST /vendor/jobs/:id/status : Update state machine (En route, Arrived, etc).
+
+[Revisions]
+- POST /revisions : Vendor creates a revision.
+- POST /revisions/:id/approve : Customer approves delta payment.
+
+[Payments]
+- POST /payments/webhook : Razorpay webhook endpoint (raw body signature validation).
+
+[Admin]
+- CRUD endpoints for /admin/zones, /admin/zone-rates, /admin/items.
+- POST /admin/dispatch : Assign vendor/vehicle to booking.
+
+
+7. NON-CODE MANUAL SETUP REMAINING
+--------------------------------------------------------------------------------
+Before the platform can go live to the public, the business owner MUST manually 
+complete the following steps:
+
+1. Accounts & API Keys Configuration:
+   - Razorpay: Complete business KYC to activate Live Mode.
+   - Google Maps: Add a billing credit card to activate Geocoding/Distance APIs.
+   - AWS: Set up an IAM User and an S3 Bucket specifically for storing PDF invoices.
+   - Expo: Create an Expo developer account for push notifications.
+   - Resend: Verify the business domain (trivenipackers.com) to allow sending emails.
+
+2. Telecommunications Legal Compliance (Strict Indian Laws):
+   - MSG91 / DLT Registration: You MUST register "Triveni Transports" as a Principal 
+     Entity on a telecom DLT platform (Jio/Airtel). You must register the Sender ID 
+     ("TRIVNI") and get every SMS template pre-approved by the government.
+   - WhatsApp Business API: Complete Facebook Business Verification to lift 
+     messaging limits on WhatsApp.
+
+3. App Store Publishing (Once Mobile Apps are built):
+   - Pay for an Apple Developer Account ($99/year).
+   - Pay for a Google Play Console Account ($25 one-time).
+   - Fill out app store privacy forms, upload screenshots, and submit for review.
+
+4. Infrastructure Provisioning:
+   - Purchase a domain name (e.g., trivenipackers.com).
+   - Spin up a Production PostgreSQL Database (e.g., Neon, AWS RDS).
+   - Spin up a Production Redis instance (e.g., Upstash, AWS ElastiCache).
+   - Deploy the Backend API to a Node.js host (Render, AWS, Railway).
+   - Deploy the Next.js Frontend to Vercel and map the domain.
+
+5. Initial Data Entry (Admin Dashboard):
+   - The first user must log in using the exact phone number specified in the 
+     `ADMIN_PHONE` environment variable to gain Super Admin rights.
+   - The Admin must manually input all the business logic: 
+     Create the exact boundaries for Thane/Mumbai/Pune, upload all furniture 
+     items with their dimensions (CFT) and prices, and add all current vehicles 
+     and drivers into the fleet management tab.
+
+6. Legal Website Pages:
+   - Write and publish the actual Privacy Policy, Terms & Conditions, and 
+     Refund/Cancellation Policy. Razorpay will manually review the website to 
+     ensure these exist before they allow you to collect payments.
+================================================================================

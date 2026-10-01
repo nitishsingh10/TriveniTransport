@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Phone, Mail, MapPin } from 'lucide-react';
 import styles from './Footer.module.css';
 
 export default function Footer() {
@@ -6,10 +7,15 @@ export default function Footer() {
     <footer className={styles.footer}>
       <div className={`container ${styles.inner}`}>
         <div className={styles.brand}>
-          <span className={styles.logo}>🚚 Triveni<span className={styles.accent}>Transports</span></span>
+          <div className={styles.logoWrapper}>
+            <img src="/logo.png" alt="Triveni Transports Logo" className={styles.logoImage} />
+            <div className={styles.logoTextWrapper}>
+              <span className={styles.logoTitle}>TRIVENI</span>
+              <span className={styles.logoSubtitle}>— TRANSPORTS —</span>
+            </div>
+          </div>
           <p className={styles.tagline}>
-            Trusted packers & movers in Mumbai, Thane and beyond.
-            Transparent pricing. Real-time tracking. Zero hassle.
+            SAFE HANDS FOR YOUR SHIFTING PLANS
           </p>
         </div>
 
@@ -35,10 +41,19 @@ export default function Footer() {
           </div>
           <div className={styles.col}>
             <h4>Contact</h4>
-            <ul>
-              <li>📞 +91 99999 99999</li>
-              <li>📧 info@trivenitransports.com</li>
-              <li>📍 Thane, Maharashtra</li>
+            <ul className={styles.contactList}>
+              <li>
+                <Phone size={14} className={styles.contactIcon} />
+                <span>8828647785, 8652521009</span>
+              </li>
+              <li>
+                <Mail size={14} className={styles.contactIcon} />
+                <span>info@trivenitransports.com</span>
+              </li>
+              <li>
+                <MapPin size={14} className={styles.contactIcon} />
+                <span>Shop No.4, HNO.372, Durganagar, near New Parshwanagh college, GB road, Thane west.</span>
+              </li>
             </ul>
           </div>
         </div>

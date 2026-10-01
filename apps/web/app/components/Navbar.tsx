@@ -11,10 +11,12 @@ export default function Navbar() {
     <nav className={styles.navbar}>
       <div className={`container ${styles.inner}`}>
         <Link href="/" className={styles.logo}>
-          <span className={styles.logoIcon}>🚚</span>
-          <span className={styles.logoText}>
-            Triveni<span className={styles.logoAccent}>Transports</span>
-          </span>
+          <img src="/logo.png" alt="Triveni Transports Logo" className={styles.logoImage} />
+          <div className={styles.logoTextWrapper}>
+            <span className={styles.logoTitle}>TRIVENI</span>
+            <span className={styles.logoSubtitle}>— TRANSPORTS —</span>
+            <span className={styles.logoTagline}>SAFE HANDS FOR YOUR SHIFTING PLANS</span>
+          </div>
         </Link>
 
         <ul className={`${styles.navLinks} ${mobileOpen ? styles.open : ''}`}>

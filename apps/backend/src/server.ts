@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { getEnv, validateEnv } from './config/env';
+import { getEnv } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 
 // Modules
@@ -25,9 +25,7 @@ import { getRedis } from './config/redis';
 import { prisma } from './config/prisma';
 
 async function bootstrap() {
-  // Validate env before doing anything
-  const env = validateEnv();
-
+  const env = getEnv();
   const app = express();
   const httpServer = createServer(app);
 

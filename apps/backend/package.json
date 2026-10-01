@@ -5,9 +5,9 @@
   "description": "Triveni Transports — Express/TypeScript API server",
   "main": "./dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsup src/server.ts --format cjs --clean",
-    "start": "node dist/server.js",
+    "start": "node --env-file=.env dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "db:generate": "prisma generate",

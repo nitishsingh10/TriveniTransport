@@ -94,9 +94,12 @@ export function validateEnv(): Env {
 
 export function getEnv(): Env {
   if (!_env) {
-    throw new Error('getEnv() called before validateEnv(). Call validateEnv() at server startup.');
+    validateEnv();
   }
   return _env;
 }
+
+// Auto-validate immediately
+validateEnv();
 
 export type { Env };

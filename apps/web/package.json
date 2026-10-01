@@ -9,11 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@triveni/shared-types": "workspace:*",
+    "@triveni/shared-validation": "workspace:*",
+    "lucide-react": "^1.49.0",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "@triveni/shared-types": "workspace:*",
-    "@triveni/shared-validation": "workspace:*"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "^20",
