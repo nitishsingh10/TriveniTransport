@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Phone, ShieldCheck, Quote, Star, Truck, User, Settings, ArrowLeft } from 'lucide-react';
+import { ArrowRight, Phone, ShieldCheck, Quote, Star, Truck, User, Settings, ArrowLeft, UserCircle } from 'lucide-react';
 import styles from './page.module.css';
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
@@ -13,7 +14,7 @@ export default function LoginPage() {
 
   const requestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < 10) return;
+    if (phone.length < 10 || name.length < 2) return;
     setLoading(true);
     // In production: POST /api/v1/auth/otp/request
     setTimeout(() => {
@@ -26,7 +27,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (otp.length < 6) return;
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/verify
+    // In production: POST /api/v1/auth/otp/verify (with signup data)
     setTimeout(() => {
       setLoading(false);
       window.location.href = '/bookings';
@@ -43,20 +44,36 @@ export default function LoginPage() {
       </div>
 
       <div className={styles.container}>
-        <div className={styles.glassCard}>
+        <div className={styles.glassCard} style={{ flexDirection: 'row-reverse' }}>
           
-          {/* Left Side: Form */}
+          {/* Right Side (visually): Form */}
           <div className={styles.leftPanel}>
             <Link href="/" className={styles.logo}>
               <img src="/logo.png" alt="Triveni" className={styles.logoImg} />
             </Link>
 
             <div className={styles.formWrapper}>
-              <h1 className={styles.title}>Welcome back</h1>
-              <p className={styles.subtitle}>Please enter your details to sign in.</p>
+              <h1 className={styles.title}>Create an account</h1>
+              <p className={styles.subtitle}>Join Triveni Transports to start moving.</p>
 
               {!otpSent ? (
                 <form className={styles.form} onSubmit={requestOtp}>
+                  <div className={styles.inputGroup}>
+                    <label>Full Name</label>
+                    <div className={styles.inputWrapper}>
+                      <input
+                        className={`${styles.input} ${styles.inputName}`}
+                        type="text"
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                      <UserCircle size={18} className={styles.inputIcon} />
+                    </div>
+                  </div>
+
                   <div className={styles.inputGroup}>
                     <label>Phone Number</label>
                     <div className={styles.inputWrapper}>
@@ -69,7 +86,6 @@ export default function LoginPage() {
                         value={phone}
                         onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                         required
-                        autoFocus
                       />
                       <Phone size={18} className={styles.inputIcon} />
                     </div>
@@ -77,15 +93,15 @@ export default function LoginPage() {
                   
                   <div className={styles.formOptions}>
                     <label className={styles.checkboxLabel}>
-                      <input type="checkbox" />
-                      <span>Keep me logged in</span>
+                      <input type="checkbox" required />
+                      <span>I agree to the Terms & Conditions</span>
                     </label>
                   </div>
 
                   <button 
                     type="submit"
                     className={styles.submitBtn} 
-                    disabled={phone.length < 10 || loading}
+                    disabled={phone.length < 10 || name.length < 2 || loading}
                   >
                     {loading ? <span className={styles.spinner} /> : 'Send OTP'}
                   </button>
@@ -115,7 +131,7 @@ export default function LoginPage() {
                     className={`${styles.submitBtn} ${styles.submitBtnAccent}`} 
                     disabled={otp.length < 6 || loading}
                   >
-                    {loading ? <span className={styles.spinner} /> : 'Verify & Sign in'}
+                    {loading ? <span className={styles.spinner} /> : 'Verify & Create Account'}
                   </button>
 
                   <button 
@@ -123,32 +139,32 @@ export default function LoginPage() {
                     className={styles.backBtn} 
                     onClick={() => setOtpSent(false)}
                   >
-                    <ArrowLeft size={16} /> Change phone number
+                    <ArrowLeft size={16} /> Edit details
                   </button>
                 </form>
               )}
 
               <div className={styles.footerLinks}>
-                <p>New to Triveni? <Link href="/signup">Create an account</Link></p>
+                <p>Already have an account? <Link href="/login">Sign in</Link></p>
               </div>
             </div>
           </div>
 
-          {/* Right Side: Showcase */}
+          {/* Left Side (visually): Showcase */}
           <div className={styles.rightPanel}>
             <div className={styles.showcaseContent}>
-              <h2 className={styles.showcaseTitle}>What our customers say.</h2>
+              <h2 className={styles.showcaseTitle}>Join thousands of happy families.</h2>
               <div className={styles.quoteWrapper}>
                 <Quote size={40} className={styles.quoteIcon} />
                 <p className={styles.quoteText}>
-                  "Triveni Transports made my move from Thane to Pune absolutely effortless. The itemised, transparent pricing is a game changer."
+                  "The packing team was extremely professional. Not a single scratch on my fragile items, and they delivered exactly on time!"
                 </p>
                 <div className={styles.author}>
                   <div className={styles.authorStars}>
                     {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill="currentColor" />)}
                   </div>
-                  <p className={styles.authorName}>Rahul Sharma</p>
-                  <p className={styles.authorRole}>Moved to Pune</p>
+                  <p className={styles.authorName}>Priya Patel</p>
+                  <p className={styles.authorRole}>Moved within Mumbai</p>
                 </div>
               </div>
             </div>

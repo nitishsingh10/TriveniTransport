@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { Home, Building2, Briefcase, LandPlot } from 'lucide-react';
 import styles from './InstantEstimate.module.css';
 
 const CONFIG_TYPES = [
-  { value: '1bhk', label: '1 BHK', icon: '🏠' },
-  { value: '2bhk', label: '2 BHK', icon: '🏡' },
-  { value: '3bhk', label: '3 BHK', icon: '🏘️' },
-  { value: 'office', label: 'Office', icon: '🏢' },
+  { value: '1bhk', label: '1 BHK', Icon: Home },
+  { value: '2bhk', label: '2 BHK', Icon: LandPlot },
+  { value: '3bhk', label: '3 BHK', Icon: Building2 },
+  { value: 'office', label: 'Office', Icon: Briefcase },
 ];
 
 export default function InstantEstimate() {
@@ -21,7 +22,6 @@ export default function InstantEstimate() {
     if (!pickup || !drop || !config) return;
     setLoading(true);
 
-    // Client-side heuristic (same logic as Layer-1 on backend)
     const baseRates: Record<string, number> = {
       '1bhk': 3000,
       '2bhk': 5000,
@@ -42,30 +42,30 @@ export default function InstantEstimate() {
   return (
     <div className={styles.widget}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Get Instant Estimate</h2>
+        <h2 className={styles.title}>Instant Estimate</h2>
         <p className={styles.subtitle}>
-          Enter your move details for a quick price range
+          Get a quick price range for your move — no commitment
         </p>
       </div>
 
       <div className={styles.form}>
         <div className={styles.inputRow}>
-          <div className={`input-group ${styles.inputWrap}`}>
-            <label htmlFor="pickup">Pickup Location</label>
+          <div className={styles.inputWrap}>
+            <label htmlFor="pickup" className={styles.label}>Pickup Location</label>
             <input
               id="pickup"
-              className="input-field"
+              className={styles.input}
               type="text"
               placeholder="e.g. Thane West"
               value={pickup}
               onChange={(e) => setPickup(e.target.value)}
             />
           </div>
-          <div className={`input-group ${styles.inputWrap}`}>
-            <label htmlFor="drop">Drop Location</label>
+          <div className={styles.inputWrap}>
+            <label htmlFor="drop" className={styles.label}>Drop Location</label>
             <input
               id="drop"
-              className="input-field"
+              className={styles.input}
               type="text"
               placeholder="e.g. Andheri East"
               value={drop}
@@ -74,21 +74,24 @@ export default function InstantEstimate() {
           </div>
         </div>
 
-        <div className={styles.configGrid}>
-          {CONFIG_TYPES.map((ct) => (
-            <button
-              key={ct.value}
-              className={`${styles.configBtn} ${config === ct.value ? styles.active : ''}`}
-              onClick={() => setConfig(ct.value)}
-            >
-              <span className={styles.configIcon}>{ct.icon}</span>
-              <span className={styles.configLabel}>{ct.label}</span>
-            </button>
-          ))}
+        <div>
+          <p className={styles.label} style={{ marginBottom: 'var(--space-3)' }}>Property Type</p>
+          <div className={styles.configGrid}>
+            {CONFIG_TYPES.map((ct) => (
+              <button
+                key={ct.value}
+                className={`${styles.configBtn} ${config === ct.value ? styles.active : ''}`}
+                onClick={() => setConfig(ct.value)}
+              >
+                <ct.Icon size={22} strokeWidth={1.75} className={styles.configIcon} />
+                <span className={styles.configLabel}>{ct.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <button
-          className={`btn btn-accent btn-lg ${styles.cta}`}
+          className={styles.cta}
           onClick={getEstimate}
           disabled={!pickup || !drop || !config || loading}
         >
@@ -102,18 +105,16 @@ export default function InstantEstimate() {
 
       {estimate && (
         <div className={styles.result}>
-          <div className={styles.resultInner}>
-            <span className={styles.resultLabel}>Estimated Range</span>
-            <span className={styles.resultPrice}>
-              ₹{estimate.min.toLocaleString('en-IN')} — ₹{estimate.max.toLocaleString('en-IN')}
-            </span>
-            <span className={styles.resultNote}>
-              Final price calculated after itemized inventory
-            </span>
-            <a href="/quote" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
-              Get Detailed Quote →
-            </a>
-          </div>
+          <span className={styles.resultLabel}>Estimated Range</span>
+          <span className={styles.resultPrice}>
+            ₹{estimate.min.toLocaleString('en-IN')} – ₹{estimate.max.toLocaleString('en-IN')}
+          </span>
+          <span className={styles.resultNote}>
+            Final price calculated after itemised inventory review
+          </span>
+          <a href="/quote" className={styles.resultCta}>
+            Get Detailed Quote →
+          </a>
         </div>
       )}
     </div>

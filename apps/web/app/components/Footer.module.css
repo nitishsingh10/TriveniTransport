@@ -11,7 +11,7 @@
 }
 
 .brand {
-  max-width: 320px;
+  max-width: 380px;
 }
 
 .logoWrapper {
@@ -88,23 +88,45 @@
   transition: color var(--duration-fast) var(--ease-out);
 }
 
-.contactList {
+.businessCardContact {
+  margin-top: var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3) !important;
+  gap: var(--space-4);
 }
 
-.contactList li {
+.contactItem {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  line-height: 1.55;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.contactIcon {
-  color: var(--accent-500);
-  margin-top: 2px;
+.iconCircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--accent-500); /* Yellow icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.contactDivider {
+  width: 2px;
+  height: 24px;
+  background: var(--brand-700);
+  border-radius: 1px;
+}
+
+.contactText {
+  font-size: var(--text-sm);
+  color: var(--gray-300);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
 }
 
 .col a:hover {

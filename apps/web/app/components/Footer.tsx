@@ -17,6 +17,32 @@ export default function Footer() {
           <p className={styles.tagline}>
             SAFE HANDS FOR YOUR SHIFTING PLANS
           </p>
+
+          <div className={styles.businessCardContact}>
+            <div className={styles.contactItem}>
+              <div className={styles.iconCircle}>
+                <Phone size={16} fill="currentColor" />
+              </div>
+              <div className={styles.contactDivider} />
+              <span className={styles.contactText}>8828647785</span>
+            </div>
+            <div className={styles.contactItem}>
+              <div className={styles.iconCircle}>
+                <Phone size={16} fill="currentColor" />
+              </div>
+              <div className={styles.contactDivider} />
+              <span className={styles.contactText}>8652521009</span>
+            </div>
+            <div className={styles.contactItem}>
+              <div className={styles.iconCircle}>
+                <MapPin size={16} fill="currentColor" />
+              </div>
+              <div className={styles.contactDivider} />
+              <span className={styles.contactText}>
+                Shop No.4, HNO.372, Durganagar, near New Parshwanagh college, GB road, Thane west.
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className={styles.links}>
@@ -40,20 +66,10 @@ export default function Footer() {
             </ul>
           </div>
           <div className={styles.col}>
-            <h4>Contact</h4>
-            <ul className={styles.contactList}>
-              <li>
-                <Phone size={14} className={styles.contactIcon} />
-                <span>8828647785, 8652521009</span>
-              </li>
-              <li>
-                <Mail size={14} className={styles.contactIcon} />
-                <span>info@trivenitransports.com</span>
-              </li>
-              <li>
-                <MapPin size={14} className={styles.contactIcon} />
-                <span>Shop No.4, HNO.372, Durganagar, near New Parshwanagh college, GB road, Thane west.</span>
-              </li>
+            <h4>Legal</h4>
+            <ul>
+              <li><Link href="/terms">Terms & Conditions</Link></li>
+              <li><Link href="/privacy">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>
