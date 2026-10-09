@@ -48,6 +48,28 @@ const PACKING_TIERS = [
 
 type SelectedItems = Record<string, number>;
 
+interface LineItem {
+  name: string;
+  qty: number;
+  rate: number;
+  tierMultiplier: number;
+  lineTotal: number;
+}
+
+interface QuoteResult {
+  lineItems: LineItem[];
+  totalCft: number;
+  itemsTotal: number;
+  floorCharge: number;
+  labourCount: number;
+  labourCharge: number;
+  packingTier: string;
+  subtotal: number;
+  gst: number;
+  total: number;
+  advance: number;
+}
+
 export default function QuotePage() {
   const [step, setStep] = useState(1);
   const [pickup, setPickup] = useState('');
@@ -56,7 +78,7 @@ export default function QuotePage() {
   const [liftAvailable, setLiftAvailable] = useState(true);
   const [selectedItems, setSelectedItems] = useState<SelectedItems>({});
   const [packingTier, setPackingTier] = useState('standard');
-  const [quote, setQuote] = useState<any>(null);
+  const [quote, setQuote] = useState<QuoteResult | null>(null);
 
   const updateItem = (name: string, delta: number) => {
     setSelectedItems(prev => {
@@ -78,7 +100,7 @@ export default function QuotePage() {
     let totalCft = 0;
     let itemsTotal = 0;
 
-    const lineItems: any[] = [];
+    const lineItems: LineItem[] = [];
     for (const cat of ITEM_CATALOG) {
       for (const item of cat.items) {
         const qty = selectedItems[item.name] || 0;
@@ -247,7 +269,7 @@ export default function QuotePage() {
                   <span>Rate</span>
                   <span>Total</span>
                 </div>
-                {quote.lineItems.map((li: any) => (
+                {quote.lineItems.map((li: LineItem) => (
                   <div key={li.name} className={styles.quoteRow}>
                     <span>{li.name}</span>
                     <span>{li.qty}</span>

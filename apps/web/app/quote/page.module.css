@@ -372,7 +372,63 @@
   .formGrid { grid-template-columns: 1fr; }
   .itemGrid { grid-template-columns: 1fr; }
   .tierGrid { grid-template-columns: 1fr; }
-  .stepCard { padding: var(--space-5); }
+  .stepCard { padding: var(--space-6) var(--space-5); }
   .quoteRow { grid-template-columns: 1.5fr 0.5fr 1fr 1fr; font-size: var(--text-xs); }
   .progress { gap: var(--space-6); }
+}
+
+@media (max-width: 480px) {
+  .stepCard {
+    padding: var(--space-5) var(--space-4);
+    border-radius: 1.5rem;
+  }
+  
+  .progress {
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
+    padding: var(--space-4) 0;
+  }
+
+  .progressBar {
+    left: 8%;
+    right: 8%;
+  }
+
+  .progressDot {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .progressLabel {
+    font-size: 0.6rem;
+    display: none; /* Hide labels on ultra narrow screens, keep dots */
+  }
+
+  .progressStep.current .progressLabel {
+    display: block; /* Only show active step label */
+  }
+
+  .stepTitle {
+    font-size: 1.35rem;
+  }
+
+  .advanceBox {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .advanceAmount {
+    font-size: 1.4rem;
+  }
+
+  .stepActions {
+    flex-direction: column-reverse;
+    gap: var(--space-3);
+  }
+
+  .stepActions button,
+  .stepActions a {
+    width: 100%;
+    justify-content: center;
+  }
 }

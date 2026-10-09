@@ -387,8 +387,19 @@
 }
 
 @media (max-width: 768px) {
+  .main {
+    padding: var(--space-4) 0;
+    align-items: flex-start;
+  }
+
+  .container {
+    padding: var(--space-3);
+  }
+
   .glassCard {
-    flex-direction: column;
+    flex-direction: column !important;
+    min-height: unset;
+    border-radius: 1.5rem;
   }
   
   .rightPanel {
@@ -396,12 +407,49 @@
   }
   
   .leftPanel {
-    padding: var(--space-8) var(--space-6);
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .logo {
+    margin-bottom: var(--space-6);
   }
   
   .formWrapper {
     margin: 0 auto;
     width: 100%;
+  }
+
+  .title {
+    font-size: 1.65rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    margin-bottom: var(--space-5);
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: var(--space-2);
+  }
+
+  .leftPanel {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .input {
+    font-size: 1rem;
+    padding: 0.85rem 0.85rem 0.85rem 4rem;
+  }
+
+  .countryCode {
+    left: var(--space-3);
+    padding-right: var(--space-2);
+  }
+
+  .submitBtn {
+    padding: 0.85rem;
   }
 }
 

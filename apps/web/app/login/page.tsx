@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Phone, ShieldCheck, Quote, Star, Truck, User, Settings, ArrowLeft } from 'lucide-react';
+import { Phone, ShieldCheck, Quote, Star, ArrowLeft } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function LoginPage() {
@@ -141,7 +141,7 @@ export default function LoginPage() {
               <div className={styles.quoteWrapper}>
                 <Quote size={40} className={styles.quoteIcon} />
                 <p className={styles.quoteText}>
-                  "Triveni Transports made my move from Thane to Pune absolutely effortless. The itemised, transparent pricing is a game changer."
+                  &quot;Triveni Transports made my move from Thane to Pune absolutely effortless. The itemised, transparent pricing is a game changer.&quot;
                 </p>
                 <div className={styles.author}>
                   <div className={styles.authorStars}>

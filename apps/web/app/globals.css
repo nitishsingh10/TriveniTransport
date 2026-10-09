@@ -352,11 +352,33 @@ input, select, textarea {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -376,9 +398,32 @@ input, select, textarea {
   50% { opacity: 0.5; }
 }
 
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(247, 163, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(247, 163, 0, 0);
+  }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes badgeGleam {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(200%); }
 }
 
 .animate-in {
@@ -390,8 +435,19 @@ input, select, textarea {
 .animate-in-delay-3 { animation-delay: 0.3s; }
 .animate-in-delay-4 { animation-delay: 0.4s; }
 
+/* ── Interactive Touch / Button Feedback ───────────────────── */
+.btn:active,
+button:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 768px) {
+  html {
+    font-size: 15.5px;
+  }
+
   :root {
     --container-padding: var(--space-4);
   }
@@ -402,5 +458,19 @@ input, select, textarea {
 
   .section-heading {
     font-size: var(--text-3xl);
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+
+  :root {
+    --container-padding: 1rem;
+  }
+
+  .section {
+    padding: var(--space-10) 0;
   }
 }
