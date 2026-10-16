@@ -89,8 +89,8 @@ async function bootstrap() {
   app.use(errorHandler);
 
   // Start server
-  httpServer.listen(env.PORT, () => {
-    console.log(`🚀 Server ready at http://localhost:${env.PORT}`);
+  httpServer.listen(env.PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server ready at http://0.0.0.0:${env.PORT}`);
     console.log(`🔌 Socket.io attached`);
   });
 
