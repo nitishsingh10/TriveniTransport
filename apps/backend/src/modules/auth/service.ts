@@ -3,6 +3,7 @@ import { getEnv } from '../../config/env';
 import { UserRole } from '@triveni/shared-types';
 import { sendSmsOtp } from '../../services/msg91';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
+import { checkPhoneOtpLimit } from '../../middleware/rateLimiter';
 import crypto from 'crypto';
 
 export class AuthService {
@@ -11,6 +12,9 @@ export class AuthService {
    */
   static async requestOtp(phone: string, role: UserRole): Promise<void> {
     const { OTP_EXPIRY_MINUTES } = getEnv();
+
+    // Check rate limit per phone number to prevent SMS bombing / balance drainage
+    await checkPhoneOtpLimit(phone);
     
     // Check if user exists based on role
     if (role === 'vendor') {
@@ -21,12 +25,12 @@ export class AuthService {
       if (!admin) throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin not found' };
     }
 
-    // Generate 6 digit code
-    const code = process.env.NODE_ENV === 'development' ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+    // Cryptographically secure 6-digit OTP code (100000 - 999999)
+    const code = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
     const otpHash = crypto.createHash('sha256').update(code).digest('hex');
 
-    // Create a new OTP challenge (can be multiple, we find the latest valid one later)
+    // Create a new OTP challenge
     await prisma.otpChallenge.create({
       data: { phone, otpHash, expiresAt, attempts: 0, purpose: 'login' }
     });
@@ -58,9 +62,13 @@ export class AuthService {
     }
 
     const inputHash = crypto.createHash('sha256').update(code).digest('hex');
-    const isDevFallback = process.env.NODE_ENV === 'development' && code === '123456';
 
-    if (challenge.otpHash !== inputHash && !isDevFallback) {
+    // Timing-safe comparison to prevent timing attacks
+    const storedHashBuf = Buffer.from(challenge.otpHash, 'hex');
+    const inputHashBuf = Buffer.from(inputHash, 'hex');
+    const isMatch = storedHashBuf.length === inputHashBuf.length && crypto.timingSafeEqual(storedHashBuf, inputHashBuf);
+
+    if (!isMatch) {
       await prisma.otpChallenge.update({
         where: { id: challenge.id },
         data: { attempts: { increment: 1 } },
@@ -126,7 +134,6 @@ export class AuthService {
     const userId = session.customerId || session.vendorId || session.adminUserId;
     if (!userId) throw { statusCode: 401, message: 'Invalid session state' };
 
-    // Issue new tokens (rotating refresh token is optional, keeping it simple here)
     const accessToken = signAccessToken(userId, payload.role);
     return { accessToken };
   }

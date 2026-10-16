@@ -20,18 +20,16 @@ export class PaymentController {
 
   static async webhook(req: Request, res: Response, next: NextFunction) {
     try {
-      // Razorpay sends signature in this header
-      const signature = req.headers['x-razorpay-signature'] as string;
+      const signature = (req.headers['x-razorpay-signature'] as string) || '';
+      const rawPayload = (req as any).rawBody || req.body;
       
-      // Webhook payload is typically verified against raw body, but assuming JSON body parser for now
-      // Note: In production, you need the raw unparsed body for accurate HMAC signature checking.
-      await PaymentService.verifyWebhook(req.body, signature || '');
+      await PaymentService.verifyWebhook(rawPayload, req.body, signature);
       
       res.status(200).send('OK');
     } catch (e) {
-      console.error('Webhook processing error', e);
-      // Always return 200 to razorpay unless it's a fatal retryable error, to stop retries on bad data
-      res.status(200).send('Processed with errors');
+      console.error('Webhook processing error:', e);
+      // Return 400 on signature failure or bad request so Razorpay can log or retry as appropriate
+      res.status(400).json({ error: 'Webhook processing failed' });
     }
   }
 }

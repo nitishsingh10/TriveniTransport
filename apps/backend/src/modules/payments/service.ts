@@ -80,20 +80,40 @@ export class PaymentService {
    * Verifies the Razorpay webhook signature and updates the DB.
    * Crucially, this must be idempotent.
    */
-  static async verifyWebhook(body: any, signature: string) {
+  static async verifyWebhook(rawPayload: any, parsedBody: any, signature: string) {
     const { RAZORPAY_WEBHOOK_SECRET } = getEnv();
-    
-    // In mock mode (no secret), we assume the webhook is just a manual local test
-    if (RAZORPAY_WEBHOOK_SECRET && !RAZORPAY_WEBHOOK_SECRET.startsWith('your_')) {
-      const expectedSignature = crypto
-        .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
-        .update(JSON.stringify(body))
-        .digest('hex');
+    const isProd = process.env.NODE_ENV === 'production';
 
-      if (expectedSignature !== signature) {
-        throw { statusCode: 400, message: 'Invalid signature' };
+    // In production, require a valid webhook secret
+    if (isProd && (!RAZORPAY_WEBHOOK_SECRET || RAZORPAY_WEBHOOK_SECRET.startsWith('your_'))) {
+      throw { statusCode: 500, message: 'Razorpay webhook secret not configured' };
+    }
+
+    if (RAZORPAY_WEBHOOK_SECRET && !RAZORPAY_WEBHOOK_SECRET.startsWith('your_')) {
+      if (!signature) {
+        throw { statusCode: 400, message: 'Missing Razorpay signature header' };
+      }
+
+      const hmac = crypto.createHmac('sha256', RAZORPAY_WEBHOOK_SECRET);
+      if (Buffer.isBuffer(rawPayload)) {
+        hmac.update(rawPayload);
+      } else if (typeof rawPayload === 'string') {
+        hmac.update(rawPayload, 'utf8');
+      } else {
+        hmac.update(JSON.stringify(rawPayload));
+      }
+      const expectedSignature = hmac.digest('hex');
+
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const signatureBuf = Buffer.from(signature, 'utf8');
+      const isValid = expectedBuf.length === signatureBuf.length && crypto.timingSafeEqual(expectedBuf, signatureBuf);
+
+      if (!isValid) {
+        throw { statusCode: 400, message: 'Invalid webhook signature' };
       }
     }
+
+    const body = Buffer.isBuffer(rawPayload) ? (parsedBody || JSON.parse(rawPayload.toString('utf8'))) : (parsedBody || rawPayload);
 
     // Process event
     if (body.event === 'payment.captured') {

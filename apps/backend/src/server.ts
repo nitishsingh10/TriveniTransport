@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { getEnv } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
+import { globalRateLimiter } from './middleware/rateLimiter';
 
 // Modules
 import authRoutes from './modules/auth/routes';
@@ -30,24 +31,31 @@ async function bootstrap() {
   const app = express();
   const httpServer = createServer(app);
 
-  // Socket.io
+  const isAllowedOrigin = (origin: string | undefined): boolean => {
+    // Allow requests with no origin (mobile apps, server-to-server, curl) or in development
+    if (!origin || env.NODE_ENV === 'development') return true;
+    return env.CORS_ORIGINS.includes(origin);
+  };
+
+  // Socket.io with origin restriction
   const io = new Server(httpServer, {
     cors: {
-      origin: (origin, callback) => callback(null, true),
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) return callback(null, true);
+        return callback(new Error('Origin not allowed by Socket.io CORS policy'));
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },
   });
   setupWebsockets(io);
 
-  // Security & standard middleware
+  // Security headers & CORS
   app.use(helmet());
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow mobile apps, curl, server-to-server (no origin header), or dev mode
-        if (!origin || env.NODE_ENV === 'development') return callback(null, true);
-        if (env.CORS_ORIGINS.includes(origin)) return callback(null, true);
+        if (isAllowedOrigin(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
@@ -55,11 +63,18 @@ async function bootstrap() {
   );
   app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 
-  // Body parsers (stripe/razorpay webhooks need raw body, so we do it conditionally or before express.json if needed)
-  app.use('/api/v1/webhooks/razorpay', express.raw({ type: 'application/json' }));
-  app.use(express.json());
+  // Body parsers: preserve raw buffer for HMAC webhook validation, and enforce strict payload limits
+  app.use(
+    express.json({
+      limit: '100kb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
+  app.use(express.urlencoded({ extended: false, limit: '50kb' }));
 
-  // Healthcheck
+  // Healthcheck (unmetered)
   app.get('/health', async (req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -70,6 +85,9 @@ async function bootstrap() {
     }
   });
 
+  // Global rate limiter on all API routes
+  app.use('/api/v1', globalRateLimiter);
+
   // API Routes
   const router = express.Router();
   router.use('/auth', authRoutes);
@@ -77,13 +95,12 @@ async function bootstrap() {
   router.use('/bookings', bookingRoutes);
   router.use('/vendor', vendorRoutes);
   router.use('/customer', customerRoutes);
-  router.use('/revisions', revisionRoutes); // often sub-routes of bookings, but can be top-level
+  router.use('/revisions', revisionRoutes);
   router.use('/admin', adminRoutes);
   router.use('/payments', paymentRoutes);
   router.use('/maps', mapsRoutes);
   
   app.use('/api/v1', router);
-
 
   // Error handling (must be last)
   app.use(errorHandler);

@@ -235,7 +235,7 @@ export const bookings = {
 // ── Payments ─────────────────────────────────────────────────────────
 export const payments = {
   createOrder: (bookingId: string, type: 'advance' | 'final') =>
-    apiFetch<{ id: string; amount: number; currency: string }>('/payments/order', {
+    apiFetch<{ id: string; amount: number; currency: string }>('/payments/create-order', {
       method: 'POST',
       body: JSON.stringify({ bookingId, type }),
     }),

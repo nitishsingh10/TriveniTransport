@@ -73,7 +73,12 @@ export class BookingController {
 
   static async getTelemetry(req: Request, res: Response, next: NextFunction) {
     try {
+      const customerId = req.user!.id;
       const bookingId = req.params.id as string;
+
+      // Ensure customer owns the booking
+      await BookingService.getBookingDetails(bookingId, customerId);
+
       const redis = getRedis();
       const cached = await redis.get(`telemetry:${bookingId}`);
       if (cached) {

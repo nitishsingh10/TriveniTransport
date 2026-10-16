@@ -12,8 +12,8 @@ router.post('/', requireRole('customer'), BookingController.createDraft);
 router.post('/:id/hold', requireRole('customer'), BookingController.holdSlot);
 router.post('/:id/cancel', requireRole('customer'), BookingController.cancel);
 
-// Webhook typically confirms, but keeping this for testing
-router.post('/:id/confirm', BookingController.confirm);
+// Webhook confirms bookings; manual confirmation restricted to admin
+router.post('/:id/confirm', requireRole('admin'), BookingController.confirm);
 
 router.get('/', requireRole('customer'), BookingController.listBookings);
 router.get('/:id', requireRole('customer'), BookingController.getDetails);

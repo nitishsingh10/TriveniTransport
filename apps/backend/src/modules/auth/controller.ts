@@ -4,14 +4,23 @@ import { z } from 'zod';
 import { UserRole } from '@triveni/shared-types';
 
 const RequestOtpSchema = z.object({
-  phone: z.string().min(10).max(15),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number format. Please provide a valid 10-15 digit number.'),
   role: z.enum(['customer', 'vendor', 'admin']),
 });
 
 const VerifyOtpSchema = z.object({
-  phone: z.string().min(10).max(15),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number format.'),
   role: z.enum(['customer', 'vendor', 'admin']),
-  code: z.string().length(6),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'OTP must be exactly 6 numeric digits.'),
 });
 
 export class AuthController {
@@ -22,7 +31,7 @@ export class AuthController {
       res.status(200).json({ message: 'OTP sent successfully' });
     } catch (e: any) {
       if (e instanceof z.ZodError) {
-        return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data', details: e.errors });
+        return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: e.errors[0]?.message || 'Invalid input data', details: e.errors });
       }
       next(e);
     }
@@ -35,7 +44,7 @@ export class AuthController {
       res.status(200).json(tokens);
     } catch (e: any) {
       if (e instanceof z.ZodError) {
-        return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid input data' });
+        return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: e.errors[0]?.message || 'Invalid input data' });
       }
       next(e);
     }
@@ -43,7 +52,7 @@ export class AuthController {
 
   static async refresh(req: Request, res: Response, next: NextFunction) {
     try {
-      const refreshToken = req.body.refreshToken;
+      const refreshToken = typeof req.body?.refreshToken === 'string' ? req.body.refreshToken.trim() : null;
       if (!refreshToken) throw { statusCode: 400, code: 'BAD_REQUEST', message: 'Refresh token required' };
       
       const tokens = await AuthService.refreshToken(refreshToken);
@@ -55,7 +64,7 @@ export class AuthController {
 
   static async logout(req: Request, res: Response, next: NextFunction) {
     try {
-      const refreshToken = req.body.refreshToken;
+      const refreshToken = typeof req.body?.refreshToken === 'string' ? req.body.refreshToken.trim() : null;
       if (refreshToken) {
         await AuthService.logout(refreshToken);
       }
