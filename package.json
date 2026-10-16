@@ -11,6 +11,7 @@
     "dev:backend": "pnpm --filter @triveni/backend dev",
     "build": "turbo run build",
     "build:web": "pnpm --filter @triveni/web build",
+    "vercel-build": "turbo run build --filter=@triveni/web",
     "build:backend": "pnpm --filter @triveni/backend build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
