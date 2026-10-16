@@ -15,20 +15,20 @@ export const metadata: Metadata = {
   keywords: 'packers and movers, Mumbai, Thane, shifting, relocation, Triveni Transports',
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icon.png', type: 'image/png' },
-      { url: '/logo-cropped.png', sizes: '550x551', type: 'image/png' },
+      { url: '/favicon.ico?v=2', sizes: 'any' },
+      { url: '/icon.png?v=2', type: 'image/png' },
+      { url: '/logo-cropped.png?v=2', sizes: '550x551', type: 'image/png' },
     ],
-    shortcut: '/favicon.ico',
+    shortcut: '/favicon.ico?v=2',
     apple: [
-      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
-      { url: '/logo-cropped.png', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-icon.png?v=2', sizes: '180x180', type: 'image/png' },
+      { url: '/logo-cropped.png?v=2', sizes: '180x180', type: 'image/png' },
     ],
   },
   openGraph: {
     title: 'Triveni Transports — Packers & Movers | Mumbai, Thane',
     description: 'Professional packers and movers service in Mumbai, Thane, and nearby areas. Instant estimates & live GPS tracking.',
-    images: [{ url: '/logo-cropped.png', width: 550, height: 551, alt: 'Triveni Transports Logo' }],
+    images: [{ url: '/logo-cropped.png?v=2', width: 550, height: 551, alt: 'Triveni Transports Logo' }],
   },
 };
 
@@ -39,6 +39,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+        <link rel="icon" href="/icon.png?v=2" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png?v=2" />
+      </head>
       <body>
         {children}
       </body>
