@@ -33,7 +33,7 @@ async function bootstrap() {
   // Socket.io
   const io = new Server(httpServer, {
     cors: {
-      origin: env.CORS_ORIGINS,
+      origin: (origin, callback) => callback(null, true),
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -44,7 +44,12 @@ async function bootstrap() {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.CORS_ORIGINS,
+      origin: (origin, callback) => {
+        // Allow mobile apps, curl, server-to-server (no origin header), or dev mode
+        if (!origin || env.NODE_ENV === 'development') return callback(null, true);
+        if (env.CORS_ORIGINS.includes(origin)) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+      },
       credentials: true,
     })
   );
