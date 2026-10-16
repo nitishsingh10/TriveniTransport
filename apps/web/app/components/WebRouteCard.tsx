@@ -1,8 +1,29 @@
 'use client';
 
 import React from 'react';
-import { Navigation, Clock, Sparkles, ExternalLink } from 'lucide-react';
+import { Navigation, Clock, ExternalLink } from 'lucide-react';
 import styles from './WebRouteCard.module.css';
+
+const GMAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+
+const DARK_MAP_STYLES = [
+  { elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#8ec3b9' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0d1f37' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#091524' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a939b' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#1e3a5f' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#0d1f37' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#091524' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+];
 
 interface WebRouteCardProps {
   pickupAddress: string;
@@ -21,15 +42,17 @@ export default function WebRouteCard({
 }: WebRouteCardProps) {
   if (!pickupAddress || !dropAddress) return null;
 
-  // Custom dark-themed route map HTML
+  // Escape addresses for safe embedding in JS string
+  const safeOrigin = pickupAddress.replace(/'/g, "\\'");
+  const safeDest = dropAddress.replace(/'/g, "\\'");
+
+  // Google Maps JS API with Directions Renderer — dark theme + gold route
   const routeMapHtml = `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
           * { box-sizing: border-box; }
           html, body, #map {
@@ -37,68 +60,57 @@ export default function WebRouteCard({
             height: 100%;
             margin: 0;
             padding: 0;
-            background: #091524;
             overflow: hidden;
-          }
-          .leaflet-tile-pane {
-            filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(200deg) saturate(0.35);
-          }
-          .leaflet-control-attribution, .leaflet-control-zoom {
-            display: none !important;
+            background: #0d1f37;
           }
         </style>
       </head>
       <body>
         <div id="map"></div>
         <script>
-          var map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false,
-            dragging: false,
-            touchZoom: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false
-          }).setView([18.55, 73.85], 11);
+          window.initMap = function() {
+            var darkStyles = ${JSON.stringify(DARK_MAP_STYLES)};
 
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd'
-          }).addTo(map);
+            var map = new google.maps.Map(document.getElementById('map'), {
+              zoom: 10,
+              styles: darkStyles,
+              disableDefaultUI: true,
+              gestureHandling: 'none',
+              backgroundColor: '#0d1f37',
+              clickableIcons: false
+            });
 
-          // Plot visual gold corridor route
-          var latlngs = [
-            [18.5679, 73.9143], // Pickup
-            [18.5590, 73.7868]  // Drop
-          ];
+            var directionsService = new google.maps.DirectionsService();
+            var directionsRenderer = new google.maps.DirectionsRenderer({
+              map: map,
+              suppressMarkers: false,
+              polylineOptions: {
+                strokeColor: '#F7A300',
+                strokeWeight: 5,
+                strokeOpacity: 0.9
+              }
+            });
 
-          var polyline = L.polyline(latlngs, {
-            color: '#F7A300',
-            weight: 4.5,
-            opacity: 0.9,
-            lineCap: 'round',
-            dashArray: '8, 8'
-          }).addTo(map);
-
-          L.circleMarker(latlngs[0], {
-            radius: 7,
-            fillColor: '#F7A300',
-            color: '#FFFFFF',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 1
-          }).addTo(map);
-
-          L.circleMarker(latlngs[1], {
-            radius: 7,
-            fillColor: '#0D1F37',
-            color: '#38BDF8',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 1
-          }).addTo(map);
-
-          map.fitBounds(polyline.getBounds(), { padding: [35, 35] });
+            directionsService.route(
+              {
+                origin: '${safeOrigin}',
+                destination: '${safeDest}',
+                travelMode: google.maps.TravelMode.DRIVING,
+                region: 'IN'
+              },
+              function(result, status) {
+                if (status === 'OK') {
+                  directionsRenderer.setDirections(result);
+                }
+              }
+            );
+          };
         </script>
+        <script
+          src="https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&callback=initMap&v=weekly"
+          async
+          defer
+        ></script>
       </body>
     </html>
   `;
@@ -107,10 +119,7 @@ export default function WebRouteCard({
     <div className={styles.routeCard}>
       <div className={styles.cardHeader}>
         <div className={styles.headerTitleRow}>
-          <div className={styles.pulseIconWrap}>
-            <Sparkles size={14} />
-          </div>
-          <span className={styles.headerTitle}>Route Estimation</span>
+          <span className={styles.headerTitle}>Route Preview</span>
         </div>
 
         {onOpenMapPicker && (
@@ -127,10 +136,6 @@ export default function WebRouteCard({
           className={styles.mapIframe}
           title="Triveni Route Preview"
         />
-        <div className={styles.floatingCorridorBadge}>
-          <span className={styles.badgeDot} />
-          <span>OPTIMIZED MOVING CORRIDOR</span>
-        </div>
       </div>
 
       <div className={styles.metricsRow}>
@@ -156,10 +161,6 @@ export default function WebRouteCard({
           </div>
         </div>
       </div>
-
-      <p className={styles.disclaimerText}>
-        Calculated via Google Maps Distance Matrix with heavy freight relocation speed profiles.
-      </p>
     </div>
   );
 }

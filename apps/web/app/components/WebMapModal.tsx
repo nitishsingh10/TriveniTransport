@@ -7,12 +7,39 @@ import {
   X,
   Crosshair,
   Check,
-  Compass,
   ArrowRight,
   Sparkles,
   Flag,
 } from 'lucide-react';
 import styles from './WebMapModal.module.css';
+
+const GMAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+
+// Triveni dark map style — navy/slate roads with gold highway labels
+const DARK_MAP_STYLES = [
+  { elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#8ec3b9' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0d1f37' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9da5b3' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#0d2137' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#3c7a53' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#091524' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a939b' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#1e3a5f' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#0d1f37' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#091524' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+  { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#091524' }] },
+];
 
 interface WebMapModalProps {
   isOpen: boolean;
@@ -102,7 +129,7 @@ export default function WebMapModal({
           const data = await res.json();
           setSelectedAddress(data.address);
           setSelectedCity(data.city || 'Pune');
-          setAreaHeadline(data.address.split(',')[0] || 'Selected Spot');
+          setAreaHeadline(data.address.split(',')[0] || 'Selected Location');
           setQuery(data.address);
         } else {
           setSelectedAddress(`${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`);
@@ -248,15 +275,13 @@ export default function WebMapModal({
 
   const isPickup = activeType === 'pickup';
 
-  // Custom dark-themed map HTML (CartoDB dark tiles)
+  // Google Maps JS API with Triveni dark theme
   const mapHtml = `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
           * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
           html, body, #map {
@@ -264,57 +289,49 @@ export default function WebMapModal({
             height: 100%;
             margin: 0;
             padding: 0;
-            background: #091524;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          }
-          /* Dark map theme filter */
-          .leaflet-tile-pane {
-            filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(200deg) saturate(0.35);
-          }
-          .leaflet-control-attribution, .leaflet-control-zoom {
-            display: none !important;
-          }
-          .leaflet-tile {
-            transition: opacity 0.2s linear;
+            background: #0d1f37;
           }
         </style>
       </head>
       <body>
         <div id="map"></div>
         <script>
-          var map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false,
-            inertia: true,
-            inertiaDeceleration: 3000
-          }).setView([${selectedCoords.lat}, ${selectedCoords.lng}], 15);
+          window.initMap = function() {
+            var darkStyles = ${JSON.stringify(DARK_MAP_STYLES)};
 
-          // CartoDB Dark Matter luxury dark tiles
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd'
-          }).addTo(map);
+            var map = new google.maps.Map(document.getElementById('map'), {
+              center: { lat: ${selectedCoords.lat}, lng: ${selectedCoords.lng} },
+              zoom: 15,
+              styles: darkStyles,
+              disableDefaultUI: true,
+              gestureHandling: 'greedy',
+              backgroundColor: '#0d1f37',
+              clickableIcons: false
+            });
 
-          map.on('movestart', function() {
-            window.parent.postMessage({ type: 'MAP_DRAGGING' }, '*');
-          });
+            map.addListener('dragstart', function() {
+              window.parent.postMessage({ type: 'MAP_DRAGGING' }, '*');
+            });
 
-          map.on('moveend', function() {
-            var c = map.getCenter();
-            window.parent.postMessage({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng }, '*');
-          });
+            map.addListener('idle', function() {
+              var c = map.getCenter();
+              window.parent.postMessage({ type: 'PIN_COORDS', lat: c.lat(), lng: c.lng() }, '*');
+            });
 
-          map.on('click', function(e) {
-            map.flyTo(e.latlng, map.getZoom(), { duration: 0.8 });
-          });
-
-          window.addEventListener('message', function(ev) {
-            if (ev.data && ev.data.type === 'FLY_TO') {
-              map.flyTo([ev.data.lat, ev.data.lng], 16, { duration: 1.2 });
-            }
-          });
+            window.addEventListener('message', function(ev) {
+              if (ev.data && ev.data.type === 'FLY_TO') {
+                map.panTo({ lat: ev.data.lat, lng: ev.data.lng });
+                map.setZoom(16);
+              }
+            });
+          };
         </script>
+        <script
+          src="https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&callback=initMap&v=weekly"
+          async
+          defer
+        ></script>
       </body>
     </html>
   `;
@@ -385,7 +402,7 @@ export default function WebMapModal({
               </button>
             </div>
 
-            {/* Glass Close Button */}
+            {/* Close Button */}
             <button type="button" className={styles.glassCloseBtn} onClick={onClose} aria-label="Close Map">
               <X size={18} strokeWidth={2.4} />
             </button>
@@ -492,7 +509,7 @@ export default function WebMapModal({
           <div className={styles.addressBlock}>
             <h3 className={styles.addressHeadline}>{areaHeadline}</h3>
             <p className={styles.addressSubtext}>
-              {selectedAddress || 'Pan the map to pick your exact doorstep or building gate...'}
+              {selectedAddress || 'Pan the map to pick your exact location...'}
             </p>
             <span className={styles.coordsMuted}>
               {selectedCoords.lat.toFixed(5)}° N, {selectedCoords.lng.toFixed(5)}° E · {selectedCity}
