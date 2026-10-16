@@ -36,10 +36,14 @@ export default function Navbar() {
       <nav className={styles.navbar}>
         <div className={`container ${styles.inner}`}>
           <Link href="/" className={styles.logo} onClick={closeMenu}>
-            <img src="/logo.png" alt="Triveni Transports Logo" className={styles.logoImage} />
+            <img src="/logo-cropped.png" alt="Triveni Transports Logo" className={styles.logoImage} />
             <div className={styles.logoTextWrapper}>
               <span className={styles.logoTitle}>TRIVENI</span>
-              <span className={styles.logoSubtitle}>— TRANSPORTS —</span>
+              <div className={styles.logoSubtitleRow}>
+                <span className={styles.subDash} aria-hidden="true" />
+                <span className={styles.logoSubtitle}>TRANSPORTS</span>
+                <span className={styles.subDash} aria-hidden="true" />
+              </div>
               <span className={styles.logoTagline}>SAFE HANDS FOR YOUR SHIFTING PLANS</span>
             </div>
           </Link>

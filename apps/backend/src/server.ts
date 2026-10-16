@@ -16,6 +16,7 @@ import revisionRoutes from './modules/revisions/routes';
 import adminRoutes from './modules/admin/routes';
 import paymentRoutes from './modules/payments/routes';
 import customerRoutes from './modules/customer/routes';
+import mapsRoutes from './modules/geocoding/routes';
 
 // Import background workers so they initialize
 import './jobs/workers/invoiceWorker';
@@ -74,8 +75,10 @@ async function bootstrap() {
   router.use('/revisions', revisionRoutes); // often sub-routes of bookings, but can be top-level
   router.use('/admin', adminRoutes);
   router.use('/payments', paymentRoutes);
+  router.use('/maps', mapsRoutes);
   
   app.use('/api/v1', router);
+
 
   // Error handling (must be last)
   app.use(errorHandler);

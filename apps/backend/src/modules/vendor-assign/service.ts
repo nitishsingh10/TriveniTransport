@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma';
+import { getRedis } from '../../config/redis';
 import { BookingStatus } from '@triveni/shared-types';
 
 export class VendorService {
@@ -37,7 +38,6 @@ export class VendorService {
     // If none are large enough, pick the largest one (second trip will be required)
     if (!selectedVehicle) {
       selectedVehicle = vehicles[vehicles.length - 1];
-      // Here you could flag a "requires_two_trips" warning on the booking
     }
 
     const updated = await prisma.booking.update({
@@ -114,4 +114,22 @@ export class VendorService {
 
     return updated;
   }
+
+  static async recordTelemetry(
+    vendorId: string,
+    bookingId: string,
+    coords: { latitude: number; longitude: number; speedKmh: number; headingDeg: number }
+  ) {
+    const booking = await prisma.booking.findFirst({ where: { id: bookingId, vendorId } });
+    if (!booking) throw { statusCode: 404, message: 'Assigned booking not found' };
+
+    const redis = getRedis();
+    const payload = {
+      ...coords,
+      timestamp: new Date().toISOString(),
+    };
+    await redis.set(`telemetry:${bookingId}`, JSON.stringify(payload), 'EX', 86400);
+    return { success: true, telemetry: payload };
+  }
 }
+

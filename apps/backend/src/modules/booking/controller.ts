@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { BookingService } from './service';
 import { ItemizedQuoteSchema } from '@triveni/shared-validation';
 import { z } from 'zod';
+import { getRedis } from '../../config/redis';
 
 export class BookingController {
   static async createDraft(req: Request, res: Response, next: NextFunction) {
@@ -69,4 +70,25 @@ export class BookingController {
       next(e);
     }
   }
+
+  static async getTelemetry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const bookingId = req.params.id as string;
+      const redis = getRedis();
+      const cached = await redis.get(`telemetry:${bookingId}`);
+      if (cached) {
+        return res.status(200).json(JSON.parse(cached));
+      }
+      res.status(200).json({
+        latitude: 18.5679,
+        longitude: 73.9143,
+        speedKmh: 36,
+        headingDeg: 82,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
 }
+

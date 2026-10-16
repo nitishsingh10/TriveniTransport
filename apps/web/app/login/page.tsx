@@ -2,35 +2,60 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Phone, ShieldCheck, Quote, Star, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Phone, ShieldCheck, Quote, Star, ArrowLeft, AlertCircle } from 'lucide-react';
+import { auth, token } from '../lib/api';
+import { ApiError } from '../lib/api';
 import styles from './page.module.css';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const requestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 10) return;
+    setError('');
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/request
-    setTimeout(() => {
+    try {
+      await auth.requestOtp(phone, 'customer');
       setOtpSent(true);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Could not send OTP. Please check your connection.');
+      }
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 6) return;
+    setError('');
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/verify
-    setTimeout(() => {
+    try {
+      const res = await auth.verifyOtp(phone, otp, 'customer');
+      token.set(res.accessToken, res.refreshToken);
+      token.setRole('customer');
+      // Redirect to bookings or intended destination
+      const next = new URLSearchParams(window.location.search).get('next') ?? '/bookings';
+      router.push(next);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Verification failed. Please try again.');
+      }
+    } finally {
       setLoading(false);
-      window.location.href = '/bookings';
-    }, 800);
+    }
   };
 
   return (
@@ -54,6 +79,14 @@ export default function LoginPage() {
             <div className={styles.formWrapper}>
               <h1 className={styles.title}>Welcome back</h1>
               <p className={styles.subtitle}>Please enter your details to sign in.</p>
+
+              {/* Error Banner */}
+              {error && (
+                <div className={styles.errorBanner}>
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
 
               {!otpSent ? (
                 <form className={styles.form} onSubmit={requestOtp}>
@@ -98,6 +131,7 @@ export default function LoginPage() {
                       <input
                         className={`${styles.input} ${styles.otpInput}`}
                         type="text"
+                        inputMode="numeric"
                         placeholder="• • • • • •"
                         maxLength={6}
                         value={otp}
@@ -108,6 +142,11 @@ export default function LoginPage() {
                       <ShieldCheck size={18} className={styles.inputIcon} />
                     </div>
                     <span className={styles.hint}>Sent to +91 {phone}</span>
+                    {process.env.NODE_ENV !== 'production' && (
+                      <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
+                        Dev mode: use OTP <strong>123456</strong>
+                      </span>
+                    )}
                   </div>
 
                   <button 
@@ -121,7 +160,7 @@ export default function LoginPage() {
                   <button 
                     type="button"
                     className={styles.backBtn} 
-                    onClick={() => setOtpSent(false)}
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); }}
                   >
                     <ArrowLeft size={16} /> Change phone number
                   </button>

@@ -5,9 +5,19 @@
   "description": "Triveni Transports Packers & Movers — Digital Platform Monorepo",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @triveni/web dev",
+    "dev:mobile": "pnpm --filter @triveni/mobile-customer start",
+    "dev:driver": "pnpm --filter @triveni/mobile-driver start",
+    "dev:backend": "pnpm --filter @triveni/backend dev",
     "build": "turbo run build",
+    "build:web": "pnpm --filter @triveni/web build",
+    "build:backend": "pnpm --filter @triveni/backend build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "typecheck:web": "pnpm --filter @triveni/web typecheck",
+    "typecheck:mobile": "pnpm --filter @triveni/mobile-customer typecheck",
+    "typecheck:driver": "pnpm --filter @triveni/mobile-driver typecheck",
+    "typecheck:backend": "pnpm --filter @triveni/backend typecheck",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

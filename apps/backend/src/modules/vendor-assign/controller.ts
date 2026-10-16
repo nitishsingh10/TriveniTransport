@@ -39,4 +39,22 @@ export class VendorController {
       next(e);
     }
   }
+
+  static async pushTelemetry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const vendorId = req.user!.id;
+      const bookingId = req.params.id as string;
+      const { latitude, longitude, speedKmh, headingDeg } = req.body;
+      const result = await VendorService.recordTelemetry(vendorId, bookingId, {
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        speedKmh: Number(speedKmh || 0),
+        headingDeg: Number(headingDeg || 0),
+      });
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
+

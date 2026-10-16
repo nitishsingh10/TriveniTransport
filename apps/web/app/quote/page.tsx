@@ -1,151 +1,163 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { quotes, bookings, token, ApiError } from '../lib/api';
 import styles from './page.module.css';
 
 const ITEM_CATALOG = [
   { category: 'Living Room', items: [
-    { name: 'Sofa (3 Seater)', cft: 25, rate: 800 },
-    { name: 'Sofa (2 Seater)', cft: 18, rate: 600 },
-    { name: 'Center Table', cft: 8, rate: 300 },
-    { name: 'TV Unit', cft: 15, rate: 500 },
-    { name: 'Bookshelf', cft: 12, rate: 400 },
-    { name: 'Shoe Rack', cft: 6, rate: 200 },
+    { name: 'Sofa (3 Seater)', cft: 25 },
+    { name: 'Sofa (2 Seater)', cft: 18 },
+    { name: 'Center Table', cft: 8 },
+    { name: 'TV Unit', cft: 15 },
+    { name: 'Bookshelf', cft: 12 },
+    { name: 'Shoe Rack', cft: 6 },
   ]},
   { category: 'Bedroom', items: [
-    { name: 'Double Bed (with mattress)', cft: 40, rate: 1200 },
-    { name: 'Single Bed (with mattress)', cft: 25, rate: 800 },
-    { name: 'Wardrobe (Large)', cft: 35, rate: 1500 },
-    { name: 'Wardrobe (Small)', cft: 20, rate: 900 },
-    { name: 'Dressing Table', cft: 12, rate: 500 },
-    { name: 'Side Table', cft: 4, rate: 150 },
+    { name: 'Double Bed (with mattress)', cft: 40 },
+    { name: 'Single Bed (with mattress)', cft: 25 },
+    { name: 'Wardrobe (Large)', cft: 35 },
+    { name: 'Wardrobe (Small)', cft: 20 },
+    { name: 'Dressing Table', cft: 12 },
+    { name: 'Side Table', cft: 4 },
   ]},
   { category: 'Kitchen', items: [
-    { name: 'Refrigerator', cft: 20, rate: 700 },
-    { name: 'Washing Machine', cft: 15, rate: 600 },
-    { name: 'Microwave Oven', cft: 3, rate: 200 },
-    { name: 'Kitchen Boxes (per box)', cft: 3, rate: 100 },
-    { name: 'Gas Cylinder', cft: 4, rate: 150 },
-    { name: 'Water Purifier', cft: 3, rate: 200 },
+    { name: 'Refrigerator', cft: 20 },
+    { name: 'Washing Machine', cft: 15 },
+    { name: 'Microwave Oven', cft: 3 },
+    { name: 'Kitchen Boxes (per box)', cft: 3 },
+    { name: 'Gas Cylinder', cft: 4 },
+    { name: 'Water Purifier', cft: 3 },
   ]},
   { category: 'Others', items: [
-    { name: 'Dining Table (4 Seater)', cft: 20, rate: 700 },
-    { name: 'AC (Split)', cft: 10, rate: 800 },
-    { name: 'AC (Window)', cft: 8, rate: 600 },
-    { name: 'Bicycle', cft: 12, rate: 400 },
-    { name: 'Carton Box (Large)', cft: 5, rate: 150 },
-    { name: 'Carton Box (Small)', cft: 3, rate: 100 },
+    { name: 'Dining Table (4 Seater)', cft: 20 },
+    { name: 'AC (Split)', cft: 10 },
+    { name: 'AC (Window)', cft: 8 },
+    { name: 'Bicycle', cft: 12 },
+    { name: 'Carton Box (Large)', cft: 5 },
+    { name: 'Carton Box (Small)', cft: 3 },
   ]},
 ];
 
 const PACKING_TIERS = [
-  { value: 'basic', label: 'Basic', desc: 'Newspaper + bubble wrap for fragiles', multiplier: 1.0 },
-  { value: 'standard', label: 'Standard', desc: 'Corrugated sheets + foam padding', multiplier: 1.3 },
-  { value: 'premium', label: 'Premium', desc: 'Wooden crating for all items', multiplier: 1.6 },
+  { value: 'lite' as const, label: 'Lite', desc: 'Newspaper + bubble wrap for fragiles', note: '0.8× base rate' },
+  { value: 'standard' as const, label: 'Standard', desc: 'Corrugated sheets + foam padding', note: '1× base rate' },
+  { value: 'premium' as const, label: 'Premium', desc: 'Wooden crating for all items', note: '1.35× base rate' },
 ];
 
+const CONFIG_TYPES = ['1bhk', '2bhk', '3bhk', '4bhk', 'villa', 'office', 'studio'] as const;
+
 type SelectedItems = Record<string, number>;
-
-interface LineItem {
-  name: string;
-  qty: number;
-  rate: number;
-  tierMultiplier: number;
-  lineTotal: number;
-}
-
-interface QuoteResult {
-  lineItems: LineItem[];
-  totalCft: number;
-  itemsTotal: number;
-  floorCharge: number;
-  labourCount: number;
-  labourCharge: number;
-  packingTier: string;
-  subtotal: number;
-  gst: number;
-  total: number;
-  advance: number;
-}
+type PackingTier = 'lite' | 'standard' | 'premium';
 
 export default function QuotePage() {
+  const router = useRouter();
+
+  // Form state
   const [step, setStep] = useState(1);
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [floor, setFloor] = useState(0);
   const [liftAvailable, setLiftAvailable] = useState(true);
+  const [configType, setConfigType] = useState<string>('1bhk');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledSlot, setScheduledSlot] = useState('morning');
   const [selectedItems, setSelectedItems] = useState<SelectedItems>({});
-  const [packingTier, setPackingTier] = useState('standard');
-  const [quote, setQuote] = useState<QuoteResult | null>(null);
+  const [packingTier, setPackingTier] = useState<PackingTier>('standard');
+
+  // API state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [quoteResult, setQuoteResult] = useState<Awaited<ReturnType<typeof quotes.itemized>> | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [bookingCreating, setBookingCreating] = useState(false);
 
   const updateItem = (name: string, delta: number) => {
     setSelectedItems(prev => {
       const current = prev[name] || 0;
       const next = Math.max(0, current + delta);
-      if (next === 0) {
-        const copy = { ...prev };
-        delete copy[name];
-        return copy;
-      }
+      if (next === 0) { const c = { ...prev }; delete c[name]; return c; }
       return { ...prev, [name]: next };
     });
   };
 
   const totalItems = Object.values(selectedItems).reduce((a, b) => a + b, 0);
 
-  const calculateQuote = () => {
-    const tier = PACKING_TIERS.find(t => t.value === packingTier)!;
-    let totalCft = 0;
-    let itemsTotal = 0;
+  // Build the items payload from the selected catalog items
+  const buildItemsPayload = () =>
+    Object.entries(selectedItems)
+      .filter(([, qty]) => qty > 0)
+      .map(([name, quantity]) => {
+        const found = ITEM_CATALOG.flatMap(c => c.items).find(i => i.name === name);
+        return {
+          itemId: null,
+          customName: name,
+          quantity,
+          packingTier,
+          customCft: found?.cft,
+        };
+      });
 
-    const lineItems: LineItem[] = [];
-    for (const cat of ITEM_CATALOG) {
-      for (const item of cat.items) {
-        const qty = selectedItems[item.name] || 0;
-        if (qty > 0) {
-          const lineTotal = item.rate * tier.multiplier * qty;
-          totalCft += item.cft * qty;
-          itemsTotal += lineTotal;
-          lineItems.push({
-            name: item.name,
-            qty,
-            rate: item.rate,
-            tierMultiplier: tier.multiplier,
-            lineTotal: Math.round(lineTotal),
-          });
-        }
-      }
+  const calculateQuote = async () => {
+    if (!token.isLoggedIn()) {
+      router.push(`/login?next=/quote`);
+      return;
     }
-
-    // Floor surcharge
-    const floorCharge = !liftAvailable && floor > 0 ? floor * 200 : 0;
-    
-    // Labour (1 labourer per 150 CFT, min 2)
-    const labourCount = Math.max(2, Math.ceil(totalCft / 150));
-    const labourCharge = labourCount * 500;
-
-    const subtotal = itemsTotal + floorCharge + labourCharge;
-    const gst = Math.round(subtotal * 0.18);
-    const total = subtotal + gst;
-
-    setQuote({
-      lineItems,
-      totalCft,
-      itemsTotal: Math.round(itemsTotal),
-      floorCharge,
-      labourCount,
-      labourCharge,
-      packingTier: tier.label,
-      subtotal,
-      gst,
-      total,
-      advance: Math.round(total * 0.2),
-    });
-
-    setStep(4);
+    setError('');
+    setLoading(true);
+    try {
+      const result = await quotes.itemized({
+        pickupAddress: pickup,
+        dropAddress: drop,
+        configurationType: configType,
+        floorNumber: floor,
+        liftAvailable,
+        scheduledDate,
+        scheduledSlot,
+        items: buildItemsPayload(),
+        addons: [],
+      });
+      setQuoteResult(result);
+      setStep(4);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to calculate quote. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const createBooking = async () => {
+    if (!token.isLoggedIn()) { router.push(`/login?next=/quote`); return; }
+    setError('');
+    setBookingCreating(true);
+    try {
+      const res = await bookings.create({
+        pickupAddress: pickup,
+        dropAddress: drop,
+        configurationType: configType,
+        floorNumber: floor,
+        liftAvailable,
+        scheduledDate,
+        scheduledSlot,
+        items: buildItemsPayload(),
+        addons: [],
+      });
+      setBookingId(res.booking.id);
+      router.push(`/booking/${res.booking.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create booking. Please try again.');
+    } finally {
+      setBookingCreating(false);
+    }
+  };
+
+  // Minimum date = tomorrow
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + 1);
+  const minDateStr = minDate.toISOString().split('T')[0];
 
   return (
     <>
@@ -165,10 +177,17 @@ export default function QuotePage() {
             </div>
           </div>
 
-          {/* Step 1: Location */}
+          {/* Error Banner */}
+          {error && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 10, padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Step 1: Location + Date */}
           {step === 1 && (
             <div className={`card ${styles.stepCard} animate-in`}>
-              <h2 className={styles.stepTitle}>📍 Where are you moving?</h2>
+              <h2 className={styles.stepTitle}>📍 Where &amp; When are you moving?</h2>
               <div className={styles.formGrid}>
                 <div className="input-group">
                   <label>Pickup Address</label>
@@ -179,18 +198,38 @@ export default function QuotePage() {
                   <input className="input-field" placeholder="Full address with area/locality" value={drop} onChange={e => setDrop(e.target.value)} />
                 </div>
                 <div className="input-group">
+                  <label>Home Configuration</label>
+                  <select className="input-field" value={configType} onChange={e => setConfigType(e.target.value)}>
+                    {CONFIG_TYPES.map(c => (
+                      <option key={c} value={c}>{c.toUpperCase().replace('BHK', ' BHK')}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
                   <label>Floor Number</label>
                   <input className="input-field" type="number" min="0" value={floor} onChange={e => setFloor(Number(e.target.value))} />
                 </div>
                 <div className="input-group">
+                  <label>Preferred Move Date</label>
+                  <input className="input-field" type="date" min={minDateStr} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Preferred Time Slot</label>
+                  <select className="input-field" value={scheduledSlot} onChange={e => setScheduledSlot(e.target.value)}>
+                    <option value="morning">Morning (7 AM – 12 PM)</option>
+                    <option value="afternoon">Afternoon (12 PM – 5 PM)</option>
+                    <option value="evening">Evening (5 PM – 8 PM)</option>
+                  </select>
+                </div>
+                <div className="input-group">
                   <label>Lift Available?</label>
                   <div className={styles.toggleRow}>
-                    <button className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(true)}>Yes</button>
-                    <button className={`${styles.toggleBtn} ${!liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(false)}>No</button>
+                    <button type="button" className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(true)}>Yes</button>
+                    <button type="button" className={`${styles.toggleBtn} ${!liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(false)}>No</button>
                   </div>
                 </div>
               </div>
-              <button className="btn btn-primary btn-lg" style={{ marginTop: 'var(--space-6)', width: '100%' }} onClick={() => setStep(2)} disabled={!pickup || !drop}>
+              <button className="btn btn-primary btn-lg" style={{ marginTop: 'var(--space-6)', width: '100%' }} onClick={() => setStep(2)} disabled={!pickup || !drop || !scheduledDate}>
                 Next: Select Items →
               </button>
             </div>
@@ -210,12 +249,12 @@ export default function QuotePage() {
                       <div key={item.name} className={`${styles.itemCard} ${(selectedItems[item.name] || 0) > 0 ? styles.itemSelected : ''}`}>
                         <div className={styles.itemInfo}>
                           <span className={styles.itemName}>{item.name}</span>
-                          <span className={styles.itemRate}>₹{item.rate}</span>
+                          <span className={styles.itemRate}>{item.cft} CFT</span>
                         </div>
                         <div className={styles.itemControls}>
-                          <button className={styles.qtyBtn} onClick={() => updateItem(item.name, -1)}>−</button>
+                          <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, -1)}>−</button>
                           <span className={styles.qtyVal}>{selectedItems[item.name] || 0}</span>
-                          <button className={styles.qtyBtn} onClick={() => updateItem(item.name, 1)}>+</button>
+                          <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, 1)}>+</button>
                         </div>
                       </div>
                     ))}
@@ -224,8 +263,8 @@ export default function QuotePage() {
               ))}
 
               <div className={styles.stepActions}>
-                <button className="btn btn-outline" onClick={() => setStep(1)}>← Back</button>
-                <button className="btn btn-primary btn-lg" onClick={() => setStep(3)} disabled={totalItems === 0}>
+                <button type="button" className="btn btn-outline" onClick={() => setStep(1)}>← Back</button>
+                <button type="button" className="btn btn-primary btn-lg" onClick={() => setStep(3)} disabled={totalItems === 0}>
                   Next: Packing ({totalItems} items) →
                 </button>
               </div>
@@ -238,24 +277,24 @@ export default function QuotePage() {
               <h2 className={styles.stepTitle}>🎁 Choose Packing Tier</h2>
               <div className={styles.tierGrid}>
                 {PACKING_TIERS.map(tier => (
-                  <button key={tier.value} className={`${styles.tierCard} ${packingTier === tier.value ? styles.tierActive : ''}`} onClick={() => setPackingTier(tier.value)}>
+                  <button type="button" key={tier.value} className={`${styles.tierCard} ${packingTier === tier.value ? styles.tierActive : ''}`} onClick={() => setPackingTier(tier.value)}>
                     <span className={styles.tierLabel}>{tier.label}</span>
                     <span className={styles.tierDesc}>{tier.desc}</span>
-                    <span className={styles.tierMulti}>{tier.multiplier}x base rate</span>
+                    <span className={styles.tierMulti}>{tier.note}</span>
                   </button>
                 ))}
               </div>
               <div className={styles.stepActions}>
-                <button className="btn btn-outline" onClick={() => setStep(2)}>← Back</button>
-                <button className="btn btn-accent btn-lg" onClick={calculateQuote}>
-                  Calculate Quote →
+                <button type="button" className="btn btn-outline" onClick={() => setStep(2)}>← Back</button>
+                <button type="button" className="btn btn-accent btn-lg" onClick={calculateQuote} disabled={loading}>
+                  {loading ? 'Calculating…' : 'Calculate Quote →'}
                 </button>
               </div>
             </div>
           )}
 
           {/* Step 4: Quote Result */}
-          {step === 4 && quote && (
+          {step === 4 && quoteResult && (
             <div className={`${styles.stepCard} animate-in`}>
               <div className={styles.quoteHeader}>
                 <h2 className={styles.stepTitle}>💰 Your Detailed Quote</h2>
@@ -264,61 +303,64 @@ export default function QuotePage() {
 
               <div className={styles.quoteTable}>
                 <div className={styles.quoteRow + ' ' + styles.quoteHeaderRow}>
-                  <span>Item</span>
-                  <span>Qty</span>
-                  <span>Rate</span>
-                  <span>Total</span>
+                  <span>Component</span>
+                  <span style={{ textAlign: 'right' }}>Amount</span>
                 </div>
-                {quote.lineItems.map((li: LineItem) => (
-                  <div key={li.name} className={styles.quoteRow}>
-                    <span>{li.name}</span>
-                    <span>{li.qty}</span>
-                    <span>₹{li.rate} × {li.tierMultiplier}</span>
-                    <span className={styles.quoteAmount}>₹{li.lineTotal.toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
-                <div className={styles.quoteDivider} />
+
                 <div className={styles.quoteRow}>
-                  <span>Packing Tier: {quote.packingTier}</span>
-                  <span></span><span></span>
-                  <span>Included</span>
+                  <span>Goods handling</span>
+                  <span className={styles.quoteAmount}>₹{quoteResult.breakdown.goodsSubtotal.toLocaleString('en-IN')}</span>
                 </div>
-                {quote.floorCharge > 0 && (
+                <div className={styles.quoteRow}>
+                  <span>Zone / Transport</span>
+                  <span className={styles.quoteAmount}>₹{quoteResult.breakdown.zoneCharge.toLocaleString('en-IN')}</span>
+                </div>
+                {quoteResult.breakdown.labourCharge > 0 && (
                   <div className={styles.quoteRow}>
-                    <span>Floor Surcharge (Floor {floor}, No Lift)</span>
-                    <span></span><span></span>
-                    <span className={styles.quoteAmount}>₹{quote.floorCharge.toLocaleString('en-IN')}</span>
+                    <span>Labour</span>
+                    <span className={styles.quoteAmount}>₹{quoteResult.breakdown.labourCharge.toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                <div className={styles.quoteRow}>
-                  <span>Labour ({quote.labourCount} workers)</span>
-                  <span></span><span></span>
-                  <span className={styles.quoteAmount}>₹{quote.labourCharge.toLocaleString('en-IN')}</span>
-                </div>
+                {quoteResult.breakdown.surcharges > 0 && (
+                  <div className={styles.quoteRow}>
+                    <span>Surcharges (floor / monsoon)</span>
+                    <span className={styles.quoteAmount}>₹{quoteResult.breakdown.surcharges.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {quoteResult.breakdown.addonsTotal > 0 && (
+                  <div className={styles.quoteRow}>
+                    <span>Add-ons</span>
+                    <span className={styles.quoteAmount}>₹{quoteResult.breakdown.addonsTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
                 <div className={styles.quoteDivider} />
-                <div className={styles.quoteRow + ' ' + styles.quoteTotalRow}>
-                  <span>Subtotal</span><span></span><span></span>
-                  <span>₹{quote.subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className={styles.quoteRow}>
-                  <span>GST (18%)</span><span></span><span></span>
-                  <span>₹{quote.gst.toLocaleString('en-IN')}</span>
-                </div>
+
                 <div className={styles.quoteRow + ' ' + styles.quoteGrandTotal}>
-                  <span>Total</span><span></span><span></span>
-                  <span>₹{quote.total.toLocaleString('en-IN')}</span>
+                  <span>Total (incl. all charges)</span>
+                  <span>₹{quoteResult.quoteAmount.toLocaleString('en-IN')}</span>
+                </div>
+
+                <div className={styles.quoteRow} style={{ opacity: 0.7 }}>
+                  <span>Volume: {quoteResult.metrics.totalCft} CFT &nbsp;|&nbsp; Weight: {quoteResult.metrics.totalWeightKg} kg</span>
+                  <span></span>
                 </div>
               </div>
 
               <div className={styles.quoteFooter}>
                 <div className={styles.advanceBox}>
                   <span className={styles.advanceLabel}>Advance to Book (20%)</span>
-                  <span className={styles.advanceAmount}>₹{quote.advance.toLocaleString('en-IN')}</span>
+                  <span className={styles.advanceAmount}>₹{Math.round(quoteResult.quoteAmount * 0.2).toLocaleString('en-IN')}</span>
                 </div>
                 <div className={styles.stepActions}>
-                  <button className="btn btn-outline" onClick={() => setStep(3)}>← Modify</button>
-                  <button className="btn btn-accent btn-lg">
-                    Pay Advance & Book →
+                  <button type="button" className="btn btn-outline" onClick={() => setStep(3)}>← Modify</button>
+                  <button
+                    type="button"
+                    className="btn btn-accent btn-lg"
+                    onClick={createBooking}
+                    disabled={bookingCreating}
+                  >
+                    {bookingCreating ? 'Creating Booking…' : 'Confirm & Book →'}
                   </button>
                 </div>
               </div>

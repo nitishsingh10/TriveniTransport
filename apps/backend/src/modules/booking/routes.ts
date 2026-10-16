@@ -17,5 +17,7 @@ router.post('/:id/confirm', BookingController.confirm);
 
 router.get('/', requireRole('customer'), BookingController.listBookings);
 router.get('/:id', requireRole('customer'), BookingController.getDetails);
+router.get('/:id/telemetry', requireRole('customer'), BookingController.getTelemetry);
 
 export default router;
+

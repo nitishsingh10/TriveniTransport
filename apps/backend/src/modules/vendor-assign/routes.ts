@@ -10,6 +10,7 @@ router.use(authGuard);
 // Vendor endpoints
 router.get('/jobs', requireRole('vendor'), VendorController.getJobs);
 router.patch('/jobs/:id/status', requireRole('vendor'), VendorController.updateStatus);
+router.post('/jobs/:id/telemetry', requireRole('vendor'), VendorController.pushTelemetry);
 
 // Admin / Webhook endpoints
 router.post('/auto-assign/:id', requireRole('admin'), VendorController.autoAssign);

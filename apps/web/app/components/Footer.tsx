@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Phone, MapPin, ShieldCheck } from 'lucide-react';
+import { Phone, MapPin } from 'lucide-react';
 import styles from './Footer.module.css';
 
 export default function Footer() {
@@ -8,15 +8,17 @@ export default function Footer() {
       <div className={`container ${styles.inner}`}>
         <div className={styles.brand}>
           <div className={styles.logoWrapper}>
-            <img src="/logo.png" alt="Triveni Transports Logo" className={styles.logoImage} />
+            <img src="/logo-white.png" alt="Triveni Transports Logo" className={styles.logoImage} />
             <div className={styles.logoTextWrapper}>
               <span className={styles.logoTitle}>TRIVENI</span>
-              <span className={styles.logoSubtitle}>— TRANSPORTS —</span>
+              <div className={styles.logoSubtitleRow}>
+                <span className={styles.subDash} aria-hidden="true" />
+                <span className={styles.logoSubtitle}>TRANSPORTS</span>
+                <span className={styles.subDash} aria-hidden="true" />
+              </div>
+              <span className={styles.tagline}>SAFE HANDS FOR YOUR SHIFTING PLANS</span>
             </div>
           </div>
-          <p className={styles.tagline}>
-            SAFE HANDS FOR YOUR SHIFTING PLANS
-          </p>
 
           <div className={styles.businessCardContact}>
             <a href="tel:8828647785" className={styles.contactItem} title="Call 8828647785">
@@ -74,7 +76,6 @@ export default function Footer() {
             <ul>
               <li><Link href="/terms">Terms & Conditions</Link></li>
               <li><Link href="/privacy">Privacy Policy</Link></li>
-              <li><span className={styles.safetyBadge}><ShieldCheck size={14} /> 100% Insured Moves</span></li>
             </ul>
           </div>
         </div>

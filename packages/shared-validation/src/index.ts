@@ -65,8 +65,8 @@ export const InstantEstimateSchema = z.object({
 });
 
 export const ChecklistItemSchema = z.object({
-  itemId: z.string().uuid().optional(),
-  customName: z.string().max(100).optional(),
+  itemId: z.string().uuid().nullable().optional(),
+  customName: z.string().max(100).nullable().optional(),
   quantity: z.number().int().positive().max(100),
   packingTier: PackingTierSchema,
   customCft: z.number().positive().optional(),
