@@ -31,9 +31,22 @@ const securityHeaders = [
   },
 ];
 
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ??
+  'http://localhost:3001';
+
 const nextConfig: NextConfig = {
   transpilePackages: ['@triveni/shared-types', '@triveni/shared-validation'],
   poweredByHeader: false,
+  async rewrites() {
+    return [
+      {
+        // Proxy all /api/v1/* requests to the backend server
+        source: '/api/v1/:path*',
+        destination: `${BACKEND_URL}/api/v1/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
