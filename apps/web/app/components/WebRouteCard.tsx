@@ -68,6 +68,10 @@ export default function WebRouteCard({
       <body>
         <div id="map"></div>
         <script>
+          window.gm_authFailure = function() {
+            console.warn('Google Maps authentication pending on route card.');
+          };
+
           window.initMap = function() {
             var darkStyles = ${JSON.stringify(DARK_MAP_STYLES)};
 

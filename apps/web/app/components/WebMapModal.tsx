@@ -297,6 +297,11 @@ export default function WebMapModal({
       <body>
         <div id="map"></div>
         <script>
+          window.gm_authFailure = function() {
+            console.warn('Google Maps authentication pending — check Google Cloud billing and API activation.');
+            window.parent.postMessage({ type: 'MAP_AUTH_NOTICE' }, '*');
+          };
+
           window.initMap = function() {
             var darkStyles = ${JSON.stringify(DARK_MAP_STYLES)};
 
