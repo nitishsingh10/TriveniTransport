@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   MapPin,
   Search,
@@ -92,12 +92,15 @@ export default function WebMapModal({
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const reverseGeocodeTimer = useRef<NodeJS.Timeout | null>(null);
 
+  const initialMapCoords = useRef({ lat: 18.5679, lng: 73.9143 });
+
   // Sync state when modal opens
   useEffect(() => {
     if (isOpen) {
       setActiveType(initialType);
       setQuery(initialAddress);
       setSelectedAddress(initialAddress);
+      initialMapCoords.current = { lat: selectedCoords.lat, lng: selectedCoords.lng };
       if (initialAddress.trim()) {
         geocodeAddress(initialAddress);
       }
@@ -275,8 +278,11 @@ export default function WebMapModal({
 
   const isPickup = activeType === 'pickup';
 
-  // Google Maps JS API with Triveni dark theme
-  const mapHtml = `
+  // Memoize map HTML so dragging the pin NEVER reloads the iframe
+  const mapHtml = useMemo(() => {
+    const startLat = initialMapCoords.current.lat;
+    const startLng = initialMapCoords.current.lng;
+    return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -306,7 +312,7 @@ export default function WebMapModal({
             var darkStyles = ${JSON.stringify(DARK_MAP_STYLES)};
 
             var map = new google.maps.Map(document.getElementById('map'), {
-              center: { lat: ${selectedCoords.lat}, lng: ${selectedCoords.lng} },
+              center: { lat: ${startLat}, lng: ${startLng} },
               zoom: 15,
               styles: darkStyles,
               disableDefaultUI: true,
@@ -340,6 +346,7 @@ export default function WebMapModal({
       </body>
     </html>
   `;
+  }, [isOpen, GMAPS_KEY]);
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>

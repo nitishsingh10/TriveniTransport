@@ -284,6 +284,8 @@ input, select, textarea {
 }
 
 .input-field {
+  width: 100%;
+  box-sizing: border-box;
   padding: var(--space-3) var(--space-4);
   border: 2px solid var(--gray-200);
   border-radius: var(--radius-lg);
@@ -292,6 +294,7 @@ input, select, textarea {
               box-shadow var(--duration-fast) var(--ease-out);
   background: #fff;
 }
+
 
 .input-field:focus {
   outline: none;

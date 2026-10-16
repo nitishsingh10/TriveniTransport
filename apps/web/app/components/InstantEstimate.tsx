@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Home, Building2, Briefcase, LandPlot, MapPin, Flag, Crosshair, Map } from 'lucide-react';
 import styles from './InstantEstimate.module.css';
 import WebMapModal from './WebMapModal';
@@ -18,6 +18,84 @@ export default function InstantEstimate() {
   const [config, setConfig] = useState('');
   const [estimate, setEstimate] = useState<{ min: number; max: number } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Autocomplete suggestions
+  const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
+  const [dropSuggestions, setDropSuggestions] = useState<any[]>([]);
+  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+  const [showDropSuggestions, setShowDropSuggestions] = useState(false);
+  const [pickupLoading, setPickupLoading] = useState(false);
+  const [dropLoading, setDropLoading] = useState(false);
+
+  const pickupDebounce = useRef<NodeJS.Timeout | null>(null);
+  const dropDebounce = useRef<NodeJS.Timeout | null>(null);
+  const pickupWrapRef = useRef<HTMLDivElement | null>(null);
+  const dropWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (pickupWrapRef.current && !pickupWrapRef.current.contains(e.target as Node)) {
+        setShowPickupSuggestions(false);
+      }
+      if (dropWrapRef.current && !dropWrapRef.current.contains(e.target as Node)) {
+        setShowDropSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handlePickupChange = (val: string) => {
+    setPickup(val);
+    if (pickupDebounce.current) clearTimeout(pickupDebounce.current);
+    if (val.trim().length < 2) {
+      setPickupSuggestions([]);
+      setShowPickupSuggestions(false);
+      setPickupLoading(false);
+      return;
+    }
+    setPickupLoading(true);
+    setShowPickupSuggestions(true);
+    pickupDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPickupSuggestions(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        setPickupSuggestions([]);
+      } finally {
+        setPickupLoading(false);
+      }
+    }, 250);
+  };
+
+  const handleDropChange = (val: string) => {
+    setDrop(val);
+    if (dropDebounce.current) clearTimeout(dropDebounce.current);
+    if (val.trim().length < 2) {
+      setDropSuggestions([]);
+      setShowDropSuggestions(false);
+      setDropLoading(false);
+      return;
+    }
+    setDropLoading(true);
+    setShowDropSuggestions(true);
+    dropDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDropSuggestions(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        setDropSuggestions([]);
+      } finally {
+        setDropLoading(false);
+      }
+    }, 250);
+  };
 
   // Map modal state
   const [mapModalType, setMapModalType] = useState<'pickup' | 'drop' | null>(null);
@@ -99,7 +177,7 @@ export default function InstantEstimate() {
                 <div className={styles.pickupDot} />
                 <div className={styles.routeVerticalLine} />
               </div>
-              <div className={styles.locationInputBlock}>
+              <div className={styles.locationInputBlock} ref={pickupWrapRef}>
                 <div className={styles.inputLabelRow}>
                   <span className={styles.inputMicroLabel}>PICKUP LOCATION</span>
                   <button
@@ -112,14 +190,41 @@ export default function InstantEstimate() {
                     <span>GPS</span>
                   </button>
                 </div>
-                <input
-                  id="ie-pickup"
-                  className={styles.locationInput}
-                  type="text"
-                  placeholder="Society name, street or landmark"
-                  value={pickup}
-                  onChange={e => setPickup(e.target.value)}
-                />
+                <div className={styles.inputContainerRelative}>
+                  <input
+                    id="ie-pickup"
+                    className={styles.locationInput}
+                    type="text"
+                    placeholder="Society name, street or landmark"
+                    value={pickup}
+                    onChange={e => handlePickupChange(e.target.value)}
+                    onFocus={() => { if (pickupSuggestions.length > 0) setShowPickupSuggestions(true); }}
+                    autoComplete="off"
+                  />
+                  {pickupLoading && <span className={styles.inputSpinner} />}
+                  {showPickupSuggestions && pickupSuggestions.length > 0 && (
+                    <div className={styles.inlineSuggestionsBox}>
+                      {pickupSuggestions.map(item => (
+                        <button
+                          key={item.placeId}
+                          type="button"
+                          className={styles.inlineSuggestionItem}
+                          onClick={() => {
+                            setPickup(item.description);
+                            setShowPickupSuggestions(false);
+                            setPickupSuggestions([]);
+                          }}
+                        >
+                          <MapPin size={12} className={styles.sugPinPickup} />
+                          <div className={styles.sugTextCol}>
+                            <span className={styles.sugMainText}>{item.mainText}</span>
+                            <span className={styles.sugSubText}>{item.secondaryText}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -137,18 +242,45 @@ export default function InstantEstimate() {
               <div className={styles.routeIndicatorCol}>
                 <div className={styles.dropSquare} />
               </div>
-              <div className={styles.locationInputBlock}>
+              <div className={styles.locationInputBlock} ref={dropWrapRef}>
                 <div className={styles.inputLabelRow}>
                   <span className={styles.inputMicroLabel}>DROP DESTINATION</span>
                 </div>
-                <input
-                  id="ie-drop"
-                  className={styles.locationInput}
-                  type="text"
-                  placeholder="Delivery destination building or area"
-                  value={drop}
-                  onChange={e => setDrop(e.target.value)}
-                />
+                <div className={styles.inputContainerRelative}>
+                  <input
+                    id="ie-drop"
+                    className={styles.locationInput}
+                    type="text"
+                    placeholder="Delivery destination building or area"
+                    value={drop}
+                    onChange={e => handleDropChange(e.target.value)}
+                    onFocus={() => { if (dropSuggestions.length > 0) setShowDropSuggestions(true); }}
+                    autoComplete="off"
+                  />
+                  {dropLoading && <span className={styles.inputSpinner} />}
+                  {showDropSuggestions && dropSuggestions.length > 0 && (
+                    <div className={styles.inlineSuggestionsBox}>
+                      {dropSuggestions.map(item => (
+                        <button
+                          key={item.placeId}
+                          type="button"
+                          className={styles.inlineSuggestionItem}
+                          onClick={() => {
+                            setDrop(item.description);
+                            setShowDropSuggestions(false);
+                            setDropSuggestions([]);
+                          }}
+                        >
+                          <Flag size={12} className={styles.sugPinDrop} />
+                          <div className={styles.sugTextCol}>
+                            <span className={styles.sugMainText}>{item.mainText}</span>
+                            <span className={styles.sugSubText}>{item.secondaryText}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <button
                 type="button"

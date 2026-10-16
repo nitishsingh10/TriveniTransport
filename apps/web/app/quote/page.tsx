@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Compass, MapPin, Flag, ArrowRight, Crosshair, Sparkles } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -53,8 +53,41 @@ const PACKING_TIERS = [
 
 const CONFIG_TYPES = ['1bhk', '2bhk', '3bhk', '4bhk', 'villa', 'office', 'studio'] as const;
 
+const CURATED_LOCATIONS = [
+  // Pune & PCMC
+  { placeId: 'pune_viman', description: 'Viman Nagar, Pune, Maharashtra, India', mainText: 'Viman Nagar', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_baner', description: 'Baner, Pune, Maharashtra, India', mainText: 'Baner', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_kothrud', description: 'Kothrud, Pune, Maharashtra, India', mainText: 'Kothrud', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_hinjewadi', description: 'Hinjewadi Phase 1, Pune, Maharashtra, India', mainText: 'Hinjewadi Phase 1', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_kharadi', description: 'Kharadi, Pune, Maharashtra, India', mainText: 'Kharadi', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_wakad', description: 'Wakad, Pune, Maharashtra, India', mainText: 'Wakad', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_aundh', description: 'Aundh, Pune, Maharashtra, India', mainText: 'Aundh', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_magarpatta', description: 'Magarpatta City, Hadapsar, Pune, Maharashtra', mainText: 'Magarpatta City', secondaryText: 'Hadapsar, Pune' },
+  { placeId: 'pune_hadapsar', description: 'Hadapsar, Pune, Maharashtra, India', mainText: 'Hadapsar', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_koregaon', description: 'Koregaon Park, Pune, Maharashtra, India', mainText: 'Koregaon Park', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_shivajinagar', description: 'Shivaji Nagar, Pune, Maharashtra, India', mainText: 'Shivaji Nagar', secondaryText: 'Pune, Maharashtra' },
+  { placeId: 'pune_pimpri', description: 'Pimpri Colony, Pimpri-Chinchwad, Pune, Maharashtra', mainText: 'Pimpri Colony', secondaryText: 'PCMC, Pune' },
+  // Mumbai & MMR
+  { placeId: 'mum_bandra', description: 'Bandra West, Mumbai, Maharashtra, India', mainText: 'Bandra West', secondaryText: 'Mumbai, Maharashtra' },
+  { placeId: 'mum_powai', description: 'Powai, Mumbai, Maharashtra, India', mainText: 'Powai', secondaryText: 'Mumbai, Maharashtra' },
+  { placeId: 'mum_thane', description: 'Thane West, Thane, Maharashtra, India', mainText: 'Thane West', secondaryText: 'Thane, Maharashtra' },
+  { placeId: 'mum_andheri', description: 'Andheri East, Mumbai, Maharashtra, India', mainText: 'Andheri East', secondaryText: 'Mumbai, Maharashtra' },
+  { placeId: 'mum_bkc', description: 'Bandra Kurla Complex (BKC), Mumbai, Maharashtra', mainText: 'BKC', secondaryText: 'Bandra, Mumbai' },
+  { placeId: 'mum_navi', description: 'Vashi, Navi Mumbai, Maharashtra, India', mainText: 'Vashi', secondaryText: 'Navi Mumbai, Maharashtra' },
+  { placeId: 'mum_borivali', description: 'Borivali West, Mumbai, Maharashtra, India', mainText: 'Borivali West', secondaryText: 'Mumbai, Maharashtra' },
+  { placeId: 'mum_dadar', description: 'Dadar, Mumbai, Maharashtra, India', mainText: 'Dadar', secondaryText: 'Mumbai, Maharashtra' },
+  { placeId: 'mum_juhu', description: 'Juhu, Mumbai, Maharashtra, India', mainText: 'Juhu', secondaryText: 'Mumbai, Maharashtra' },
+  // Bengaluru
+  { placeId: 'blr_whitefield', description: 'Whitefield, Bengaluru, Karnataka, India', mainText: 'Whitefield', secondaryText: 'Bengaluru, Karnataka' },
+  { placeId: 'blr_indiranagar', description: 'Indiranagar, Bengaluru, Karnataka, India', mainText: 'Indiranagar', secondaryText: 'Bengaluru, Karnataka' },
+  { placeId: 'blr_koramangala', description: 'Koramangala, Bengaluru, Karnataka, India', mainText: 'Koramangala', secondaryText: 'Bengaluru, Karnataka' },
+  { placeId: 'blr_hsr', description: 'HSR Layout, Bengaluru, Karnataka, India', mainText: 'HSR Layout', secondaryText: 'Bengaluru, Karnataka' },
+  { placeId: 'blr_ecity', description: 'Electronic City, Bengaluru, Karnataka, India', mainText: 'Electronic City', secondaryText: 'Bengaluru, Karnataka' },
+];
+
 type SelectedItems = Record<string, number>;
 type PackingTier = 'lite' | 'standard' | 'premium';
+
 
 export default function QuotePage() {
   const router = useRouter();
@@ -81,6 +114,127 @@ export default function QuotePage() {
   const [quoteResult, setQuoteResult] = useState<Awaited<ReturnType<typeof quotes.itemized>> | null>(null);
   const [, setBookingId] = useState<string | null>(null);
   const [bookingCreating, setBookingCreating] = useState(false);
+
+  // Autocomplete suggestion states
+  const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
+  const [dropSuggestions, setDropSuggestions] = useState<any[]>([]);
+  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+  const [showDropSuggestions, setShowDropSuggestions] = useState(false);
+  const [pickupLoading, setPickupLoading] = useState(false);
+  const [dropLoading, setDropLoading] = useState(false);
+
+  const pickupDebounce = useRef<NodeJS.Timeout | null>(null);
+  const dropDebounce = useRef<NodeJS.Timeout | null>(null);
+  const pickupWrapRef = useRef<HTMLDivElement | null>(null);
+  const dropWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Close suggestion dropdowns on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (pickupWrapRef.current && !pickupWrapRef.current.contains(e.target as Node)) {
+        setShowPickupSuggestions(false);
+      }
+      if (dropWrapRef.current && !dropWrapRef.current.contains(e.target as Node)) {
+        setShowDropSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handlePickupChange = (val: string) => {
+    setPickup(val);
+    if (pickupDebounce.current) clearTimeout(pickupDebounce.current);
+    const q = val.trim().toLowerCase();
+    if (q.length < 2) {
+      setPickupSuggestions([]);
+      setShowPickupSuggestions(false);
+      setPickupLoading(false);
+      return;
+    }
+
+    // Instant local match (0ms latency)
+    const localMatches = CURATED_LOCATIONS.filter(
+      loc => loc.description.toLowerCase().includes(q) || loc.mainText.toLowerCase().includes(q)
+    );
+    setPickupSuggestions(localMatches);
+    setShowPickupSuggestions(true);
+    setPickupLoading(true);
+
+    // Asynchronous backend enrichment
+    pickupDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setPickupSuggestions(prev => {
+              const ids = new Set(data.map(d => d.placeId));
+              const combined = [...data, ...prev.filter(p => !ids.has(p.placeId))];
+              return combined.slice(0, 7);
+            });
+          }
+        }
+      } catch {
+        // Keep local matches
+      } finally {
+        setPickupLoading(false);
+      }
+    }, 250);
+  };
+
+  const handleDropChange = (val: string) => {
+    setDrop(val);
+    if (dropDebounce.current) clearTimeout(dropDebounce.current);
+    const q = val.trim().toLowerCase();
+    if (q.length < 2) {
+      setDropSuggestions([]);
+      setShowDropSuggestions(false);
+      setDropLoading(false);
+      return;
+    }
+
+    // Instant local match (0ms latency)
+    const localMatches = CURATED_LOCATIONS.filter(
+      loc => loc.description.toLowerCase().includes(q) || loc.mainText.toLowerCase().includes(q)
+    );
+    setDropSuggestions(localMatches);
+    setShowDropSuggestions(true);
+    setDropLoading(true);
+
+    // Asynchronous backend enrichment
+    dropDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setDropSuggestions(prev => {
+              const ids = new Set(data.map(d => d.placeId));
+              const combined = [...data, ...prev.filter(p => !ids.has(p.placeId))];
+              return combined.slice(0, 7);
+            });
+          }
+        }
+      } catch {
+        // Keep local matches
+      } finally {
+        setDropLoading(false);
+      }
+    }, 250);
+  };
+
+  const selectPickupSuggestion = (item: any) => {
+    setPickup(item.description);
+    setShowPickupSuggestions(false);
+    setPickupSuggestions([]);
+  };
+
+  const selectDropSuggestion = (item: any) => {
+    setDrop(item.description);
+    setShowDropSuggestions(false);
+    setDropSuggestions([]);
+  };
 
   // Automatically calculate route distance & time when pickup & drop are set
   useEffect(() => {
@@ -262,56 +416,82 @@ export default function QuotePage() {
                     <div className={styles.pickupDot} />
                     <div className={styles.routeVerticalLine} />
                   </div>
-                  <div className={styles.locationInputBlock}>
+                  <div className={styles.locationInputBlock} ref={pickupWrapRef}>
                     <div className={styles.inputLabelRow}>
                       <span className={styles.inputMicroLabel}>PICKUP LOCATION</span>
-                      <button
-                        type="button"
-                        className={styles.shortcutGpsBtn}
-                        onClick={() => {
-                          if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                              async pos => {
-                                const lat = pos.coords.latitude;
-                                const lng = pos.coords.longitude;
-                                try {
-                                  const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
-                                  if (res.ok) {
-                                    const data = await res.json();
-                                    setPickup(data.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-                                  } else {
+                      <div className={styles.labelActions}>
+                        <button
+                          type="button"
+                          className={styles.shortcutGpsBtn}
+                          onClick={() => {
+                            if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                              navigator.geolocation.getCurrentPosition(
+                                async pos => {
+                                  const lat = pos.coords.latitude;
+                                  const lng = pos.coords.longitude;
+                                  try {
+                                    const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
+                                    if (res.ok) {
+                                      const data = await res.json();
+                                      setPickup(data.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                                    } else {
+                                      setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                                    }
+                                  } catch {
                                     setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
                                   }
-                                } catch {
-                                  setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-                                }
-                              },
-                              () => setPickup('Viman Nagar, Pune, Maharashtra')
-                            );
-                          } else {
-                            setPickup('Viman Nagar, Pune, Maharashtra');
-                          }
-                        }}
-                      >
-                        <Crosshair size={11} strokeWidth={2.4} />
-                        <span>Use GPS</span>
-                      </button>
+                                },
+                                () => setPickup('Viman Nagar, Pune, Maharashtra')
+                              );
+                            } else {
+                              setPickup('Viman Nagar, Pune, Maharashtra');
+                            }
+                          }}
+                        >
+                          <Crosshair size={11} strokeWidth={2.4} />
+                          <span>Use GPS</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.pinActionBtn}
+                          onClick={() => setMapModalType('pickup')}
+                        >
+                          <MapPin size={12} strokeWidth={2.4} />
+                          <span>Pin on Map</span>
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      className="input-field"
-                      placeholder="Society name, street, or landmark"
-                      value={pickup}
-                      onChange={e => setPickup(e.target.value)}
-                    />
+                    <div className={styles.inputContainerRelative}>
+                      <input
+                        className="input-field"
+                        placeholder="Society name, street, or landmark"
+                        value={pickup}
+                        onChange={e => handlePickupChange(e.target.value)}
+                        onFocus={() => { if (pickupSuggestions.length > 0) setShowPickupSuggestions(true); }}
+                        autoComplete="off"
+                      />
+                      {pickupLoading && <span className={styles.inputSpinner} />}
+                      {/* Autocomplete Suggestions Dropdown */}
+                      {showPickupSuggestions && pickupSuggestions.length > 0 && (
+                        <div className={styles.inlineSuggestionsBox}>
+                          {pickupSuggestions.map(item => (
+                            <button
+                              key={item.placeId}
+                              type="button"
+                              className={styles.inlineSuggestionItem}
+                              onClick={() => selectPickupSuggestion(item)}
+                            >
+                              <MapPin size={14} className={styles.sugPinPickup} />
+                              <div className={styles.sugTextCol}>
+                                <span className={styles.sugMainText}>{item.mainText}</span>
+                                <span className={styles.sugSubText}>{item.secondaryText}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className={styles.pinActionBtn}
-                    onClick={() => setMapModalType('pickup')}
-                  >
-                    <MapPin size={13} strokeWidth={2.4} />
-                    <span>Pin Map</span>
-                  </button>
                 </div>
 
                 {/* Drop Destination Row */}
@@ -319,25 +499,51 @@ export default function QuotePage() {
                   <div className={styles.routeIndicatorCol}>
                     <div className={styles.dropSquare} />
                   </div>
-                  <div className={styles.locationInputBlock}>
+                  <div className={styles.locationInputBlock} ref={dropWrapRef}>
                     <div className={styles.inputLabelRow}>
                       <span className={styles.inputMicroLabel}>DROP DESTINATION</span>
+                      <div className={styles.labelActions}>
+                        <button
+                          type="button"
+                          className={`${styles.pinActionBtn} ${styles.pinActionBtnNavy}`}
+                          onClick={() => setMapModalType('drop')}
+                        >
+                          <Flag size={12} strokeWidth={2.4} />
+                          <span>Pin on Map</span>
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      className="input-field"
-                      placeholder="Delivery destination building or area"
-                      value={drop}
-                      onChange={e => setDrop(e.target.value)}
-                    />
+                    <div className={styles.inputContainerRelative}>
+                      <input
+                        className="input-field"
+                        placeholder="Delivery destination building or area"
+                        value={drop}
+                        onChange={e => handleDropChange(e.target.value)}
+                        onFocus={() => { if (dropSuggestions.length > 0) setShowDropSuggestions(true); }}
+                        autoComplete="off"
+                      />
+                      {dropLoading && <span className={styles.inputSpinner} />}
+                      {/* Drop Suggestions Dropdown */}
+                      {showDropSuggestions && dropSuggestions.length > 0 && (
+                        <div className={styles.inlineSuggestionsBox}>
+                          {dropSuggestions.map(item => (
+                            <button
+                              key={item.placeId}
+                              type="button"
+                              className={styles.inlineSuggestionItem}
+                              onClick={() => selectDropSuggestion(item)}
+                            >
+                              <Flag size={14} className={styles.sugPinDrop} />
+                              <div className={styles.sugTextCol}>
+                                <span className={styles.sugMainText}>{item.mainText}</span>
+                                <span className={styles.sugSubText}>{item.secondaryText}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className={`${styles.pinActionBtn} ${styles.pinActionBtnNavy}`}
-                    onClick={() => setMapModalType('drop')}
-                  >
-                    <Flag size={13} strokeWidth={2.4} />
-                    <span>Pin Map</span>
-                  </button>
                 </div>
 
                 {/* Quick Area Shortcuts */}
@@ -392,7 +598,7 @@ export default function QuotePage() {
                     <option value="evening">Evening (5 PM – 8 PM)</option>
                   </select>
                 </div>
-                <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                <div className={`input-group ${styles.fullWidthCol}`}>
                   <label>Lift Available?</label>
                   <div className={styles.toggleRow}>
                     <button type="button" className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(true)}>Yes (Elevator Available)</button>
