@@ -9,6 +9,7 @@
   overflow: hidden;
   background: var(--brand-900);
   min-height: calc(100vh - 68px);
+  min-height: calc(100dvh - 68px);
   display: flex;
   align-items: center;
 }
@@ -1056,21 +1057,24 @@
 
 @media (max-width: 580px) {
   .heroTitle {
-    font-size: clamp(1.85rem, 7.5vw, 2.75rem);
+    font-size: clamp(1.65rem, 6.8vw, 2.5rem);
   }
 
   .heroBadge {
     font-size: var(--text-xs);
     padding: var(--space-2) var(--space-4);
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.35;
   }
 
   .heroStats {
     gap: var(--space-2);
     padding: var(--space-3) var(--space-2);
     border-radius: 1.25rem;
-    /* Ensure it doesn't overflow the container */
     width: 100%;
     box-sizing: border-box;
+    justify-content: space-between;
   }
 
   .appDownloadBlock {
@@ -1092,12 +1096,13 @@
     width: 100%;
     justify-content: center;
     padding: 0.75rem 1rem;
+    min-height: 48px;
   }
 
   .appPerks {
     justify-content: center;
-    font-size: 0.72rem;
-    gap: var(--space-1);
+    font-size: 0.75rem;
+    gap: 8px 12px;
   }
 
   .estimateScrollBtn {
@@ -1177,7 +1182,7 @@
   }
 
   .ctaTitle {
-    font-size: clamp(1.6rem, 6vw, 1.9rem);
+    font-size: clamp(1.5rem, 5.5vw, 1.9rem);
   }
 
   .ctaDesc {
@@ -1190,11 +1195,108 @@
     justify-content: center;
     padding: var(--space-4) var(--space-6) !important;
     margin-top: var(--space-6) !important;
+    min-height: 48px;
   }
 
   /* Glow decorations are too large for mobile */
   .ctaGlow {
     width: 280px;
     height: 200px;
+  }
+}
+
+/* ── Compact Phones (e.g. 375px - 420px) ─────────────────── */
+@media (max-width: 420px) {
+  .perkDot {
+    display: none;
+  }
+
+  .appPerks {
+    gap: 6px 14px;
+  }
+
+  .appPerks span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+  }
+
+  .heroStats {
+    padding: var(--space-2) var(--space-2);
+    gap: 4px;
+  }
+
+  .stat {
+    min-width: 0;
+  }
+
+  .statLabel {
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+  }
+
+  .statDivider {
+    height: 24px;
+  }
+
+  .ctaGlass {
+    margin: 0;
+    padding: var(--space-6) var(--space-4);
+  }
+}
+
+/* ── Ultra-Compact Phones (e.g. 320px - 360px) ───────────── */
+@media (max-width: 360px) {
+  .heroTitle {
+    font-size: 1.55rem;
+    line-height: 1.15;
+  }
+
+  .heroDesc {
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .heroBadge {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+  }
+
+  .heroStats {
+    padding: var(--space-2) var(--space-1);
+    gap: 2px;
+  }
+
+  .statIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .statLabel {
+    font-size: 0.52rem;
+    letter-spacing: 0.04em;
+  }
+
+  .statDivider {
+    height: 20px;
+  }
+
+  .trustNum {
+    font-size: 1.6rem;
+  }
+
+  .areaCard {
+    padding: var(--space-3) var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .areaIconWrap {
+    width: 36px;
+    height: 36px;
+  }
+
+  .stepCard {
+    padding: var(--space-5) var(--space-4);
   }
 }

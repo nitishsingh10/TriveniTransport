@@ -325,12 +325,47 @@
   }
   .configBtn {
     padding: var(--space-3) var(--space-2);
+    min-height: 54px;
   }
   .cta {
     padding: var(--space-3) var(--space-5);
     font-size: var(--text-sm);
+    min-height: 48px;
   }
   .resultPrice {
     font-size: 1.85rem;
   }
+  .resultCta {
+    min-height: 44px;
+  }
 }
+
+@media (max-width: 360px) {
+  .form {
+    padding: var(--space-3) var(--space-2);
+  }
+  .header {
+    padding: var(--space-4) var(--space-3) 0;
+    padding-top: var(--space-5);
+  }
+  .title {
+    font-size: 1.2rem;
+  }
+  .subtitle {
+    font-size: 0.8rem;
+  }
+  .configBtn {
+    padding: var(--space-2) var(--space-1);
+    min-height: 48px;
+  }
+  .configLabel {
+    font-size: 0.72rem;
+  }
+  .resultPrice {
+    font-size: 1.6rem;
+  }
+  .result {
+    padding: var(--space-5) var(--space-3);
+  }
+}
+

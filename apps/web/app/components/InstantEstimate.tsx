@@ -80,6 +80,7 @@ export default function InstantEstimate() {
             {CONFIG_TYPES.map((ct) => (
               <button
                 key={ct.value}
+                type="button"
                 className={`${styles.configBtn} ${config === ct.value ? styles.active : ''}`}
                 onClick={() => setConfig(ct.value)}
               >
@@ -91,6 +92,7 @@ export default function InstantEstimate() {
         </div>
 
         <button
+          type="button"
           className={styles.cta}
           onClick={getEstimate}
           disabled={!pickup || !drop || !config || loading}

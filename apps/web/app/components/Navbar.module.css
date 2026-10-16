@@ -248,7 +248,9 @@
     pointer-events: none;
     transition: all var(--duration-normal) var(--ease-out);
     max-height: calc(100vh - 80px);
+    max-height: calc(100dvh - 80px);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .navLinks.open {
@@ -357,3 +359,42 @@
     padding: 5px;
   }
 }
+
+/* ── Mobile Responsive (Ultra-Compact Phones < 380px) ───── */
+@media (max-width: 380px) {
+  .logo {
+    gap: 8px;
+  }
+
+  .logoImage {
+    width: 34px;
+    height: 34px;
+  }
+
+  .logoTitle {
+    font-size: 1.05rem;
+    letter-spacing: 0.11em;
+    margin-right: -0.11em;
+  }
+
+  .logoSubtitle {
+    font-size: 0.46rem;
+    letter-spacing: 0.16em;
+    margin-right: -0.16em;
+  }
+
+  .subDash {
+    width: 12px;
+  }
+
+  .logoTagline {
+    display: none; /* Hide tagline on ultra-small screens to prevent horizontal overflow */
+  }
+
+  .burger {
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+  }
+}
+

@@ -267,3 +267,24 @@
     height: 20px;
   }
 }
+
+@media (max-width: 380px) {
+  .logoWrapper {
+    gap: 10px;
+  }
+
+  .logoImage {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logoTitle {
+    font-size: 1.15rem;
+  }
+
+  .tagline {
+    font-size: 0.44rem;
+    white-space: normal;
+  }
+}
+
