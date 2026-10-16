@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ['@triveni/shared-types', '@triveni/shared-validation'],
 };
 
 export default nextConfig;

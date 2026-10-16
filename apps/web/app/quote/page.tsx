@@ -72,7 +72,7 @@ export default function QuotePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [quoteResult, setQuoteResult] = useState<Awaited<ReturnType<typeof quotes.itemized>> | null>(null);
-  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [, setBookingId] = useState<string | null>(null);
   const [bookingCreating, setBookingCreating] = useState(false);
 
   const updateItem = (name: string, delta: number) => {
