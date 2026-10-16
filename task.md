@@ -42,30 +42,31 @@
 - [ ] Admin notification visibility
 
 ## Part 5 — Frontend Web (Next.js)
-- [ ] Design system / CSS tokens
-- [ ] Customer landing + instant estimate
-- [ ] Quote flow
-- [ ] Booking detail + real-time status
-- [ ] Payment flow
-- [ ] Admin dashboard
-- [ ] Admin pricing pages
-- [ ] Admin audit log
+- [x] Design system / CSS tokens
+- [x] Customer landing + instant estimate
+- [x] Quote flow
+- [x] Booking detail + real-time status
+- [x] Payment flow
+- [x] Admin dashboard
+- [x] Admin pricing pages
+- [x] Admin audit log
 
 ## Part 6 — Mobile Apps
-- [ ] Customer app — auth flow
-- [ ] Customer app — quote + booking
-- [ ] Customer app — revision approval
-- [ ] Vendor app — auth flow
-- [ ] Vendor app — job calendar
-- [ ] Vendor app — status updates
-- [ ] Vendor app — on-site revision
-- [ ] Vendor app — offline queue
+- [x] Customer app — auth flow
+- [x] Customer app — quote + booking
+- [x] Customer app — revision approval
+- [x] Vendor app — auth flow
+- [x] Vendor app — job calendar
+- [x] Vendor app — status updates
+- [x] Vendor app — on-site revision
+- [x] Vendor app — offline queue
 
 ## Part 7 — Super Admin Dashboard
-- [ ] Metrics overview
-- [ ] Booking management
-- [ ] Pricing management UI
-- [ ] Audit log
-- [ ] Fleet management
-- [ ] Vendor management
-- [ ] Notifications management
+- [x] Metrics overview
+- [x] Booking management
+- [x] Pricing management UI
+- [x] Audit log
+- [x] Fleet management
+- [x] Vendor management
+- [x] Notifications management
+

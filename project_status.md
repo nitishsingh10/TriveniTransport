@@ -1,5 +1,5 @@
 # Triveni Transports — Project Status
-**Last Updated:** 16 Oct 2026, 4:25 PM IST
+**Last Updated:** 16 Oct 2026, 11:30 PM IST
 
 ---
 
@@ -166,17 +166,41 @@ Built with high-end luxury feel matching the website's dark navy & marigold bran
 
 ---
 
-## 🚧 Pending Tasks & Roadmap
+## 🖥️ Super Admin Dashboard (`@triveni/web/app/admin`) ✅ Completed & Connected
 
-### 🖥️ Admin Dashboard (Web) — Next Up 🎯
-- [ ] Scaffold admin panel (Next.js route group `apps/web/app/admin` or standalone)
-- [ ] Auth-guarded admin login (role: `ADMIN`)
-- [ ] Bookings management table — search, filter, status override (`CONFIRMED`, `EN_ROUTE`, `COMPLETED`, etc.)
-- [ ] Quote review & manual pricing override
-- [ ] Vendor / driver assignment panel (assign booking → driver → vehicle)
-- [ ] Customer management — view profiles, booking history, contact info
-- [ ] Revenue & analytics dashboard (monthly bookings, revenue breakdown, route heatmaps)
-- [ ] Broadcast notification center
+A luxury, dark-themed master operations console (`#081220` deep canvas, `#0D1F37` cards, `#F7A300` Marigold highlights, and crisp Lucide vector icons — zero emojis) for central fleet dispatchers and operations heads:
+
+| Screen / Module | Route | Key Operational Capabilities |
+|---|---|---|
+| **Executive Overview** | `/admin` | Real-time KPI summary (Total Relocations, In-Transit Active Moves, Settled Turnover in ₹, Active Commercial Fleet 3/3), Live Relocation Stream table with pulsing status dots, slide-in relocation manifest drawer |
+| **Relocations & Dispatch Directory** | `/admin/bookings` | Advanced search (by booking ID, customer name, phone, pickup/drop area), status filter chips (`REQUESTED`, `CONFIRMED`, `ASSIGNED`, `EN_ROUTE`, `COMPLETED`, `CANCELLED`), 1-click status override with instant broadcast, driver & vehicle assignment |
+| **Commercial Fleet & Captains** | `/admin/fleet` | Vehicle compliance monitor (Tata Ace 300 CFT, Tata 407 600 CFT, Eicher 17ft 1000 CFT), verified permit expiry & fitness certificate dates, certified shifting captain roster with ratings (4.8 - 4.95★) and completed trips |
+| **Pricing & Item Catalog** | `/admin/pricing` | Standardized volumetric item dimensions (CFT), default weight (kg), base handling tariffs, and dynamic pricing multipliers (Lite/Standard/Premium tiers, no-lift staircase carrying surcharge per floor, weekend peak rates, carpenter add-on) |
+| **Security Audit & Alerts** | `/admin/audit` | Append-only immutable audit trail (timestamp, entity, field modified, old value → new value, authorized operator, justification), multi-channel notification dispatch queue (WhatsApp, SMS, Email, Push) with 1-click retry mechanism |
+| **Admin Portal Sign-In** | `/admin/login` | Phone-based admin authentication with OTP challenge (`role: admin`), dev auto-fill (`123456`), and 1-click Master Dispatcher bypass |
+
+---
+
+## 🗺️ Google Maps, Mobile Quote & Performance Enhancements ✅ Completed
+
+1. **Address Autocomplete While Typing**:
+   - Instant 0ms local match against curated Pune/Mumbai residential hubs (`CURATED_LOCATIONS`).
+   - Debounced backend places enrichment (`GET /api/v1/maps/places`).
+   - Floating glassmorphic suggestion dropdown with street landmarks and click-outside dismissal.
+2. **Smooth Map Pinning (Zero Iframe Reloads)**:
+   - Initial coordinates memoized in `useRef` upon modal opening.
+   - `useMemo` protects iframe `srcDoc` from rebuilding on drag events.
+   - Real-time marker synchronization and camera repositioning handled via `postMessage` (`FLY_TO`, `PIN_COORDS`).
+3. **Mobile Quote Form Optimization**:
+   - Replaced multi-column grid overflow triggers with `.fullWidthCol` collapsing cleanly on viewports $\le 768\text{px}$.
+   - Ensured all `.input-field` elements enforce `width: 100%; box-sizing: border-box;`.
+   - Relocated "Use GPS" and "Pin on Map" to the micro-label header row on mobile, maximizing space for typing.
+4. **Git History & Secrets Sanitization**:
+   - Scrubbed all hardcoded API keys and fallbacks from git history; 0 occurrences verified via `git log -S` and `git grep`.
+
+---
+
+## 🚧 Pending Tasks & Roadmap
 
 ### 🔔 Push Notifications
 - [ ] Integrate Expo Push Notifications in `@triveni/mobile-customer`
@@ -192,3 +216,4 @@ Built with high-end luxury feel matching the website's dark navy & marigold bran
 - [ ] Enable HTTPS + CORS for production frontend domain
 - [ ] Set up CI/CD pipeline (GitHub Actions) — typecheck + deploy on merge to `main`
 - [ ] App Store & Google Play submission for mobile apps
+

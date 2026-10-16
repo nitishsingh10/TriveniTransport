@@ -165,6 +165,8 @@ export const quotes = {
 // ── Bookings ─────────────────────────────────────────────────────────
 export interface Booking {
   id: string;
+  customerId?: string;
+  distanceKm?: number;
   status: string;
   pickupAddress: string;
   dropAddress: string;
@@ -240,3 +242,62 @@ export const payments = {
       body: JSON.stringify({ bookingId, type }),
     }),
 };
+
+// ── Admin ────────────────────────────────────────────────────────────
+export interface AdminMetrics {
+  totalBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  pendingBookings: number;
+  totalCustomers: number;
+  totalVendors: number;
+  totalVehicles: number;
+  totalRevenue: number;
+  activeRevenue: number;
+}
+
+export interface AdminBookingListResponse {
+  bookings: Array<Booking & {
+    customer?: { id: string; name: string; phone: string; email?: string | null };
+    vendor?: { id: string; name: string; phone: string } | null;
+    vehicle?: { id: string; type: string; registrationNumber: string } | null;
+    _count?: { items: number; revisions: number };
+  }>;
+  total: number;
+  skip: number;
+  take: number;
+}
+
+export const admin = {
+  getMetrics: () => apiFetch<AdminMetrics>('/admin/metrics'),
+  listBookings: (params?: { status?: string; search?: string; skip?: number; take?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.append('status', params.status);
+    if (params?.search) q.append('search', params.search);
+    if (params?.skip !== undefined) q.append('skip', String(params.skip));
+    if (params?.take !== undefined) q.append('take', String(params.take));
+    const qs = q.toString();
+    return apiFetch<AdminBookingListResponse>(`/admin/bookings${qs ? `?${qs}` : ''}`);
+  },
+  getBooking: (id: string) => apiFetch<any>(`/admin/bookings/${id}`),
+  updateStatus: (id: string, status: string, notes?: string) =>
+    apiFetch<any>(`/admin/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, notes }),
+    }),
+  assign: (id: string, vendorId: string, vehicleId?: string) =>
+    apiFetch<any>(`/admin/bookings/${id}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ vendorId, vehicleId }),
+    }),
+  listVendors: () => apiFetch<any[]>('/admin/vendors'),
+  listVehicles: () => apiFetch<any[]>('/admin/vehicles'),
+  listItems: () => apiFetch<any[]>('/admin/items'),
+  listPricingRules: () => apiFetch<any[]>('/admin/pricing-rules'),
+  listZones: () => apiFetch<any[]>('/admin/zones'),
+  listAuditLogs: () => apiFetch<any[]>('/admin/audit-logs'),
+  getNotifications: () => apiFetch<any[]>('/admin/notifications'),
+  retryNotification: (id: string) =>
+    apiFetch<any>(`/admin/notifications/${id}/retry`, { method: 'POST' }),
+};
+
