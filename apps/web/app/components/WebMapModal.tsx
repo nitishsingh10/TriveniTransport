@@ -274,12 +274,11 @@ export default function WebMapModal({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   const isPickup = activeType === 'pickup';
 
   // Memoize map HTML so dragging the pin NEVER reloads the iframe
   const mapHtml = useMemo(() => {
+    if (!isOpen) return '';
     const startLat = initialMapCoords.current.lat;
     const startLng = initialMapCoords.current.lng;
     return `
@@ -347,6 +346,8 @@ export default function WebMapModal({
     </html>
   `;
   }, [isOpen, GMAPS_KEY]);
+
+  if (!isOpen) return null;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
