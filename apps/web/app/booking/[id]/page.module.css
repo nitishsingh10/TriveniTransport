@@ -1,6 +1,7 @@
 .main {
   padding: var(--space-8) 0 var(--space-20);
-  min-height: 80vh;
+  min-height: calc(100vh - 68px);
+  min-height: calc(100dvh - 68px);
   background: var(--gray-50);
 }
 
