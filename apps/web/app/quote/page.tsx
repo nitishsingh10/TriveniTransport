@@ -233,7 +233,7 @@ export default function QuotePage() {
               </div>
               <h2 className={styles.stepTitle}>Where &amp; When are you moving?</h2>
               <p className={styles.stepSubtitle}>
-                Select pickup &amp; drop points using our interactive Uber-styled map pin selector.
+                Select your pickup & drop points using our interactive map.
               </p>
 
               {/* Interactive Banner to open full Map Pinning */}
@@ -246,9 +246,9 @@ export default function QuotePage() {
                   <Compass size={22} strokeWidth={2.4} />
                 </div>
                 <div className={styles.mapHeroTextCol}>
-                  <span className={styles.mapHeroTitle}>Select via Interactive Map Pinning</span>
+                  <span className={styles.mapHeroTitle}>Select on Map</span>
                   <span className={styles.mapHeroSub}>
-                    Drag and pin exact building, doorway or gate on our Uber-themed live map
+                    Drag the map to pin the exact location
                   </span>
                 </div>
                 <ArrowRight size={18} className={styles.mapHeroArrow} strokeWidth={2.6} />
@@ -271,7 +271,21 @@ export default function QuotePage() {
                         onClick={() => {
                           if (typeof navigator !== 'undefined' && navigator.geolocation) {
                             navigator.geolocation.getCurrentPosition(
-                              pos => setPickup(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} (Current Location)`),
+                              async pos => {
+                                const lat = pos.coords.latitude;
+                                const lng = pos.coords.longitude;
+                                try {
+                                  const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    setPickup(data.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                                  } else {
+                                    setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                                  }
+                                } catch {
+                                  setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                                }
+                              },
                               () => setPickup('Viman Nagar, Pune, Maharashtra')
                             );
                           } else {
@@ -523,7 +537,7 @@ export default function QuotePage() {
         </div>
       </main>
 
-      {/* Interactive Uber-Themed Web Map Pinning Modal */}
+      {/* Interactive Map Modal */}
       <WebMapModal
         isOpen={mapModalType !== null}
         type={mapModalType || 'pickup'}

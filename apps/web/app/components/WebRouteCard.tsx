@@ -21,7 +21,7 @@ export default function WebRouteCard({
 }: WebRouteCardProps) {
   if (!pickupAddress || !dropAddress) return null;
 
-  // Uber-like custom themed dark Triveni route map HTML
+  // Custom dark-themed route map HTML
   const routeMapHtml = `
     <!DOCTYPE html>
     <html>
@@ -110,7 +110,7 @@ export default function WebRouteCard({
           <div className={styles.pulseIconWrap}>
             <Sparkles size={14} />
           </div>
-          <span className={styles.headerTitle}>Uber-Themed Route Estimation</span>
+          <span className={styles.headerTitle}>Route Estimation</span>
         </div>
 
         {onOpenMapPicker && (

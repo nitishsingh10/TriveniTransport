@@ -58,8 +58,22 @@ export default function InstantEstimate() {
   const handleGps = () => {
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => setPickup(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} (Current Location)`),
+        async pos => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          try {
+            const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
+            if (res.ok) {
+              const data = await res.json();
+              setPickup(data.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            } else {
+              setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            }
+          } catch {
+            setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          }
+        },
         () => setPickup('Viman Nagar, Pune, Maharashtra'),
+        { timeout: 6000 },
       );
     } else {
       setPickup('Viman Nagar, Pune, Maharashtra');
@@ -155,7 +169,7 @@ export default function InstantEstimate() {
             onClick={() => setMapModalType('pickup')}
           >
             <Map size={16} strokeWidth={2} className={styles.mapBannerIcon} />
-            <span className={styles.mapBannerText}>Pin exact locations on Uber-styled live map</span>
+            <span className={styles.mapBannerText}>Select pickup &amp; drop on map</span>
             <span className={styles.mapBannerArrow}>→</span>
           </button>
 
@@ -206,7 +220,7 @@ export default function InstantEstimate() {
         )}
       </div>
 
-      {/* Uber-styled interactive map modal */}
+      {/* Interactive map modal */}
       <WebMapModal
         isOpen={mapModalType !== null}
         type={mapModalType || 'pickup'}

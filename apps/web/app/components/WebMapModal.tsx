@@ -193,13 +193,29 @@ export default function WebMapModal({
     setLoading(true);
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => {
+        async pos => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           setSelectedCoords({ lat, lng });
           panMapTo(lat, lng);
-          handleCoordsChanged(lat, lng);
-          setLoading(false);
+          // Reverse-geocode to show real address, not raw coordinates
+          try {
+            const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || '';
+              setSelectedAddress(addr);
+              setSelectedCity(data.city || 'Pune');
+              setAreaHeadline(addr.split(',')[0] || 'Current Location');
+              setQuery(addr);
+            } else {
+              handleCoordsChanged(lat, lng);
+            }
+          } catch {
+            handleCoordsChanged(lat, lng);
+          } finally {
+            setLoading(false);
+          }
         },
         () => {
           const fallback = POPULAR_HUBS[0];
@@ -232,7 +248,7 @@ export default function WebMapModal({
 
   const isPickup = activeType === 'pickup';
 
-  // Custom Uber-like midnight dark Triveni theme map HTML
+  // Custom dark-themed map HTML (CartoDB dark tiles)
   const mapHtml = `
     <!DOCTYPE html>
     <html>
@@ -252,7 +268,7 @@ export default function WebMapModal({
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           }
-          /* Custom Uber-like Triveni midnight theme filter */
+          /* Dark map theme filter */
           .leaflet-tile-pane {
             filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(200deg) saturate(0.35);
           }
@@ -306,16 +322,16 @@ export default function WebMapModal({
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-        {/* Full Interactive Uber-Themed Map Viewport */}
+        {/* Map Viewport */}
         <div className={styles.mapViewport}>
           <iframe
             id="web-triveni-map-iframe"
             srcDoc={mapHtml}
             className={styles.mapIframe}
-            title="Triveni Uber-Themed Interactive Map"
+            title="Triveni Interactive Map"
           />
 
-          {/* Central Fixed Uber-style Animated Pin */}
+          {/* Central Fixed Animated Pin */}
           <div className={styles.centerPinContainer}>
             <div
               className={`${styles.groundPulse} ${isPickup ? styles.groundPulsePickup : styles.groundPulseDrop}`}
@@ -337,10 +353,10 @@ export default function WebMapModal({
             <div className={`${styles.pinTooltip} ${isMapMoving ? styles.pinTooltipLifted : ''}`}>
               <span>
                 {isMapMoving
-                  ? 'Release to drop pin here'
+                  ? 'Release to set location'
                   : isPickup
-                  ? '📍 Pointing to Pickup Spot'
-                  : '🏁 Pointing to Drop Destination'}
+                  ? 'Pickup location'
+                  : 'Drop destination'}
               </span>
             </div>
           </div>
@@ -381,7 +397,7 @@ export default function WebMapModal({
             <input
               type="text"
               className={styles.glassSearchInput}
-              placeholder="Search society, landmark, or street in Mumbai/Pune..."
+              placeholder="Search area, society, landmark or street..."
               value={query}
               onChange={e => handleQueryChange(e.target.value)}
             />
