@@ -190,12 +190,44 @@ export default function QuotePage() {
               <h2 className={styles.stepTitle}>📍 Where &amp; When are you moving?</h2>
               <div className={styles.formGrid}>
                 <div className="input-group">
-                  <label>Pickup Address</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <label style={{ margin: 0 }}>Pickup Address</label>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#B45309', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+                      onClick={() => {
+                        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                          navigator.geolocation.getCurrentPosition(
+                            pos => setPickup(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} (Current Location)`),
+                            () => setPickup('Viman Nagar, Pune, Maharashtra')
+                          );
+                        } else {
+                          setPickup('Viman Nagar, Pune, Maharashtra');
+                        }
+                      }}
+                    >
+                      📍 My Location
+                    </button>
+                  </div>
                   <input className="input-field" placeholder="Full address with area/locality" value={pickup} onChange={e => setPickup(e.target.value)} />
+                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                    {['Viman Nagar', 'Baner', 'Kothrud'].map(area => (
+                      <button key={area} type="button" onClick={() => setPickup(`${area}, Pune, Maharashtra`)} style={{ background: 'rgba(13, 31, 55, 0.05)', border: '1px solid rgba(13, 31, 55, 0.1)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.7rem', color: '#0D1F37', cursor: 'pointer' }}>
+                        +{area}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="input-group">
                   <label>Drop Address</label>
                   <input className="input-field" placeholder="Full address with area/locality" value={drop} onChange={e => setDrop(e.target.value)} />
+                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                    {['Hinjewadi', 'Bandra West', 'Powai', 'Thane West'].map(area => (
+                      <button key={area} type="button" onClick={() => setDrop(`${area}, Maharashtra`)} style={{ background: 'rgba(247, 163, 0, 0.12)', border: '1px solid rgba(247, 163, 0, 0.3)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.7rem', color: '#B45309', fontWeight: 600, cursor: 'pointer' }}>
+                        +{area}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="input-group">
                   <label>Home Configuration</label>

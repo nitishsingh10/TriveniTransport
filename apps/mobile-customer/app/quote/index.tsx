@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -17,6 +18,10 @@ import {
   Layers,
   ArrowRight,
   Compass,
+  Sparkles,
+  Crosshair,
+  Flag,
+  Navigation,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import type { ConfigurationType } from '@triveni/shared-types';
@@ -49,7 +54,7 @@ export default function QuoteIndexScreen() {
   const [floor, setFloor] = useState(0);
   const [lift, setLift] = useState(true);
 
-  // Google Maps State
+  // Google Maps Pinning Modal State
   const [mapModalType, setMapModalType] = useState<'pickup' | 'drop' | null>(null);
   const [routeEstimate, setRouteEstimate] = useState<RouteEstimate | null>(null);
 
@@ -72,13 +77,32 @@ export default function QuoteIndexScreen() {
 
   const canProceed = pickup.trim().length > 2 && drop.trim().length > 2;
 
-  const handleLocationSelected = (loc: { address: string; lat: number; lng: number; city: string }) => {
-    if (mapModalType === 'pickup') {
+  const handleLocationSelected = (loc: { address: string; lat: number; lng: number; city: string; type?: 'pickup' | 'drop' }) => {
+    const targetType = loc.type || mapModalType;
+    if (targetType === 'pickup') {
       setPickup(loc.address);
-    } else if (mapModalType === 'drop') {
+    } else if (targetType === 'drop') {
       setDrop(loc.address);
     }
     setMapModalType(null);
+  };
+
+  const handleUseCurrentLocationForPickup = () => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const rev = await mapsApi.reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+            setPickup(rev.address);
+          } catch {
+            setPickup('Viman Nagar, Pune, Maharashtra');
+          }
+        },
+        () => setPickup('Viman Nagar, Pune, Maharashtra')
+      );
+    } else {
+      setPickup('Viman Nagar, Pune, Maharashtra');
+    }
   };
 
   return (
@@ -88,100 +112,159 @@ export default function QuoteIndexScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
+      {/* Glassmorphic Step Progress Indicator */}
+      <View style={styles.glassProgressCard}>
         <View style={styles.progressItem}>
           <View style={[styles.progressCircle, styles.progressCircleActive]}>
             <Text style={styles.progressNumActive}>1</Text>
           </View>
           <Text style={[styles.progressLabel, styles.progressLabelActive]}>Locations</Text>
         </View>
-        <View style={styles.progressLine} />
+
+        <View style={styles.progressLineActive} />
+
         <View style={styles.progressItem}>
           <View style={styles.progressCircle}>
             <Text style={styles.progressNum}>2</Text>
           </View>
-          <Text style={styles.progressLabel}>Items</Text>
+          <Text style={styles.progressLabel}>Inventory</Text>
         </View>
+
         <View style={styles.progressLine} />
+
         <View style={styles.progressItem}>
           <View style={styles.progressCircle}>
             <Text style={styles.progressNum}>3</Text>
           </View>
-          <Text style={styles.progressLabel}>Summary</Text>
+          <Text style={styles.progressLabel}>Quote</Text>
         </View>
       </View>
 
+      {/* Screen Title */}
       <View style={styles.titleGroup}>
-        <Text style={styles.stepBadge}>STEP 1 OF 3</Text>
+        <View style={styles.badgeRow}>
+          <Sparkles size={12} color={Colors.marigoldDark} />
+          <Text style={styles.stepBadge}>STEP 1 · RELOCATION ROUTE</Text>
+        </View>
         <Text style={styles.title}>Where are you moving?</Text>
         <Text style={styles.subtitle}>
-          Select pickup and drop locations via Google Maps for instant distance-based estimates.
+          Select pickup & drop points using our interactive Uber-styled map pin selector.
         </Text>
       </View>
 
-      {/* Location Card with Map Pickers */}
-      <View style={styles.locationCard}>
+      {/* Glassmorphic Location Pinning Card with Route Connector */}
+      <View style={styles.glassLocationCard}>
+        {/* Interactive Banner to open full Map Pinning */}
+        <TouchableOpacity
+          style={styles.mapPinHeroBanner}
+          onPress={() => setMapModalType('pickup')}
+          activeOpacity={0.88}
+        >
+          <View style={styles.mapPinIconBox}>
+            <Compass size={20} color="#FFFFFF" strokeWidth={2.4} />
+          </View>
+          <View style={styles.mapPinBannerTextCol}>
+            <Text style={styles.mapPinBannerTitle}>Select via Interactive Map Pinning</Text>
+            <Text style={styles.mapPinBannerSub}>
+              Drag to pin exact doorway or building in our Uber-themed map
+            </Text>
+          </View>
+          <ArrowRight size={16} color={Colors.marigold} strokeWidth={2.6} />
+        </TouchableOpacity>
+
+        {/* Pickup Row */}
         <View style={styles.locationRow}>
-          <TouchableOpacity
-            style={styles.pinWrapper}
-            onPress={() => setMapModalType('pickup')}
-            activeOpacity={0.8}
-          >
-            <MapPin size={18} color={Colors.marigold} strokeWidth={2.4} />
-          </TouchableOpacity>
+          <View style={styles.routeIndicatorCol}>
+            <View style={styles.pickupDot} />
+            <View style={styles.routeVerticalLine} />
+          </View>
+
           <View style={styles.locationInputBlock}>
             <Text style={styles.inputLabel}>PICKUP LOCATION</Text>
             <TextInput
               style={styles.locationInput}
-              placeholder="e.g. Viman Nagar, Pune"
+              placeholder="Society name, street, or landmark"
               placeholderTextColor={Colors.inputPlaceholder}
               value={pickup}
               onChangeText={setPickup}
             />
           </View>
+
           <TouchableOpacity
             style={styles.mapPickerTrigger}
             onPress={() => setMapModalType('pickup')}
             activeOpacity={0.75}
           >
-            <Compass size={13} color={Colors.navy} />
-            <Text style={styles.mapPickerTriggerText}>Map</Text>
+            <MapPin size={13} color={Colors.marigoldDark} strokeWidth={2.4} />
+            <Text style={styles.mapPickerTriggerText}>Pin Map</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.locationDivider} />
-
+        {/* Drop Destination Row */}
         <View style={styles.locationRow}>
-          <TouchableOpacity
-            style={styles.pinWrapper}
-            onPress={() => setMapModalType('drop')}
-            activeOpacity={0.8}
-          >
-            <MapPin size={18} color={Colors.navy} strokeWidth={2.4} />
-          </TouchableOpacity>
+          <View style={styles.routeIndicatorCol}>
+            <View style={styles.dropSquare} />
+          </View>
+
           <View style={styles.locationInputBlock}>
             <Text style={styles.inputLabel}>DROP DESTINATION</Text>
             <TextInput
               style={styles.locationInput}
-              placeholder="e.g. Baner, Pune"
+              placeholder="Delivery destination building or area"
               placeholderTextColor={Colors.inputPlaceholder}
               value={drop}
               onChangeText={setDrop}
             />
           </View>
+
           <TouchableOpacity
-            style={styles.mapPickerTrigger}
+            style={[styles.mapPickerTrigger, { backgroundColor: Colors.navySubtle, borderColor: Colors.navyBorder }]}
             onPress={() => setMapModalType('drop')}
             activeOpacity={0.75}
           >
-            <Compass size={13} color={Colors.navy} />
-            <Text style={styles.mapPickerTriggerText}>Map</Text>
+            <Flag size={13} color={Colors.navy} strokeWidth={2.4} />
+            <Text style={[styles.mapPickerTriggerText, { color: Colors.navy }]}>Pin Map</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Location Shortcuts */}
+        <View style={styles.quickShortcutsRow}>
+          <TouchableOpacity
+            style={styles.quickGpsChip}
+            onPress={handleUseCurrentLocationForPickup}
+            activeOpacity={0.75}
+          >
+            <Crosshair size={12} color={Colors.navy} strokeWidth={2.2} />
+            <Text style={styles.quickGpsText}>My GPS Location</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickAreaChip}
+            onPress={() => setDrop('Baner, Pune, Maharashtra')}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.quickAreaText}>+ Baner</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickAreaChip}
+            onPress={() => setDrop('Hinjewadi Phase 1, Pune')}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.quickAreaText}>+ Hinjewadi</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickAreaChip}
+            onPress={() => setDrop('Powai, Mumbai')}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.quickAreaText}>+ Powai</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Google Maps Route Preview Card */}
+      {/* Google Maps Route Preview Card with Custom Uber Theme */}
       {routeEstimate && (
         <GoogleMapsRouteCard
           pickupAddress={pickup}
@@ -192,8 +275,7 @@ export default function QuoteIndexScreen() {
         />
       )}
 
-
-      {/* Home Configuration */}
+      {/* Home Configuration Glass Grid */}
       <View style={styles.sectionBlock}>
         <Text style={styles.sectionTitle}>Home Size / Configuration</Text>
         <View style={styles.configGrid}>
@@ -203,14 +285,14 @@ export default function QuoteIndexScreen() {
             return (
               <TouchableOpacity
                 key={c.value}
-                style={[styles.configChip, isSelected && styles.configChipActive]}
+                style={[styles.glassConfigChip, isSelected && styles.glassConfigChipActive]}
                 onPress={() => setConfig(c.value)}
                 activeOpacity={0.8}
               >
                 <Icon
                   size={16}
-                  color={isSelected ? Colors.white : Colors.navy}
-                  strokeWidth={isSelected ? 2.4 : 1.8}
+                  color={isSelected ? Colors.marigoldDark : Colors.navy}
+                  strokeWidth={isSelected ? 2.6 : 1.8}
                 />
                 <Text
                   style={[
@@ -226,7 +308,7 @@ export default function QuoteIndexScreen() {
         </View>
       </View>
 
-      {/* Floor Number */}
+      {/* Floor Number Glass Chips */}
       <View style={styles.sectionBlock}>
         <Text style={styles.sectionTitle}>Pickup Floor Level</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -236,7 +318,7 @@ export default function QuoteIndexScreen() {
               return (
                 <TouchableOpacity
                   key={f}
-                  style={[styles.floorChip, isSelected && styles.floorChipActive]}
+                  style={[styles.glassFloorChip, isSelected && styles.glassFloorChipActive]}
                   onPress={() => setFloor(i)}
                   activeOpacity={0.8}
                 >
@@ -255,9 +337,9 @@ export default function QuoteIndexScreen() {
         </ScrollView>
       </View>
 
-      {/* Lift Available */}
+      {/* Lift Available Glass Card */}
       <TouchableOpacity
-        style={styles.liftToggle}
+        style={styles.glassLiftToggle}
         onPress={() => setLift(!lift)}
         activeOpacity={0.85}
       >
@@ -265,12 +347,12 @@ export default function QuoteIndexScreen() {
           <View style={styles.liftIconCircle}>
             <Layers size={18} color={Colors.navy} strokeWidth={2} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.liftTitle}>Service Lift / Elevator Available</Text>
             <Text style={styles.liftSub}>
               {lift
-                ? 'Elevator reduces manual carrying and labour time'
-                : 'Staircase carrying charges applied'}
+                ? 'Elevator available · standard loading rates'
+                : 'Staircase manual carry charges apply'}
             </Text>
           </View>
         </View>
@@ -279,7 +361,7 @@ export default function QuoteIndexScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* CTA Button: Deep Navy matching website btn-primary */}
+      {/* CTA Button */}
       <TouchableOpacity
         style={[styles.cta, !canProceed && styles.ctaDisabled]}
         disabled={!canProceed}
@@ -298,11 +380,11 @@ export default function QuoteIndexScreen() {
         }
         activeOpacity={0.88}
       >
-        <Text style={styles.ctaText}>Proceed to Item Selection</Text>
-        <ArrowRight size={18} color={Colors.white} strokeWidth={2.4} />
+        <Text style={styles.ctaText}>Proceed to Item Inventory</Text>
+        <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
       </TouchableOpacity>
 
-      {/* Google Maps Location Selection Modal */}
+      {/* Full-Screen Uber-Themed Interactive Map Pinning Modal */}
       {mapModalType && (
         <GoogleMapsLocationModal
           visible={Boolean(mapModalType)}
@@ -317,17 +399,33 @@ export default function QuoteIndexScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: Colors.background },
-  container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
+  scroll: {
+    flex: 1,
+    backgroundColor: '#F0F4F8',
+  },
+  container: {
+    padding: Spacing.md,
+    gap: Spacing.md,
+    paddingBottom: Spacing.xxl,
+  },
 
-  // Progress
-  progressContainer: {
+  // ── Glassmorphic Step Progress Card ─────────────────────────────
+  glassProgressCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.75)',
+    shadowColor: '#0D1F37',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   progressItem: {
     alignItems: 'center',
@@ -337,8 +435,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1.5,
     borderColor: Colors.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
@@ -353,7 +451,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   progressNumActive: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -373,9 +471,23 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.sm,
     marginBottom: 16,
   },
+  progressLineActive: {
+    flex: 1,
+    height: 2,
+    backgroundColor: Colors.navy,
+    marginHorizontal: Spacing.sm,
+    marginBottom: 16,
+  },
 
   // Title
-  titleGroup: { gap: 4 },
+  titleGroup: {
+    gap: 4,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   stepBadge: {
     color: Colors.marigoldDark,
     fontSize: FontSize.xxs,
@@ -384,41 +496,112 @@ const styles = StyleSheet.create({
   },
   title: {
     color: Colors.navyDark,
-    fontSize: FontSize.xl,
+    fontSize: FontSize.xl + 2,
     fontWeight: FontWeight.extrabold,
     letterSpacing: -0.5,
   },
   subtitle: {
     color: Colors.textSecondary,
-    fontSize: FontSize.xs,
-    lineHeight: 18,
+    fontSize: FontSize.xs + 1,
+    lineHeight: 19,
   },
 
-  // Location Card
-  locationCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
+  // ── Glassmorphic Location Card ──────────────────────────────────
+  glassLocationCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderRadius: BorderRadius.xl + 2,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: Spacing.md + 2,
-    gap: Spacing.xs,
-    ...Shadow.sm,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    padding: Spacing.md,
+    gap: Spacing.md,
+    shadowColor: '#0D1F37',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 20,
+    elevation: 5,
   },
-  locationRow: {
+
+  // Map Pin Hero Banner
+  mapPinHeroBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: 4,
+    backgroundColor: '#091524',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm + 4,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 163, 0, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  pinWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.surfaceSubtle,
+  mapPinIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(247, 163, 0, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: Colors.marigold,
+  },
+  mapPinBannerTextCol: {
+    flex: 1,
+  },
+  mapPinBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: FontSize.xs + 1,
+    fontWeight: FontWeight.bold,
+  },
+  mapPinBannerSub: {
+    color: '#94A3B8',
+    fontSize: 10,
+    marginTop: 2,
+  },
+
+  // Location Rows with vertical connected route
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm + 2,
+  },
+  routeIndicatorCol: {
+    alignItems: 'center',
+    width: 24,
+  },
+  pickupDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.marigold,
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    shadowColor: Colors.marigold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  routeVerticalLine: {
+    width: 2,
+    height: 32,
+    backgroundColor: 'rgba(13, 31, 55, 0.2)',
+    marginVertical: 2,
+  },
+  dropSquare: {
+    width: 13,
+    height: 13,
+    borderRadius: 3,
+    backgroundColor: Colors.navy,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   locationInputBlock: {
     flex: 1,
@@ -426,43 +609,79 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.8,
   },
   locationInput: {
     color: Colors.navy,
-    fontSize: FontSize.xs,
-    paddingVertical: 2,
-    fontWeight: FontWeight.medium,
-  },
-  locationDivider: {
-    height: 1,
-    backgroundColor: Colors.cardBorder,
-    marginVertical: 4,
+    fontSize: FontSize.xs + 1,
+    fontWeight: FontWeight.semibold,
+    paddingVertical: 3,
   },
   mapPickerTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.navySubtle,
+    gap: 5,
+    backgroundColor: Colors.marigoldSubtle,
     borderWidth: 1,
-    borderColor: Colors.navyBorder,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: Colors.marigoldBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
   },
   mapPickerTriggerText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.marigoldDark,
   },
 
-  // Sections
-  sectionBlock: { gap: Spacing.xs },
+  // Quick Shortcuts Row
+  quickShortcutsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(13, 31, 55, 0.06)',
+  },
+  quickGpsChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(13, 31, 55, 0.15)',
+    gap: 5,
+  },
+  quickGpsText: {
+    color: Colors.navy,
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+  },
+  quickAreaChip: {
+    backgroundColor: 'rgba(247, 163, 0, 0.12)',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 163, 0, 0.28)',
+  },
+  quickAreaText: {
+    color: Colors.marigoldDark,
+    fontSize: 10,
+    fontWeight: FontWeight.semibold,
+  },
+
+  // ── Sections ────────────────────────────────────────────────────
+  sectionBlock: {
+    gap: Spacing.xs + 2,
+  },
   sectionTitle: {
     color: Colors.navyDark,
-    fontSize: FontSize.xs,
+    fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.2,
   },
@@ -470,23 +689,28 @@ const styles = StyleSheet.create({
   configGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: Spacing.xs + 2,
   },
-  configChip: {
+  glassConfigChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    backgroundColor: Colors.surface,
-    ...Shadow.sm,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    shadowColor: '#0D1F37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  configChipActive: {
-    borderColor: Colors.navy,
-    backgroundColor: Colors.navy,
+  glassConfigChipActive: {
+    borderColor: Colors.marigold,
+    backgroundColor: 'rgba(247, 163, 0, 0.12)',
+    borderWidth: 1.5,
   },
   configLabel: {
     color: Colors.navy,
@@ -494,20 +718,28 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
   configLabelActive: {
-    color: Colors.white,
+    color: Colors.marigoldDark,
     fontWeight: FontWeight.bold,
   },
 
-  floorRow: { flexDirection: 'row', gap: Spacing.xs },
-  floorChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm - 2,
+  floorRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs + 2,
+  },
+  glassFloorChip: {
+    paddingHorizontal: Spacing.md + 2,
+    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    backgroundColor: Colors.surface,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    shadowColor: '#0D1F37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  floorChipActive: {
+  glassFloorChipActive: {
     borderColor: Colors.navy,
     backgroundColor: Colors.navy,
   },
@@ -517,78 +749,98 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
   floorTextActive: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontWeight: FontWeight.bold,
   },
 
   // Lift toggle
-  liftToggle: {
+  glassLiftToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
     padding: Spacing.md,
-    ...Shadow.sm,
+    shadowColor: '#0D1F37',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   liftInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.sm + 2,
     flex: 1,
+    marginRight: Spacing.sm,
   },
   liftIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: Colors.navySubtle,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.navyBorder,
   },
   liftTitle: {
     color: Colors.navyDark,
-    fontSize: FontSize.xs,
+    fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.bold,
   },
   liftSub: {
     color: Colors.textSecondary,
-    fontSize: 10,
+    fontSize: 10.5,
     marginTop: 2,
+    lineHeight: 14,
   },
   toggle: {
-    width: 44,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: Colors.cardBorder,
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#CBD5E1',
     justifyContent: 'center',
     padding: 3,
   },
-  toggleActive: { backgroundColor: Colors.navy },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.white,
+  toggleActive: {
+    backgroundColor: Colors.navy,
   },
-  toggleThumbActive: { alignSelf: 'flex-end' },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
 
+  // CTA
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     backgroundColor: Colors.navy,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     paddingVertical: Spacing.md + 2,
     marginTop: Spacing.xs,
-    ...Shadow.sm,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 5,
   },
-  ctaDisabled: { opacity: 0.45 },
+  ctaDisabled: {
+    opacity: 0.45,
+  },
   ctaText: {
-    color: Colors.white,
-    fontSize: FontSize.sm,
+    color: '#FFFFFF',
+    fontSize: FontSize.sm + 1,
     fontWeight: FontWeight.bold,
+    letterSpacing: 0.2,
   },
 });

@@ -67,7 +67,23 @@ export const Colors = {
   // Glass / Overlay Tokens
   glass: 'rgba(255, 255, 255, 0.85)',
   glassBorder: 'rgba(13, 31, 55, 0.08)',
+  glassLight: 'rgba(255, 255, 255, 0.78)',
+  glassLightBorder: 'rgba(255, 255, 255, 0.60)',
+  glassDark: 'rgba(13, 31, 55, 0.88)',
+  glassDarkBorder: 'rgba(255, 255, 255, 0.16)',
+  glassMarigold: 'rgba(247, 163, 0, 0.16)',
+  glassMarigoldBorder: 'rgba(247, 163, 0, 0.38)',
   overlay: 'rgba(13, 31, 55, 0.45)',
+
+  // Custom Uber-like Triveni Map Theme
+  mapBg: '#091524',
+  mapRoads: '#1A2E46',
+  mapRoadsHighlight: '#2A4365',
+  mapWater: '#060E18',
+  mapLand: '#0D1D30',
+  mapAccent: '#F7A300',
+  mapAccentGlow: 'rgba(247, 163, 0, 0.45)',
+  mapPinNavy: '#0D1F37',
 } as const;
 
 export const Spacing = {
@@ -145,5 +161,19 @@ export const Shadow = {
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 3,
+  },
+  glass: {
+    shadowColor: '#0D1F37',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  glassGlowGold: {
+    shadowColor: '#F7A300',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 10,
   },
 } as const;
