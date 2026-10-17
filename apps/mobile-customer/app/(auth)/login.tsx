@@ -18,7 +18,6 @@ import {
   Package,
   Star,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { authApi } from '@/lib/api';

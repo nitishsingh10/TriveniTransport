@@ -8,7 +8,6 @@ import {
   Crosshair,
   Check,
   ArrowRight,
-  Sparkles,
   Flag,
 } from 'lucide-react';
 import styles from './WebMapModal.module.css';
@@ -476,7 +475,6 @@ export default function WebMapModal({
                   className={`${styles.quickHubPill} ${selectedAddress.includes(hub.name) ? styles.quickHubActive : ''}`}
                   onClick={() => handleSelectQuickHub(hub)}
                 >
-                  <Sparkles size={11} />
                   <span>{hub.name}</span>
                 </button>
               ))}

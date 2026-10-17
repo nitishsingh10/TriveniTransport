@@ -18,7 +18,6 @@ import {
   Layers,
   ArrowRight,
   Compass,
-  Sparkles,
   Crosshair,
   Flag,
   Navigation,
@@ -143,7 +142,6 @@ export default function QuoteIndexScreen() {
       {/* Screen Title */}
       <View style={styles.titleGroup}>
         <View style={styles.badgeRow}>
-          <Sparkles size={12} color={Colors.marigoldDark} />
           <Text style={styles.stepBadge}>STEP 1 · RELOCATION ROUTE</Text>
         </View>
         <Text style={styles.title}>Where are you moving?</Text>

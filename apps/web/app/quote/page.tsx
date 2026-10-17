@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Compass, MapPin, Flag, ArrowRight, Crosshair, Sparkles } from 'lucide-react';
+import { Compass, MapPin, Flag, ArrowRight, Crosshair } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WebMapModal from '../components/WebMapModal';
@@ -379,8 +379,7 @@ export default function QuotePage() {
           {/* Step 1: Location + Date */}
           {step === 1 && (
             <div className={`card ${styles.stepCard} animate-in`}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Sparkles size={14} color="#D98C00" />
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#B45309', letterSpacing: '0.8px' }}>
                   STEP 1 · RELOCATION ROUTE
                 </span>

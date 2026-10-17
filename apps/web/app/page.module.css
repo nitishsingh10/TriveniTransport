@@ -877,7 +877,7 @@
 .ctaBadge {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
   background: rgba(247, 163, 0, 0.1);
   border: 1px solid rgba(247, 163, 0, 0.28);
   color: #F7A300;
@@ -888,11 +888,6 @@
   padding: 6px 14px;
   border-radius: 30px;
   margin-bottom: 20px;
-}
-
-.badgeSparkle {
-  color: #F7A300;
-  flex-shrink: 0;
 }
 
 .ctaTitle {

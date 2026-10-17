@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
-import { Navigation, Clock, MapPin, ExternalLink, Sparkles } from 'lucide-react-native';
+import { Navigation, Clock, MapPin, ExternalLink } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 
 interface GoogleMapsRouteCardProps {
@@ -111,7 +111,7 @@ export function GoogleMapsRouteCard({
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.badgePulse}>
-            <Sparkles size={13} color={Colors.marigoldDark} />
+            <Navigation size={13} color={Colors.marigoldDark} />
           </View>
           <Text style={styles.headerTitle}>Uber-Themed Route Preview</Text>
         </View>

@@ -20,7 +20,6 @@ import {
   Navigation,
   Award,
   Users,
-  Sparkles,
   Phone,
 } from 'lucide-react';
 import Navbar from './components/Navbar';
@@ -254,7 +253,6 @@ export default function Home() {
           <div className="container">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={scrollReveal} className={styles.ctaGlass}>
               <div className={styles.ctaBadge}>
-                <Sparkles size={13} className={styles.badgeSparkle} />
                 <span>VERIFIED RELOCATION PARTNER • MUMBAI &amp; THANE</span>
               </div>
               <h2 className={styles.ctaTitle}>

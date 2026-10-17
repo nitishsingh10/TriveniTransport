@@ -18,7 +18,6 @@ import {
   Check,
   Compass,
   ArrowRight,
-  Sparkles,
   Navigation,
   Layers,
   Flag,
@@ -513,7 +512,6 @@ export function GoogleMapsLocationModal({
                   onPress={() => handleSelectQuickHub(hub)}
                   activeOpacity={0.75}
                 >
-                  <Sparkles size={11} color={selectedAddress.includes(hub.name) ? Colors.marigold : Colors.navy} />
                   <Text
                     style={[
                       styles.quickHubText,

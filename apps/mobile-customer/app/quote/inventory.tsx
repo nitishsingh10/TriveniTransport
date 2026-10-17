@@ -13,7 +13,7 @@ import {
   Coffee,
   Bed,
   DoorClosed,
-  Sparkles,
+  MirrorRectangular,
   Refrigerator,
   WashingMachine,
   Box,
@@ -58,7 +58,7 @@ const CATALOG: RoomSection[] = [
     items: [
       { id: 'double_bed', name: 'King / Queen Bed with Mattress', icon: Bed, defaultCft: 65, baseRate: 1200 },
       { id: 'wardrobe', name: 'Almirah / Wardrobe (2-3 Door)', icon: DoorClosed, defaultCft: 50, baseRate: 900 },
-      { id: 'dressing', name: 'Dressing Table with Mirror', icon: Sparkles, defaultCft: 30, baseRate: 500 },
+      { id: 'dressing', name: 'Dressing Table with Mirror', icon: MirrorRectangular, defaultCft: 30, baseRate: 500 },
     ],
   },
   {

@@ -28,7 +28,6 @@ import {
   Compass,
   Star,
   Award,
-  Sparkles,
   Calendar,
   Crosshair,
   Flag,
@@ -127,7 +126,6 @@ export default function HomeScreen() {
       >
         <View style={styles.heroContent}>
           <View style={styles.heroPill}>
-            <Sparkles size={12} color={Colors.marigold} />
             <Text style={styles.heroPillText}>Next-Gen Packers & Movers</Text>
           </View>
 
