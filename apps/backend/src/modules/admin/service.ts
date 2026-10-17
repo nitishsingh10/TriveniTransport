@@ -109,7 +109,6 @@ export class AdminService {
         toState: newStatus,
         actorId: adminId,
         actorRole: 'admin',
-        notes: notes || 'Admin status override',
       },
     });
 
@@ -140,7 +139,6 @@ export class AdminService {
         toState: 'ASSIGNED',
         actorId: adminId,
         actorRole: 'admin',
-        notes: `Assigned to vendor ${vendorId}${vehicleId ? ` and vehicle ${vehicleId}` : ''}`,
       },
     });
 

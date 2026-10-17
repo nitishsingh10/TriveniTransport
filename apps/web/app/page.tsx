@@ -20,6 +20,8 @@ import {
   Navigation,
   Award,
   Users,
+  Sparkles,
+  Phone,
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -246,14 +248,47 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── CTA ──────────────────────────────────────── */}
+        {/* ── Ready to Move CTA ───────────────────────── */}
         <section className={styles.ctaSection}>
           <div className={styles.ctaGlow} aria-hidden="true" />
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={scrollReveal} className={styles.ctaGlass}>
-            <h2 className={styles.ctaTitle}>Ready to Move?</h2>
-            <p className={styles.ctaDesc}>Get your detailed, itemised quote in under 2 minutes. No surprises, ever.</p>
-            <Link href="/quote" className={styles.ctaBtn}>Get Your Free Quote <ArrowRight size={18} /></Link>
-          </motion.div>
+          <div className="container">
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={scrollReveal} className={styles.ctaGlass}>
+              <div className={styles.ctaBadge}>
+                <Sparkles size={13} className={styles.badgeSparkle} />
+                <span>VERIFIED RELOCATION PARTNER • MUMBAI &amp; THANE</span>
+              </div>
+              <h2 className={styles.ctaTitle}>
+                Ready to Move <span className={styles.titleAccent}>Without the Stress?</span>
+              </h2>
+              <p className={styles.ctaDesc}>
+                Get an accurate, itemised quote in under 2 minutes. Transparent rates, verified captains, and zero hidden surprises on moving day.
+              </p>
+              <div className={styles.ctaBtnGroup}>
+                <Link href="/quote" className={styles.ctaBtn}>
+                  <span>Get Your Free Quote</span>
+                  <ArrowRight size={18} />
+                </Link>
+                <a href="tel:8828647785" className={styles.ctaPhoneBtn}>
+                  <Phone size={16} />
+                  <span>Call 8828647785</span>
+                </a>
+              </div>
+              <div className={styles.ctaTrustRow}>
+                <div className={styles.ctaTrustItem}>
+                  <CheckCircle2 size={15} className={styles.trustCheck} />
+                  <span>Fixed Price Guarantee</span>
+                </div>
+                <div className={styles.ctaTrustItem}>
+                  <CheckCircle2 size={15} className={styles.trustCheck} />
+                  <span>Dedicated Fleet Truck</span>
+                </div>
+                <div className={styles.ctaTrustItem}>
+                  <CheckCircle2 size={15} className={styles.trustCheck} />
+                  <span>Live GPS Tracking</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </section>
 
       </main>
