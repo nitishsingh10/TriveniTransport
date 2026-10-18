@@ -74,6 +74,11 @@ async function bootstrap() {
   );
   app.use(express.urlencoded({ extended: false, limit: '50kb' }));
 
+  //To test the server
+
+  app.get('/', async (req, res) => {
+    res.json({ message: 'Server is running' });
+  });
   // Healthcheck (unmetered)
   app.get('/health', async (req, res) => {
     try {
@@ -99,7 +104,7 @@ async function bootstrap() {
   router.use('/admin', adminRoutes);
   router.use('/payments', paymentRoutes);
   router.use('/maps', mapsRoutes);
-  
+
   app.use('/api/v1', router);
 
   // Error handling (must be last)
