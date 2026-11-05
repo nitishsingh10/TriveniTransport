@@ -52,29 +52,29 @@
   --font-heading: 'Montserrat', sans-serif;
   --font-body:    'Poppins', sans-serif;
 
-  --text-xs:   0.8125rem;   /* 13px */
-  --text-sm:   0.9375rem;   /* 15px */
-  --text-base: 1.0625rem;   /* 17px */
-  --text-lg:   1.25rem;     /* 20px */
-  --text-xl:   1.4375rem;   /* 23px */
-  --text-2xl:  1.75rem;     /* 28px */
-  --text-3xl:  2.25rem;     /* 36px */
-  --text-4xl:  2.875rem;    /* 46px */
-  --text-5xl:  3.75rem;     /* 60px */
+  --text-xs:   0.75rem;     /* 12px */
+  --text-sm:   0.875rem;    /* 14px */
+  --text-base: 1rem;        /* 16px */
+  --text-lg:   1.125rem;    /* 18px */
+  --text-xl:   1.25rem;     /* 20px */
+  --text-2xl:  1.5rem;      /* 24px */
+  --text-3xl:  1.875rem;    /* 30px */
+  --text-4xl:  2.25rem;     /* 36px */
+  --text-5xl:  2.75rem;     /* 44px */
 
-  /* ── Spacing (8px grid, generous for laptop) ───────────────── */
+  /* ── Spacing (clean compact grid) ────────────────────────── */
   --space-1:  0.25rem;
   --space-2:  0.5rem;
   --space-3:  0.75rem;
   --space-4:  1rem;
-  --space-5:  1.375rem;
-  --space-6:  1.75rem;
-  --space-8:  2.5rem;
-  --space-10: 3rem;
-  --space-12: 3.75rem;
-  --space-16: 5rem;
-  --space-20: 6.5rem;
-  --space-24: 8rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 3.75rem;
+  --space-20: 4.5rem;
+  --space-24: 5.5rem;
 
   /* ── Radii ──────────────────────────────────────────────── */
   --radius-sm:   0.375rem;
@@ -116,7 +116,7 @@
 }
 
 html {
-  font-size: 17px;
+  font-size: 16px;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -340,18 +340,22 @@ input, select, textarea {
 
 /* ── Section ──────────────────────────────────────────────── */
 .section {
-  padding: var(--space-20) 0;
+  padding: var(--space-12) 0;
 }
 
 .section-heading {
-  font-size: clamp(2rem, 3vw, 3.25rem);
-  margin-bottom: var(--space-5);
+  font-size: clamp(1.5rem, 2.3vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin-bottom: var(--space-3);
+  line-height: 1.2;
 }
 
 .section-subheading {
-  font-size: var(--text-lg);
+  font-size: var(--text-sm);
   color: var(--gray-500);
-  max-width: 680px;
+  max-width: 620px;
+  line-height: 1.6;
 }
 
 /* ── Animations ───────────────────────────────────────────── */

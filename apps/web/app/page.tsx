@@ -378,22 +378,17 @@ export default function Home() {
                   <span className={styles.perkDot}>•</span>
                   <span><Shield size={12} /> ₹0 Hidden Costs</span>
                 </div>
-                <a href="#instant-estimate" className={styles.estimateScrollBtn}>
-                  Or calculate instant estimate online below <ArrowDown size={14} />
-                </a>
               </motion.div>
             </div>
-          </div>
-        </section>
 
-        {/* ── Instant Estimate ────────────────────────── */}
-        <section className={`section ${styles.estimateSection}`} id="instant-estimate">
-          <div className="container">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: '-50px' }} variants={scrollReveal} style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-              <h2 className="section-heading">Get an Instant Estimate</h2>
-              <p className="section-subheading" style={{ marginInline: 'auto' }}>Calculate your moving cost in 30 seconds with transparent, line-by-line pricing</p>
-            </motion.div>
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: '-50px' }} variants={scrollReveal} className={styles.estimateWrapper}>
+            {/* Right Column: Instant Fare Calculator Widget */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className={styles.heroWidgetCol}
+              id="instant-estimate"
+            >
               <InstantEstimate />
             </motion.div>
           </div>
