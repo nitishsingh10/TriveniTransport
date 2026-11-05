@@ -64,6 +64,10 @@ export class PaymentService {
         currency: 'INR',
         receipt: receiptId,
         status: 'created',
+        notes: {
+          bookingId,
+          type,
+        },
       };
     }
 
@@ -71,6 +75,10 @@ export class PaymentService {
       amount: amountInPaise,
       currency: 'INR',
       receipt: receiptId,
+      notes: {
+        bookingId,
+        type,
+      },
     });
 
     return order;

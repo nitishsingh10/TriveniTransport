@@ -13,12 +13,11 @@ import {
   User,
   Truck,
   ShieldCheck,
-  Star,
+  Award,
   FileText,
   PhoneCall,
   LogOut,
   ChevronRight,
-  Award,
   CheckCircle2,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
@@ -62,8 +61,8 @@ export default function DriverProfileScreen() {
         <View style={styles.metricsRow}>
           <View style={styles.metricItem}>
             <View style={styles.metricValueRow}>
-              <Star size={13} color={Colors.marigold} fill={Colors.marigold} />
-              <Text style={styles.metricValue}>4.9</Text>
+              <Award size={13} color={Colors.marigold} />
+              <Text style={styles.metricValue}>4.9/5</Text>
             </View>
             <Text style={styles.metricLabel}>Rating</Text>
           </View>

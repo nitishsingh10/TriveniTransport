@@ -6,13 +6,13 @@
 
 export const Colors = {
   // Canvas & Surfaces (Matching web globals.css & login/bookings pages)
-  background: '#F0F4F8',        // Clean light canvas (--brand-50 / --gray-50)
+  background: '#F8FAFC',        // Ultra-clean light canvas
   surface: '#FFFFFF',           // Pure white card background
   surfaceElevated: '#FFFFFF',
-  surfaceSubtle: '#F8FAFC',
+  surfaceSubtle: '#F1F5F9',
   cardBg: '#FFFFFF',
-  cardBorder: '#E2E8F0',
-  cardBorderSubtle: '#EDF2F7',
+  cardBorder: 'rgba(13, 31, 55, 0.06)',
+  cardBorderSubtle: 'rgba(13, 31, 55, 0.04)',
 
   // Primary Brand (Deep Navy palette from web --brand-*)
   navy: '#0D1F37',              // Core Logo Navy (--brand-700)

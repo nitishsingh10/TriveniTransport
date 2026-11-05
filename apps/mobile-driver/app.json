@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.trivenitransports.driver"
+      "bundleIdentifier": "com.trivenitransports.driver",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Triveni Driver uses your location to broadcast live telemetry to operations and customers while fulfilling active moves.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Triveni Driver uses your background location to broadcast transit progress while duty is active."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +26,12 @@
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.trivenitransports.driver",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",

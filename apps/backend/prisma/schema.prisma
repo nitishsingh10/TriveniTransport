@@ -471,6 +471,7 @@ enum NotificationStatus {
 
 enum OtpPurpose {
   login
+  signup
 }
 
 enum PricingRuleType {

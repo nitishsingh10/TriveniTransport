@@ -2,36 +2,59 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Phone, ShieldCheck, Quote, Star, ArrowLeft, UserCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Phone, ShieldCheck, Quote, ArrowLeft, UserCircle, AlertCircle } from 'lucide-react';
+import { auth, token, ApiError } from '../lib/api';
 import styles from './page.module.css';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const requestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 10 || name.length < 2) return;
+    setError('');
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/request
-    setTimeout(() => {
+    try {
+      await auth.requestOtp(phone, 'customer', true);
       setOtpSent(true);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Could not send OTP. Please check your network connection.');
+      }
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 6) return;
+    setError('');
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/verify (with signup data)
-    setTimeout(() => {
+    try {
+      const res = await auth.verifyOtp(phone, otp, 'customer', name, true);
+      token.set(res.accessToken, res.refreshToken);
+      token.setRole('customer');
+      const next = new URLSearchParams(window.location.search).get('next') ?? '/bookings';
+      router.push(next);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Account verification failed. Please try again.');
+      }
+    } finally {
       setLoading(false);
-      window.location.href = '/bookings';
-    }, 800);
+    }
   };
 
   return (
@@ -55,6 +78,13 @@ export default function SignupPage() {
             <div className={styles.formWrapper}>
               <h1 className={styles.title}>Create an account</h1>
               <p className={styles.subtitle}>Join Triveni Transports to start moving.</p>
+
+              {error && (
+                <div className={styles.errorBanner}>
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
 
               {!otpSent ? (
                 <form className={styles.form} onSubmit={requestOtp}>
@@ -124,6 +154,11 @@ export default function SignupPage() {
                       <ShieldCheck size={18} className={styles.inputIcon} />
                     </div>
                     <span className={styles.hint}>Sent to +91 {phone}</span>
+                    {process.env.NODE_ENV !== 'production' && (
+                      <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
+                        Dev mode: use OTP <strong>123456</strong>
+                      </span>
+                    )}
                   </div>
 
                   <button
@@ -160,11 +195,8 @@ export default function SignupPage() {
                   &quot;The packing team was extremely professional. Not a single scratch on my fragile items, and they delivered exactly on time!&quot;
                 </p>
                 <div className={styles.author}>
-                  <div className={styles.authorStars}>
-                    {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill="currentColor" />)}
-                  </div>
                   <p className={styles.authorName}>Priya Patel</p>
-                  <p className={styles.authorRole}>Moved within Mumbai</p>
+                  <p className={styles.authorRole}>Moved within Mumbai • Verified Customer</p>
                 </div>
               </div>
             </div>

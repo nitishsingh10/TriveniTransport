@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   MapPin,
   Home,
@@ -21,12 +23,15 @@ import {
   Crosshair,
   Flag,
   Navigation,
+  CheckCircle2,
+  Sparkles,
+  X,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import type { ConfigurationType } from '@triveni/shared-types';
 import { GoogleMapsLocationModal } from '@/components/GoogleMapsLocationModal';
 import { GoogleMapsRouteCard } from '@/components/GoogleMapsRouteCard';
-import { mapsApi, RouteEstimate } from '@/lib/api';
+import { mapsApi, RouteEstimate, PlaceLocation } from '@/lib/api';
 
 interface ConfigOption {
   value: ConfigurationType;
@@ -47,15 +52,45 @@ const CONFIGS: ConfigOption[] = [
 const FLOORS = ['Ground', '1st', '2nd', '3rd', '4th', '5th+'];
 
 export default function QuoteIndexScreen() {
-  const [pickup, setPickup] = useState('');
-  const [drop, setDrop] = useState('');
-  const [config, setConfig] = useState<ConfigurationType>('2bhk');
+  const params = useLocalSearchParams<{
+    pickup?: string;
+    drop?: string;
+    config?: string;
+    pickupLat?: string;
+    pickupLng?: string;
+    dropLat?: string;
+    dropLng?: string;
+  }>();
+  const [pickup, setPickup] = useState(params.pickup || '');
+  const [drop, setDrop] = useState(params.drop || '');
+  const [config, setConfig] = useState<ConfigurationType>((params.config as ConfigurationType) || '2bhk');
   const [floor, setFloor] = useState(0);
   const [lift, setLift] = useState(true);
+
+  // Address suggestions state (Google Maps style)
+  const [pickupSuggestions, setPickupSuggestions] = useState<PlaceLocation[]>([]);
+  const [dropSuggestions, setDropSuggestions] = useState<PlaceLocation[]>([]);
+  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+  const [showDropSuggestions, setShowDropSuggestions] = useState(false);
+  const [isPickupLoading, setIsPickupLoading] = useState(false);
+  const [isDropLoading, setIsDropLoading] = useState(false);
+
+  const pickupDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Google Maps Pinning Modal State
   const [mapModalType, setMapModalType] = useState<'pickup' | 'drop' | null>(null);
   const [routeEstimate, setRouteEstimate] = useState<RouteEstimate | null>(null);
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | undefined>(
+    params.pickupLat && params.pickupLng
+      ? { lat: parseFloat(params.pickupLat), lng: parseFloat(params.pickupLng) }
+      : undefined
+  );
+  const [dropCoords, setDropCoords] = useState<{ lat: number; lng: number } | undefined>(
+    params.dropLat && params.dropLng
+      ? { lat: parseFloat(params.dropLat), lng: parseFloat(params.dropLng) }
+      : undefined
+  );
 
   // Fetch route estimate when both addresses are valid
   useEffect(() => {
@@ -76,31 +111,131 @@ export default function QuoteIndexScreen() {
 
   const canProceed = pickup.trim().length > 2 && drop.trim().length > 2;
 
+  // Handle address input typing with instant local matching + debounced Google Places suggestions
+  const handlePickupChange = (text: string) => {
+    setPickup(text);
+    if (pickupDebounce.current) clearTimeout(pickupDebounce.current);
+
+    if (text.trim().length < 2) {
+      setPickupSuggestions([]);
+      setShowPickupSuggestions(false);
+      setIsPickupLoading(false);
+      return;
+    }
+
+    // Instant local match (0ms latency, exactly like Google Maps cache)
+    const localMatches = mapsApi.getLocalMatches(text);
+    setPickupSuggestions(localMatches);
+    setShowPickupSuggestions(true);
+    setIsPickupLoading(true);
+
+    pickupDebounce.current = setTimeout(async () => {
+      try {
+        const results = await mapsApi.searchPlaces(text);
+        if (results && results.length > 0) {
+          setPickupSuggestions((prev) => {
+            const seen = new Set(results.map((r) => r.placeId || r.description));
+            const merged = [...results, ...prev.filter((p) => !seen.has(p.placeId || p.description))];
+            return merged.slice(0, 6);
+          });
+        }
+      } catch {
+        // Keep local matches
+      } finally {
+        setIsPickupLoading(false);
+      }
+    }, 250);
+  };
+
+  const handleDropChange = (text: string) => {
+    setDrop(text);
+    if (dropDebounce.current) clearTimeout(dropDebounce.current);
+
+    if (text.trim().length < 2) {
+      setDropSuggestions([]);
+      setShowDropSuggestions(false);
+      setIsDropLoading(false);
+      return;
+    }
+
+    // Instant local match (0ms latency)
+    const localMatches = mapsApi.getLocalMatches(text);
+    setDropSuggestions(localMatches);
+    setShowDropSuggestions(true);
+    setIsDropLoading(true);
+
+    dropDebounce.current = setTimeout(async () => {
+      try {
+        const results = await mapsApi.searchPlaces(text);
+        if (results && results.length > 0) {
+          setDropSuggestions((prev) => {
+            const seen = new Set(results.map((r) => r.placeId || r.description));
+            const merged = [...results, ...prev.filter((p) => !seen.has(p.placeId || p.description))];
+            return merged.slice(0, 6);
+          });
+        }
+      } catch {
+        // Keep local matches
+      } finally {
+        setIsDropLoading(false);
+      }
+    }, 250);
+  };
+
+  const handleSelectPickupSuggestion = (item: PlaceLocation) => {
+    setPickup(item.description);
+    if (item.lat && item.lng) {
+      setPickupCoords({ lat: item.lat, lng: item.lng });
+    }
+    setShowPickupSuggestions(false);
+    setPickupSuggestions([]);
+  };
+
+  const handleSelectDropSuggestion = (item: PlaceLocation) => {
+    setDrop(item.description);
+    if (item.lat && item.lng) {
+      setDropCoords({ lat: item.lat, lng: item.lng });
+    }
+    setShowDropSuggestions(false);
+    setDropSuggestions([]);
+  };
+
   const handleLocationSelected = (loc: { address: string; lat: number; lng: number; city: string; type?: 'pickup' | 'drop' }) => {
     const targetType = loc.type || mapModalType;
     if (targetType === 'pickup') {
       setPickup(loc.address);
+      setPickupCoords({ lat: loc.lat, lng: loc.lng });
+      setShowPickupSuggestions(false);
     } else if (targetType === 'drop') {
       setDrop(loc.address);
+      setDropCoords({ lat: loc.lat, lng: loc.lng });
+      setShowDropSuggestions(false);
     }
     setMapModalType(null);
   };
 
   const handleUseCurrentLocationForPickup = () => {
+    setShowPickupSuggestions(false);
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           try {
+            setPickupCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
             const rev = await mapsApi.reverseGeocode(pos.coords.latitude, pos.coords.longitude);
             setPickup(rev.address);
           } catch {
             setPickup('Viman Nagar, Pune, Maharashtra');
+            setPickupCoords({ lat: 18.5679, lng: 73.9143 });
           }
         },
-        () => setPickup('Viman Nagar, Pune, Maharashtra')
+        () => {
+          setPickup('Viman Nagar, Pune, Maharashtra');
+          setPickupCoords({ lat: 18.5679, lng: 73.9143 });
+        }
       );
     } else {
       setPickup('Viman Nagar, Pune, Maharashtra');
+      setPickupCoords({ lat: 18.5679, lng: 73.9143 });
     }
   };
 
@@ -111,8 +246,8 @@ export default function QuoteIndexScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Glassmorphic Step Progress Indicator */}
-      <View style={styles.glassProgressCard}>
+      {/* ── Modern Step Progress Bar ─────────────────────────────── */}
+      <View style={styles.progressCard}>
         <View style={styles.progressItem}>
           <View style={[styles.progressCircle, styles.progressCircleActive]}>
             <Text style={styles.progressNumActive}>1</Text>
@@ -139,90 +274,201 @@ export default function QuoteIndexScreen() {
         </View>
       </View>
 
-      {/* Screen Title */}
+      {/* ── Screen Title Group ────────────────────────────────────── */}
       <View style={styles.titleGroup}>
-        <View style={styles.badgeRow}>
-          <Text style={styles.stepBadge}>STEP 1 · RELOCATION ROUTE</Text>
+        <View style={styles.stepBadgePill}>
+          <Sparkles size={11} color={Colors.marigoldDark} />
+          <Text style={styles.stepBadgeText}>STEP 1 OF 3 · RELOCATION ROUTE</Text>
         </View>
         <Text style={styles.title}>Where are you moving?</Text>
         <Text style={styles.subtitle}>
-          Select pickup & drop points using our interactive Uber-styled map pin selector.
+          Enter addresses or select on the map for an instant estimate.
         </Text>
       </View>
 
-      {/* Glassmorphic Location Pinning Card with Route Connector */}
-      <View style={styles.glassLocationCard}>
-        {/* Interactive Banner to open full Map Pinning */}
+      {/* ── Location Card with Route Connector ─────────────────────── */}
+      <View style={styles.locationCard}>
+        {/* Hero Banner to Open Map Pinning */}
         <TouchableOpacity
           style={styles.mapPinHeroBanner}
           onPress={() => setMapModalType('pickup')}
           activeOpacity={0.88}
         >
           <View style={styles.mapPinIconBox}>
-            <Compass size={20} color="#FFFFFF" strokeWidth={2.4} />
+            <Compass size={18} color={Colors.navy} strokeWidth={2.4} />
           </View>
           <View style={styles.mapPinBannerTextCol}>
-            <Text style={styles.mapPinBannerTitle}>Select via Interactive Map Pinning</Text>
+            <Text style={styles.mapPinBannerTitle}>Select on Map</Text>
             <Text style={styles.mapPinBannerSub}>
-              Drag to pin exact doorway or building in our Uber-themed map
+              Pin exact pickup &amp; drop entrance on map
             </Text>
           </View>
-          <ArrowRight size={16} color={Colors.marigold} strokeWidth={2.6} />
+          <View style={styles.bannerArrowCircle}>
+            <ArrowRight size={14} color={Colors.navy} strokeWidth={2.6} />
+          </View>
         </TouchableOpacity>
 
-        {/* Pickup Row */}
-        <View style={styles.locationRow}>
-          <View style={styles.routeIndicatorCol}>
-            <View style={styles.pickupDot} />
-            <View style={styles.routeVerticalLine} />
+        {/* Pickup Location Block */}
+        <View style={styles.addressBlockWrap}>
+          <View style={styles.inputContainerRow}>
+            <View style={styles.routeIndicatorCol}>
+              <View style={styles.pickupDotOuter}>
+                <View style={styles.pickupDotInner} />
+              </View>
+              <View style={styles.routeVerticalTrack} />
+            </View>
+
+            <View style={styles.locationInputBlock}>
+              <Text style={styles.inputLabel}>PICKUP LOCATION</Text>
+              <TextInput
+                style={styles.locationInput}
+                placeholder="Society name, street, or landmark"
+                placeholderTextColor={Colors.inputPlaceholder}
+                value={pickup}
+                onChangeText={handlePickupChange}
+                onFocus={() => {
+                  if (pickupSuggestions.length > 0) setShowPickupSuggestions(true);
+                }}
+              />
+            </View>
+
+            {pickup.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setPickup('');
+                  setShowPickupSuggestions(false);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.clearBtn}
+              >
+                <X size={14} color={Colors.textMuted} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.mapPickerTrigger}
+              onPress={() => setMapModalType('pickup')}
+              activeOpacity={0.75}
+            >
+              <MapPin size={12} color={Colors.marigoldDark} strokeWidth={2.4} />
+              <Text style={styles.mapPickerTriggerText}>Pin Map</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.locationInputBlock}>
-            <Text style={styles.inputLabel}>PICKUP LOCATION</Text>
-            <TextInput
-              style={styles.locationInput}
-              placeholder="Society name, street, or landmark"
-              placeholderTextColor={Colors.inputPlaceholder}
-              value={pickup}
-              onChangeText={setPickup}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.mapPickerTrigger}
-            onPress={() => setMapModalType('pickup')}
-            activeOpacity={0.75}
-          >
-            <MapPin size={13} color={Colors.marigoldDark} strokeWidth={2.4} />
-            <Text style={styles.mapPickerTriggerText}>Pin Map</Text>
-          </TouchableOpacity>
+          {/* Google Maps Places Suggestions for Pickup */}
+          {showPickupSuggestions && (
+            <View style={styles.suggestionsContainer}>
+              {isPickupLoading && (
+                <View style={styles.suggestionLoadingRow}>
+                  <ActivityIndicator size="small" color={Colors.marigoldDark} />
+                  <Text style={styles.suggestionLoadingText}>Searching Google Maps locations...</Text>
+                </View>
+              )}
+              {pickupSuggestions.map((item) => (
+                <TouchableOpacity
+                  key={item.placeId || item.description}
+                  style={styles.suggestionRow}
+                  onPress={() => handleSelectPickupSuggestion(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.suggestionPinBox}>
+                    <MapPin size={14} color={Colors.marigoldDark} strokeWidth={2.2} />
+                  </View>
+                  <View style={styles.suggestionTextBox}>
+                    <Text style={styles.suggestionMainText} numberOfLines={1}>
+                      {item.mainText || item.description}
+                    </Text>
+                    {item.secondaryText ? (
+                      <Text style={styles.suggestionSubText} numberOfLines={1}>
+                        {item.secondaryText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
-        {/* Drop Destination Row */}
-        <View style={styles.locationRow}>
-          <View style={styles.routeIndicatorCol}>
-            <View style={styles.dropSquare} />
+        {/* Drop Destination Block */}
+        <View style={styles.addressBlockWrap}>
+          <View style={styles.inputContainerRow}>
+            <View style={styles.routeIndicatorCol}>
+              <View style={styles.dropSquareOuter}>
+                <View style={styles.dropSquareInner} />
+              </View>
+            </View>
+
+            <View style={styles.locationInputBlock}>
+              <Text style={styles.inputLabel}>DROP DESTINATION</Text>
+              <TextInput
+                style={styles.locationInput}
+                placeholder="Delivery destination building or area"
+                placeholderTextColor={Colors.inputPlaceholder}
+                value={drop}
+                onChangeText={handleDropChange}
+                onFocus={() => {
+                  if (dropSuggestions.length > 0) setShowDropSuggestions(true);
+                }}
+              />
+            </View>
+
+            {drop.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setDrop('');
+                  setShowDropSuggestions(false);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.clearBtn}
+              >
+                <X size={14} color={Colors.textMuted} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[styles.mapPickerTrigger, styles.mapPickerTriggerNavy]}
+              onPress={() => setMapModalType('drop')}
+              activeOpacity={0.75}
+            >
+              <Flag size={12} color={Colors.navy} strokeWidth={2.4} />
+              <Text style={[styles.mapPickerTriggerText, { color: Colors.navy }]}>Pin Map</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.locationInputBlock}>
-            <Text style={styles.inputLabel}>DROP DESTINATION</Text>
-            <TextInput
-              style={styles.locationInput}
-              placeholder="Delivery destination building or area"
-              placeholderTextColor={Colors.inputPlaceholder}
-              value={drop}
-              onChangeText={setDrop}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.mapPickerTrigger, { backgroundColor: Colors.navySubtle, borderColor: Colors.navyBorder }]}
-            onPress={() => setMapModalType('drop')}
-            activeOpacity={0.75}
-          >
-            <Flag size={13} color={Colors.navy} strokeWidth={2.4} />
-            <Text style={[styles.mapPickerTriggerText, { color: Colors.navy }]}>Pin Map</Text>
-          </TouchableOpacity>
+          {/* Google Maps Places Suggestions for Drop */}
+          {showDropSuggestions && (
+            <View style={styles.suggestionsContainer}>
+              {isDropLoading && (
+                <View style={styles.suggestionLoadingRow}>
+                  <ActivityIndicator size="small" color={Colors.navy} />
+                  <Text style={styles.suggestionLoadingText}>Searching Google Maps locations...</Text>
+                </View>
+              )}
+              {dropSuggestions.map((item) => (
+                <TouchableOpacity
+                  key={item.placeId || item.description}
+                  style={styles.suggestionRow}
+                  onPress={() => handleSelectDropSuggestion(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.suggestionPinBox, { backgroundColor: Colors.navySubtle }]}>
+                    <MapPin size={14} color={Colors.navy} strokeWidth={2.2} />
+                  </View>
+                  <View style={styles.suggestionTextBox}>
+                    <Text style={styles.suggestionMainText} numberOfLines={1}>
+                      {item.mainText || item.description}
+                    </Text>
+                    {item.secondaryText ? (
+                      <Text style={styles.suggestionSubText} numberOfLines={1}>
+                        {item.secondaryText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Quick Location Shortcuts */}
@@ -238,44 +484,58 @@ export default function QuoteIndexScreen() {
 
           <TouchableOpacity
             style={styles.quickAreaChip}
-            onPress={() => setDrop('Baner, Pune, Maharashtra')}
+            onPress={() => {
+              setDrop('Thane West, Maharashtra');
+              setShowDropSuggestions(false);
+            }}
             activeOpacity={0.75}
           >
-            <Text style={styles.quickAreaText}>+ Baner</Text>
+            <Text style={styles.quickAreaText}>+ Thane West</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickAreaChip}
-            onPress={() => setDrop('Hinjewadi Phase 1, Pune')}
+            onPress={() => {
+              setDrop('Bandra BKC, Mumbai');
+              setShowDropSuggestions(false);
+            }}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.quickAreaText}>+ Bandra BKC</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickAreaChip}
+            onPress={() => {
+              setDrop('Hinjewadi Phase 1, Pune');
+              setShowDropSuggestions(false);
+            }}
             activeOpacity={0.75}
           >
             <Text style={styles.quickAreaText}>+ Hinjewadi</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAreaChip}
-            onPress={() => setDrop('Powai, Mumbai')}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.quickAreaText}>+ Powai</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Google Maps Route Preview Card with Custom Uber Theme */}
+      {/* Google Maps Route Preview Card */}
       {routeEstimate && (
         <GoogleMapsRouteCard
           pickupAddress={pickup}
           dropAddress={drop}
+          pickupCoords={pickupCoords}
+          dropCoords={dropCoords}
           distanceKm={routeEstimate.distanceKm}
           durationMins={routeEstimate.durationMins}
           onOpenMapPicker={() => setMapModalType('pickup')}
         />
       )}
 
-      {/* Home Configuration Glass Grid */}
+      {/* ── Home Configuration Grid ─────────────────────────────────── */}
       <View style={styles.sectionBlock}>
-        <Text style={styles.sectionTitle}>Home Size / Configuration</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Home Size / Configuration</Text>
+          <Text style={styles.sectionSubtitle}>Standard truck sized to fit</Text>
+        </View>
         <View style={styles.configGrid}>
           {CONFIGS.map((c) => {
             const Icon = c.icon;
@@ -283,15 +543,17 @@ export default function QuoteIndexScreen() {
             return (
               <TouchableOpacity
                 key={c.value}
-                style={[styles.glassConfigChip, isSelected && styles.glassConfigChipActive]}
+                style={[styles.configChip, isSelected && styles.configChipActive]}
                 onPress={() => setConfig(c.value)}
                 activeOpacity={0.8}
               >
-                <Icon
-                  size={16}
-                  color={isSelected ? Colors.marigoldDark : Colors.navy}
-                  strokeWidth={isSelected ? 2.6 : 1.8}
-                />
+                <View style={[styles.configIconBox, isSelected && styles.configIconBoxActive]}>
+                  <Icon
+                    size={16}
+                    color={isSelected ? Colors.marigold : Colors.navy}
+                    strokeWidth={isSelected ? 2.4 : 1.8}
+                  />
+                </View>
                 <Text
                   style={[
                     styles.configLabel,
@@ -306,7 +568,7 @@ export default function QuoteIndexScreen() {
         </View>
       </View>
 
-      {/* Floor Number Glass Chips */}
+      {/* ── Floor Number Level ───────────────────────────────────────── */}
       <View style={styles.sectionBlock}>
         <Text style={styles.sectionTitle}>Pickup Floor Level</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -316,7 +578,7 @@ export default function QuoteIndexScreen() {
               return (
                 <TouchableOpacity
                   key={f}
-                  style={[styles.glassFloorChip, isSelected && styles.glassFloorChipActive]}
+                  style={[styles.floorChip, isSelected && styles.floorChipActive]}
                   onPress={() => setFloor(i)}
                   activeOpacity={0.8}
                 >
@@ -335,21 +597,21 @@ export default function QuoteIndexScreen() {
         </ScrollView>
       </View>
 
-      {/* Lift Available Glass Card */}
+      {/* ── Lift Available Toggle Card ──────────────────────────────── */}
       <TouchableOpacity
-        style={styles.glassLiftToggle}
+        style={styles.liftToggleCard}
         onPress={() => setLift(!lift)}
         activeOpacity={0.85}
       >
         <View style={styles.liftInfo}>
           <View style={styles.liftIconCircle}>
-            <Layers size={18} color={Colors.navy} strokeWidth={2} />
+            <Layers size={18} color={Colors.navy} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.liftTitle}>Service Lift / Elevator Available</Text>
             <Text style={styles.liftSub}>
               {lift
-                ? 'Elevator available · standard loading rates'
+                ? 'Elevator available · Standard loading rates apply'
                 : 'Staircase manual carry charges apply'}
             </Text>
           </View>
@@ -359,7 +621,7 @@ export default function QuoteIndexScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* CTA Button */}
+      {/* ── Primary CTA Button ───────────────────────────────────────── */}
       <TouchableOpacity
         style={[styles.cta, !canProceed && styles.ctaDisabled]}
         disabled={!canProceed}
@@ -379,7 +641,7 @@ export default function QuoteIndexScreen() {
         activeOpacity={0.88}
       >
         <Text style={styles.ctaText}>Proceed to Item Inventory</Text>
-        <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
+        <ArrowRight size={17} color={Colors.navy} strokeWidth={2.6} />
       </TouchableOpacity>
 
       {/* Full-Screen Uber-Themed Interactive Map Pinning Modal */}
@@ -400,30 +662,26 @@ export default function QuoteIndexScreen() {
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: '#F0F4F8',
+    backgroundColor: Colors.background,
   },
   container: {
     padding: Spacing.md,
     gap: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing.xxxl,
   },
 
-  // ── Glassmorphic Step Progress Card ─────────────────────────────
-  glassProgressCard: {
+  // ── Step Progress Indicator ──────────────────────────────────
+  progressCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: '#FFFFFF',
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.75)',
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: 'rgba(13, 31, 55, 0.06)',
+    ...Shadow.sm,
   },
   progressItem: {
     alignItems: 'center',
@@ -433,15 +691,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   progressCircleActive: {
     backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
   },
   progressNum: {
     color: Colors.textMuted,
@@ -455,7 +710,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: FontWeight.medium,
   },
   progressLabelActive: {
@@ -465,7 +720,7 @@ const styles = StyleSheet.create({
   progressLine: {
     flex: 1,
     height: 2,
-    backgroundColor: Colors.cardBorder,
+    backgroundColor: '#E2E8F0',
     marginHorizontal: Spacing.sm,
     marginBottom: 16,
   },
@@ -477,182 +732,264 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Title
+  // ── Title Group ──────────────────────────────────────────────
   titleGroup: {
     gap: 4,
+    paddingHorizontal: Spacing.xs,
   },
-  badgeRow: {
+  stepBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    backgroundColor: 'rgba(247, 163, 0, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 163, 0, 0.25)',
   },
-  stepBadge: {
+  stepBadgeText: {
     color: Colors.marigoldDark,
-    fontSize: FontSize.xxs,
+    fontSize: 9.5,
     fontWeight: FontWeight.bold,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   title: {
     color: Colors.navyDark,
     fontSize: FontSize.xl + 2,
     fontWeight: FontWeight.extrabold,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   subtitle: {
     color: Colors.textSecondary,
     fontSize: FontSize.xs + 1,
-    lineHeight: 19,
+    lineHeight: 18,
   },
 
-  // ── Glassmorphic Location Card ──────────────────────────────────
-  glassLocationCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
-    borderRadius: BorderRadius.xl + 2,
+  // ── Location Card ────────────────────────────────────────────
+  locationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.xxl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: 'rgba(13, 31, 55, 0.06)',
     padding: Spacing.md,
     gap: Spacing.md,
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.10,
-    shadowRadius: 20,
-    elevation: 5,
+    ...Shadow.md,
   },
 
-  // Map Pin Hero Banner
+  // Hero Map Pin Banner
   mapPinHeroBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#091524',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.sm + 4,
-    gap: Spacing.sm,
+    backgroundColor: '#0D1F37',
+    borderRadius: BorderRadius.xl,
+    padding: 12,
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(247, 163, 0, 0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    borderColor: 'rgba(247, 163, 0, 0.35)',
+    ...Shadow.sm,
   },
   mapPinIconBox: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(247, 163, 0, 0.25)',
+    backgroundColor: Colors.marigold,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.marigold,
   },
   mapPinBannerTextCol: {
     flex: 1,
+    gap: 1,
   },
   mapPinBannerTitle: {
     color: '#FFFFFF',
-    fontSize: FontSize.xs + 1,
-    fontWeight: FontWeight.bold,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: -0.2,
   },
   mapPinBannerSub: {
     color: '#94A3B8',
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 10.5,
+  },
+  bannerArrowCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.marigold,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  // Location Rows with vertical connected route
-  locationRow: {
+  // Address Block Wrap
+  addressBlockWrap: {
+    position: 'relative',
+    gap: 4,
+  },
+
+  // Location Row
+  inputContainerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm + 2,
+    backgroundColor: Colors.surfaceSubtle,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(13, 31, 55, 0.04)',
   },
   routeIndicatorCol: {
     alignItems: 'center',
-    width: 24,
+    width: 18,
   },
-  pickupDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.marigold,
-    borderWidth: 2.5,
-    borderColor: '#FFFFFF',
-    shadowColor: Colors.marigold,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 3,
+  pickupDotOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(22, 163, 74, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  routeVerticalLine: {
+  pickupDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.success,
+  },
+  routeVerticalTrack: {
     width: 2,
-    height: 32,
-    backgroundColor: 'rgba(13, 31, 55, 0.2)',
+    height: 36,
+    backgroundColor: 'rgba(13, 31, 55, 0.12)',
     marginVertical: 2,
   },
-  dropSquare: {
-    width: 13,
-    height: 13,
-    borderRadius: 3,
-    backgroundColor: Colors.navy,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+  dropSquareOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    backgroundColor: 'rgba(247, 163, 0, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropSquareInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: Colors.marigold,
   },
   locationInputBlock: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
   inputLabel: {
     color: Colors.textMuted,
-    fontSize: 9.5,
-    fontWeight: FontWeight.bold,
+    fontSize: 8.5,
+    fontWeight: FontWeight.extrabold,
     letterSpacing: 0.8,
   },
   locationInput: {
-    color: Colors.navy,
+    color: Colors.navyDark,
     fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.semibold,
-    paddingVertical: 3,
+    paddingVertical: 2,
+  },
+  clearBtn: {
+    padding: 4,
   },
   mapPickerTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: Colors.marigoldSubtle,
     borderWidth: 1,
     borderColor: Colors.marigoldBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: BorderRadius.full,
   },
+  mapPickerTriggerNavy: {
+    backgroundColor: Colors.navySubtle,
+    borderColor: Colors.navyBorder,
+  },
   mapPickerTriggerText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: FontWeight.bold,
     color: Colors.marigoldDark,
   },
 
-  // Quick Shortcuts Row
+  // Google Maps Style Suggestions
+  suggestionsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(13, 31, 55, 0.1)',
+    overflow: 'hidden',
+    marginTop: 4,
+    ...Shadow.md,
+  },
+  suggestionLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  suggestionLoadingText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontWeight: FontWeight.medium,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(13, 31, 55, 0.04)',
+  },
+  suggestionPinBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.marigoldSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestionTextBox: {
+    flex: 1,
+    gap: 1,
+  },
+  suggestionMainText: {
+    fontSize: FontSize.xs + 1,
+    fontWeight: FontWeight.bold,
+    color: Colors.navyDark,
+  },
+  suggestionSubText: {
+    fontSize: 10.5,
+    color: Colors.textSecondary,
+  },
+
+  // Shortcuts Row
   quickShortcutsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(13, 31, 55, 0.06)',
+    borderTopColor: 'rgba(13, 31, 55, 0.05)',
   },
   quickGpsChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 10,
-    paddingVertical: 4.5,
+    paddingVertical: 5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.15)',
-    gap: 5,
+    borderColor: 'rgba(13, 31, 55, 0.12)',
+    gap: 4,
+    ...Shadow.sm,
   },
   quickGpsText: {
     color: Colors.navy,
@@ -660,117 +997,127 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   quickAreaChip: {
-    backgroundColor: 'rgba(247, 163, 0, 0.12)',
+    backgroundColor: 'rgba(247, 163, 0, 0.1)',
     paddingHorizontal: 9,
-    paddingVertical: 4.5,
+    paddingVertical: 5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(247, 163, 0, 0.28)',
+    borderColor: 'rgba(247, 163, 0, 0.25)',
   },
   quickAreaText: {
     color: Colors.marigoldDark,
     fontSize: 10,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
   },
 
-  // ── Sections ────────────────────────────────────────────────────
+  // ── Sections & Grids ─────────────────────────────────────────
   sectionBlock: {
-    gap: Spacing.xs + 2,
+    gap: Spacing.sm,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xs,
   },
   sectionTitle: {
     color: Colors.navyDark,
-    fontSize: FontSize.xs + 1,
-    fontWeight: FontWeight.bold,
-    letterSpacing: 0.2,
+    fontSize: FontSize.sm + 1,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: -0.2,
+  },
+  sectionSubtitle: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontWeight: FontWeight.medium,
   },
 
   configGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs + 2,
+    gap: 8,
   },
-  glassConfigChip: {
+  configChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    borderColor: 'rgba(13, 31, 55, 0.08)',
+    backgroundColor: '#FFFFFF',
+    ...Shadow.sm,
   },
-  glassConfigChipActive: {
-    borderColor: Colors.marigold,
-    backgroundColor: 'rgba(247, 163, 0, 0.12)',
-    borderWidth: 1.5,
+  configChipActive: {
+    borderColor: Colors.navy,
+    backgroundColor: Colors.navy,
+    ...Shadow.md,
+  },
+  configIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.navySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  configIconBoxActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   configLabel: {
-    color: Colors.navy,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
+    color: Colors.navyDark,
+    fontSize: FontSize.xs + 0.5,
+    fontWeight: FontWeight.bold,
   },
   configLabelActive: {
-    color: Colors.marigoldDark,
-    fontWeight: FontWeight.bold,
+    color: '#FFFFFF',
   },
 
   floorRow: {
     flexDirection: 'row',
-    gap: Spacing.xs + 2,
+    gap: 8,
+    paddingVertical: 2,
   },
-  glassFloorChip: {
-    paddingHorizontal: Spacing.md + 2,
-    paddingVertical: Spacing.sm,
+  floorChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    borderColor: 'rgba(13, 31, 55, 0.08)',
+    backgroundColor: '#FFFFFF',
+    ...Shadow.sm,
   },
-  glassFloorChipActive: {
+  floorChipActive: {
     borderColor: Colors.navy,
     backgroundColor: Colors.navy,
+    ...Shadow.md,
   },
   floorText: {
-    color: Colors.navy,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
+    color: Colors.navyDark,
+    fontSize: FontSize.xs + 0.5,
+    fontWeight: FontWeight.bold,
   },
   floorTextActive: {
     color: '#FFFFFF',
-    fontWeight: FontWeight.bold,
   },
 
-  // Lift toggle
-  glassLiftToggle: {
+  // Lift Toggle Card
+  liftToggleCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    backgroundColor: '#FFFFFF',
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: 'rgba(13, 31, 55, 0.06)',
     padding: Spacing.md,
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    ...Shadow.sm,
   },
   liftInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm + 2,
+    gap: 12,
     flex: 1,
     marginRight: Spacing.sm,
   },
@@ -781,8 +1128,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.navySubtle,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.navyBorder,
   },
   liftTitle: {
     color: Colors.navyDark,
@@ -804,7 +1149,7 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   toggleActive: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.marigold,
   },
   toggleThumb: {
     width: 22,
@@ -816,29 +1161,25 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
 
-  // CTA
+  // Primary CTA Button
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.navy,
+    gap: Spacing.xs + 4,
+    backgroundColor: Colors.marigold,
     borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.md + 2,
+    paddingVertical: 15,
     marginTop: Spacing.xs,
-    shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 5,
+    ...Shadow.glowSm,
   },
   ctaDisabled: {
     opacity: 0.45,
   },
   ctaText: {
-    color: '#FFFFFF',
+    color: Colors.navy,
     fontSize: FontSize.sm + 1,
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.extrabold,
     letterSpacing: 0.2,
   },
 });

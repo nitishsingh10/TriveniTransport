@@ -86,18 +86,28 @@ export class ApiError extends Error {
   }
 }
 
-// ── Auth ─────────────────────────────────────────────────────────────
 export const auth = {
-  requestOtp: (phone: string, role: 'customer' | 'vendor' | 'admin' = 'customer') =>
+  requestOtp: (phone: string, role: 'customer' | 'vendor' | 'admin' = 'customer', isSignup = false) =>
     apiFetch<{ message: string }>('/auth/otp/request', {
       method: 'POST',
-      body: JSON.stringify({ phone, role }),
+      body: JSON.stringify({ phone, role, isSignup }),
     }),
 
-  verifyOtp: (phone: string, code: string, role: 'customer' | 'vendor' | 'admin' = 'customer') =>
-    apiFetch<{ accessToken: string; refreshToken: string; userId: string }>('/auth/otp/verify', {
+  verifyOtp: (
+    phone: string,
+    code: string,
+    role: 'customer' | 'vendor' | 'admin' = 'customer',
+    name?: string,
+    isSignup = false
+  ) =>
+    apiFetch<{
+      accessToken: string;
+      refreshToken: string;
+      userId: string;
+      user?: { id: string; role: string; name: string; phone: string };
+    }>('/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, code, role }),
+      body: JSON.stringify({ phone, code, role, name, isSignup }),
     }),
 
   logout: () =>

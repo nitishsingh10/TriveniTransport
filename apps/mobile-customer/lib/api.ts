@@ -6,11 +6,22 @@
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// In Expo Web, localhost works. On physical device / simulator, user can set EXPO_PUBLIC_API_URL
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1');
+// Auto-detect development machine LAN IP when running in Expo Go on a real physical device
+const getBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:3001/api/v1`;
+    }
+  }
+  return Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1';
+};
+
+const BASE_URL = getBaseUrl();
 
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'triveni_customer_access_token',
@@ -118,7 +129,53 @@ export interface RouteEstimate {
   durationMins: number;
 }
 
+export const CURATED_LOCATIONS: PlaceLocation[] = [
+  // Pune & PCMC
+  { placeId: 'pune_viman', description: 'Viman Nagar, Pune, Maharashtra, India', mainText: 'Viman Nagar', secondaryText: 'Pune, Maharashtra', lat: 18.5679, lng: 73.9143, city: 'Pune' },
+  { placeId: 'pune_baner', description: 'Baner, Pune, Maharashtra, India', mainText: 'Baner', secondaryText: 'Pune, Maharashtra', lat: 18.5590, lng: 73.7868, city: 'Pune' },
+  { placeId: 'pune_kothrud', description: 'Kothrud, Pune, Maharashtra, India', mainText: 'Kothrud', secondaryText: 'Pune, Maharashtra', lat: 18.5074, lng: 73.8077, city: 'Pune' },
+  { placeId: 'pune_hinjewadi', description: 'Hinjewadi Phase 1, Pune, Maharashtra, India', mainText: 'Hinjewadi Phase 1', secondaryText: 'Pune, Maharashtra', lat: 18.5913, lng: 73.7389, city: 'Pune' },
+  { placeId: 'pune_kharadi', description: 'Kharadi, Pune, Maharashtra, India', mainText: 'Kharadi', secondaryText: 'Pune, Maharashtra', lat: 18.5514, lng: 73.9348, city: 'Pune' },
+  { placeId: 'pune_wakad', description: 'Wakad, Pune, Maharashtra, India', mainText: 'Wakad', secondaryText: 'Pune, Maharashtra', lat: 18.5987, lng: 73.7661, city: 'Pune' },
+  { placeId: 'pune_aundh', description: 'Aundh, Pune, Maharashtra, India', mainText: 'Aundh', secondaryText: 'Pune, Maharashtra', lat: 18.5580, lng: 73.8075, city: 'Pune' },
+  { placeId: 'pune_magarpatta', description: 'Magarpatta City, Hadapsar, Pune, Maharashtra', mainText: 'Magarpatta City', secondaryText: 'Hadapsar, Pune', lat: 18.5158, lng: 73.9272, city: 'Pune' },
+  { placeId: 'pune_hadapsar', description: 'Hadapsar, Pune, Maharashtra, India', mainText: 'Hadapsar', secondaryText: 'Pune, Maharashtra', lat: 18.5089, lng: 73.9259, city: 'Pune' },
+  { placeId: 'pune_koregaon', description: 'Koregaon Park, Pune, Maharashtra, India', mainText: 'Koregaon Park', secondaryText: 'Pune, Maharashtra', lat: 18.5362, lng: 73.8940, city: 'Pune' },
+  { placeId: 'pune_shivajinagar', description: 'Shivaji Nagar, Pune, Maharashtra, India', mainText: 'Shivaji Nagar', secondaryText: 'Pune, Maharashtra', lat: 18.5314, lng: 73.8446, city: 'Pune' },
+  { placeId: 'pune_pimpri', description: 'Pimpri Colony, Pimpri-Chinchwad, Pune, Maharashtra', mainText: 'Pimpri Colony', secondaryText: 'PCMC, Pune', lat: 18.6279, lng: 73.8009, city: 'Pune' },
+  // Mumbai & MMR
+  { placeId: 'mum_bandra', description: 'Bandra West, Mumbai, Maharashtra, India', mainText: 'Bandra West', secondaryText: 'Mumbai, Maharashtra', lat: 19.0596, lng: 72.8295, city: 'Mumbai' },
+  { placeId: 'mum_powai', description: 'Powai, Mumbai, Maharashtra, India', mainText: 'Powai', secondaryText: 'Mumbai, Maharashtra', lat: 19.1176, lng: 72.9060, city: 'Mumbai' },
+  { placeId: 'mum_thane', description: 'Thane West, Thane, Maharashtra, India', mainText: 'Thane West', secondaryText: 'Thane, Maharashtra', lat: 19.2183, lng: 72.9781, city: 'Thane' },
+  { placeId: 'mum_andheri', description: 'Andheri East, Mumbai, Maharashtra, India', mainText: 'Andheri East', secondaryText: 'Mumbai, Maharashtra', lat: 19.1136, lng: 72.8697, city: 'Mumbai' },
+  { placeId: 'mum_bkc', description: 'Bandra Kurla Complex (BKC), Mumbai, Maharashtra', mainText: 'BKC', secondaryText: 'Bandra, Mumbai', lat: 19.0657, lng: 72.8687, city: 'Mumbai' },
+  { placeId: 'mum_vashi', description: 'Vashi, Navi Mumbai, Maharashtra, India', mainText: 'Vashi', secondaryText: 'Navi Mumbai, Maharashtra', lat: 19.0771, lng: 72.9986, city: 'Navi Mumbai' },
+  { placeId: 'mum_borivali', description: 'Borivali West, Mumbai, Maharashtra, India', mainText: 'Borivali West', secondaryText: 'Mumbai, Maharashtra', lat: 19.2307, lng: 72.8567, city: 'Mumbai' },
+  { placeId: 'mum_dadar', description: 'Dadar, Mumbai, Maharashtra, India', mainText: 'Dadar', secondaryText: 'Mumbai, Maharashtra', lat: 19.0178, lng: 72.8478, city: 'Mumbai' },
+  { placeId: 'mum_juhu', description: 'Juhu, Mumbai, Maharashtra, India', mainText: 'Juhu', secondaryText: 'Mumbai, Maharashtra', lat: 19.1075, lng: 72.8263, city: 'Mumbai' },
+  // Bengaluru
+  { placeId: 'blr_whitefield', description: 'Whitefield, Bengaluru, Karnataka, India', mainText: 'Whitefield', secondaryText: 'Bengaluru, Karnataka', lat: 12.9698, lng: 77.7500, city: 'Bengaluru' },
+  { placeId: 'blr_indiranagar', description: 'Indiranagar, Bengaluru, Karnataka, India', mainText: 'Indiranagar', secondaryText: 'Bengaluru, Karnataka', lat: 12.9784, lng: 77.6408, city: 'Bengaluru' },
+  { placeId: 'blr_koramangala', description: 'Koramangala, Bengaluru, Karnataka, India', mainText: 'Koramangala', secondaryText: 'Bengaluru, Karnataka', lat: 12.9352, lng: 77.6245, city: 'Bengaluru' },
+  { placeId: 'blr_hsr', description: 'HSR Layout, Bengaluru, Karnataka, India', mainText: 'HSR Layout', secondaryText: 'Bengaluru, Karnataka', lat: 12.9121, lng: 77.6446, city: 'Bengaluru' },
+  { placeId: 'blr_ecity', description: 'Electronic City, Bengaluru, Karnataka, India', mainText: 'Electronic City', secondaryText: 'Bengaluru, Karnataka', lat: 12.8452, lng: 77.6602, city: 'Bengaluru' },
+];
+
 export const mapsApi = {
+  /**
+   * Fast synchronous match against curated cities and hubs (0ms latency)
+   */
+  getLocalMatches(query: string): PlaceLocation[] {
+    const q = (query || '').trim().toLowerCase();
+    if (q.length < 2) return [];
+    return CURATED_LOCATIONS.filter(
+      (loc) =>
+        loc.description.toLowerCase().includes(q) ||
+        loc.mainText.toLowerCase().includes(q) ||
+        loc.city.toLowerCase().includes(q)
+    );
+  },
+
   /**
    * Search places using Google Places Autocomplete API via backend
    */
@@ -187,6 +244,7 @@ export const authApi = {
       accessToken: string;
       refreshToken: string;
       userId: string;
+      user?: { id: string; role: string; name: string; phone: string };
     }>('/auth/otp/verify', {
       method: 'POST',
       body: JSON.stringify({ phone, code, role: 'customer' }),

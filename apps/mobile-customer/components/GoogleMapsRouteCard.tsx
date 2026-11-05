@@ -1,109 +1,127 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Navigation, Clock, MapPin, ExternalLink } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { CURATED_LOCATIONS } from '@/lib/api';
 
 interface GoogleMapsRouteCardProps {
   pickupAddress: string;
   dropAddress: string;
+  pickupCoords?: { lat: number; lng: number };
+  dropCoords?: { lat: number; lng: number };
   distanceKm: number;
   durationMins: number;
   onOpenMapPicker?: () => void;
 }
 
+function resolveCoords(address: string, fallback: { lat: number; lng: number }): { lat: number; lng: number } {
+  if (!address) return fallback;
+  const lower = address.toLowerCase();
+  const matched = CURATED_LOCATIONS.find(
+    (loc) =>
+      lower.includes(loc.mainText.toLowerCase()) ||
+      lower.includes(loc.city.toLowerCase()) ||
+      lower.includes(loc.description.toLowerCase())
+  );
+  if (matched && matched.lat && matched.lng) {
+    return { lat: matched.lat, lng: matched.lng };
+  }
+  return fallback;
+}
+
 export function GoogleMapsRouteCard({
   pickupAddress,
   dropAddress,
+  pickupCoords,
+  dropCoords,
   distanceKm,
   durationMins,
   onOpenMapPicker,
 }: GoogleMapsRouteCardProps) {
   if (!pickupAddress || !dropAddress) return null;
 
-  // Uber-like custom themed route map HTML using Leaflet + CartoDB dark tiles
-  const routeMapHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style>
-          * { box-sizing: border-box; }
-          html, body, #map {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background: #091524;
-            overflow: hidden;
-          }
-          .leaflet-tile-pane {
-            filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(200deg) saturate(0.35);
-          }
-          .leaflet-control-attribution, .leaflet-control-zoom {
-            display: none !important;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script>
-          // Rough coordinates bounding Pune / Mumbai corridor
-          var map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false,
-            dragging: false,
-            touchZoom: false,
-            scrollWheelZoom: false,
-            doubleClickZoom: false
-          }).setView([18.55, 73.85], 11);
+  const pCoords = pickupCoords || resolveCoords(pickupAddress, { lat: 18.5679, lng: 73.9143 });
+  const dCoords = dropCoords || resolveCoords(dropAddress, { lat: 18.5590, lng: 73.7868 });
 
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd'
-          }).addTo(map);
+  // Custom luxury dark themed route map HTML using Leaflet + CartoDB dark tiles
+  const routeMapHtml = useMemo(() => {
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body, #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #091524;
+        overflow: hidden;
+      }
+      .leaflet-control-attribution, .leaflet-control-zoom {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var pickup = [${pCoords.lat}, ${pCoords.lng}];
+      var drop = [${dCoords.lat}, ${dCoords.lng}];
 
-          // Plot visual gold route curve
-          var latlngs = [
-            [18.5679, 73.9143], // Pickup
-            [18.5590, 73.7868]  // Drop
-          ];
+      var map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        touchZoom: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false
+      }).setView(pickup, 12);
 
-          var polyline = L.polyline(latlngs, {
-            color: '#F7A300',
-            weight: 4.5,
-            opacity: 0.9,
-            lineCap: 'round',
-            dashArray: '8, 8'
-          }).addTo(map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(map);
 
-          // Pickup Pin Marker
-          L.circleMarker(latlngs[0], {
-            radius: 7,
-            fillColor: '#F7A300',
-            color: '#FFFFFF',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 1
-          }).addTo(map);
+      // Dash line connecting pickup and drop
+      var polyline = L.polyline([pickup, drop], {
+        color: '#F7A300',
+        weight: 4,
+        opacity: 0.95,
+        lineCap: 'round',
+        dashArray: '6, 8'
+      }).addTo(map);
 
-          // Drop Pin Marker
-          L.circleMarker(latlngs[1], {
-            radius: 7,
-            fillColor: '#0D1F37',
-            color: '#38BDF8',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 1
-          }).addTo(map);
+      // Pickup Pin Marker (Marigold)
+      L.circleMarker(pickup, {
+        radius: 6.5,
+        fillColor: '#F7A300',
+        color: '#FFFFFF',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+      }).addTo(map);
 
-          map.fitBounds(polyline.getBounds(), { padding: [35, 35] });
-        </script>
-      </body>
-    </html>
-  `;
+      // Drop Pin Marker (Deep Navy with Cyan ring)
+      L.circleMarker(drop, {
+        radius: 6.5,
+        fillColor: '#0D1F37',
+        color: '#38BDF8',
+        weight: 2.5,
+        opacity: 1,
+        fillOpacity: 1
+      }).addTo(map);
+
+      map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+    </script>
+  </body>
+</html>`;
+  }, [pCoords.lat, pCoords.lng, dCoords.lat, dCoords.lng]);
 
   return (
     <View style={styles.glassCard}>
@@ -139,10 +157,20 @@ export function GoogleMapsRouteCard({
             title="Uber-Themed Route Map"
           />
         ) : (
-          <View style={styles.nativeRoutePlaceholder}>
-            <Navigation size={28} color={Colors.marigold} />
-            <Text style={styles.routeText}>Transit Corridor: {distanceKm} km</Text>
-          </View>
+          <WebView
+            source={{ html: routeMapHtml }}
+            style={{
+              width: '100%',
+              height: 160,
+              backgroundColor: '#091524',
+              borderRadius: 14,
+            }}
+            scrollEnabled={false}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            originWhitelist={['*']}
+            bounces={false}
+          />
         )}
 
         {/* Floating Route Badge */}

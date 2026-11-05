@@ -4,9 +4,12 @@ import { getEnv } from '../config/env';
 export async function sendSmsOtp(phone: string, otp: string): Promise<void> {
   const { MSG91_API_KEY, MSG91_SENDER_ID } = getEnv();
   
-  if (process.env.NODE_ENV === 'development' || !MSG91_API_KEY.startsWith('your_')) {
-    console.log(`[MOCK MSG91] Sending OTP ${otp} to ${phone}`);
-    if (MSG91_API_KEY === 'your_msg91_api_key') return; // Skip if dummy key
+  const isMockMode = !MSG91_API_KEY || MSG91_API_KEY.startsWith('your_');
+  if (isMockMode) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[MOCK MSG91] Generated OTP ${otp} for ${phone}`);
+    }
+    return;
   }
 
   try {

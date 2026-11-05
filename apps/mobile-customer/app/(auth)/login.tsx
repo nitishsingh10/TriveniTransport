@@ -16,7 +16,7 @@ import {
   Phone,
   ShieldCheck,
   Package,
-  Star,
+  CheckCircle2,
   ArrowRight,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
@@ -35,11 +35,17 @@ export default function LoginScreen() {
     setErrorMsg('');
     try {
       await authApi.requestOtp(cleaned);
+      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
     } catch (e: any) {
       console.log('Backend requestOtp failed or fallback:', e.message);
+      if (e.status === 429) {
+        setErrorMsg('Too many OTP requests. Please wait a few minutes.');
+        return;
+      }
+      // Allow moving to OTP screen in dev mode so dev code 123456 can be used
+      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
     } finally {
       setLoading(false);
-      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
     }
   };
 
@@ -85,6 +91,12 @@ export default function LoginScreen() {
             <Text style={styles.cardSubtitle}>
               Please enter your 10-digit mobile number to track moves and manage bookings.
             </Text>
+
+            {!!errorMsg && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              </View>
+            )}
 
             {/* Phone Input */}
             <View style={styles.inputGroup}>
@@ -146,7 +158,7 @@ export default function LoginScreen() {
               <Text style={styles.trustBadgeText}>50,000+ Moves</Text>
             </View>
             <View style={styles.trustBadge}>
-              <Star size={14} color={Colors.marigold} fill={Colors.marigold} />
+              <CheckCircle2 size={14} color={Colors.marigold} />
               <Text style={styles.trustBadgeText}>4.9/5 Rating</Text>
             </View>
           </View>
@@ -377,5 +389,18 @@ const styles = StyleSheet.create({
     color: Colors.navy,
     fontSize: 11,
     fontWeight: FontWeight.semibold,
+  },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
   },
 });

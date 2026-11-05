@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   Navigation,
   Truck,
@@ -32,7 +33,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
-import { bookingApi, type BookingItem } from '@/lib/api';
+import { bookingApi, CURATED_LOCATIONS, type BookingItem } from '@/lib/api';
 
 interface Milestone {
   key: string;
@@ -135,6 +136,111 @@ export default function BookingTrackScreen() {
   const vehicleName = booking.vehicle?.type || 'Tata 407 (14ft)';
   const vehicleReg = booking.vehicle?.registrationNumber || 'KA-01-TR-4921';
 
+  const pickupCoords = useMemo(() => {
+    const lower = (booking.pickupAddress || '').toLowerCase();
+    const found = CURATED_LOCATIONS.find((c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase()));
+    return found ? { lat: found.lat, lng: found.lng } : { lat: 18.5679, lng: 73.9143 };
+  }, [booking.pickupAddress]);
+
+  const dropCoords = useMemo(() => {
+    const lower = (booking.dropAddress || '').toLowerCase();
+    const found = CURATED_LOCATIONS.find((c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase()));
+    return found ? { lat: found.lat, lng: found.lng } : { lat: 18.5590, lng: 73.7868 };
+  }, [booking.dropAddress]);
+
+  const truckCoords = useMemo(() => {
+    if (telemetry?.latitude && telemetry?.longitude) {
+      return { lat: telemetry.latitude, lng: telemetry.longitude };
+    }
+    return {
+      lat: (pickupCoords.lat + dropCoords.lat) / 2,
+      lng: (pickupCoords.lng + dropCoords.lng) / 2,
+    };
+  }, [telemetry, pickupCoords, dropCoords]);
+
+  const liveMapHtml = useMemo(() => {
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body, #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #091524;
+        overflow: hidden;
+      }
+      .leaflet-control-attribution, .leaflet-control-zoom {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var pickup = [${pickupCoords.lat}, ${pickupCoords.lng}];
+      var drop = [${dropCoords.lat}, ${dropCoords.lng}];
+      var truck = [${truckCoords.lat}, ${truckCoords.lng}];
+
+      var map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: true,
+        touchZoom: true
+      }).setView(truck, 12);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(map);
+
+      // Route dashed line
+      var polyline = L.polyline([pickup, truck, drop], {
+        color: '#F7A300',
+        weight: 3.5,
+        opacity: 0.9,
+        dashArray: '6, 8'
+      }).addTo(map);
+
+      // Pickup pin (Gold)
+      L.circleMarker(pickup, {
+        radius: 6,
+        fillColor: '#F7A300',
+        color: '#FFFFFF',
+        weight: 2,
+        fillOpacity: 1
+      }).addTo(map);
+
+      // Drop pin (Cyan)
+      L.circleMarker(drop, {
+        radius: 6,
+        fillColor: '#0D1F37',
+        color: '#38BDF8',
+        weight: 2.5,
+        fillOpacity: 1
+      }).addTo(map);
+
+      // Moving Truck Marker
+      var truckIcon = L.divIcon({
+        className: 'custom-truck',
+        html: '<div style="width:28px;height:28px;border-radius:14px;background:#F7A300;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px #F7A300;border:2px solid #FFFFFF;"><span style="font-size:13px;line-height:28px;text-align:center;">🚚</span></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      L.marker(truck, { icon: truckIcon }).addTo(map);
+
+      map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+    </script>
+  </body>
+</html>`;
+  }, [pickupCoords, dropCoords, truckCoords]);
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -143,55 +249,48 @@ export default function BookingTrackScreen() {
     >
       {/* Live Map Display Graphic */}
       <View style={styles.mapContainer}>
-        <LinearGradient
-          colors={['#E2E8F0', '#EDF2F7']}
-          style={styles.mapCanvas}
-        >
-          {/* Simulated GPS grid */}
-          <View style={styles.gpsGridRow}>
-            <View style={styles.gpsGridLine} />
-            <View style={styles.gpsGridLine} />
-            <View style={styles.gpsGridLine} />
-          </View>
+        {Platform.OS === 'web' ? (
+          <iframe
+            srcDoc={liveMapHtml}
+            style={{
+              width: '100%',
+              height: 200,
+              border: 'none',
+              background: '#091524',
+            }}
+            title="Triveni Live Tracking Map"
+          />
+        ) : (
+          <WebView
+            source={{ html: liveMapHtml }}
+            style={{
+              width: '100%',
+              height: 200,
+              backgroundColor: '#091524',
+            }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            originWhitelist={['*']}
+            scrollEnabled={false}
+            bounces={false}
+          />
+        )}
 
-          {/* Live GPS badge */}
-          <View style={styles.gpsLiveBadge}>
-            <Radio size={12} color={Colors.success} />
-            <Text style={styles.gpsLiveText}>
-              GPS ACTIVE · {telemetry?.latitude ? `${telemetry.latitude.toFixed(3)}, ${telemetry.longitude.toFixed(3)}` : '12 SATELLITES'}
-            </Text>
-          </View>
+        {/* Floating Live GPS badge */}
+        <View style={styles.gpsLiveBadge}>
+          <Radio size={12} color={Colors.success} />
+          <Text style={styles.gpsLiveText}>
+            GPS ACTIVE · {telemetry?.latitude ? `${telemetry.latitude.toFixed(3)}, ${telemetry.longitude.toFixed(3)}` : '12 SATELLITES'}
+          </Text>
+        </View>
 
-          {/* Route path line on map */}
-          <View style={styles.mapRouteGraphic}>
-            <View style={styles.mapPointStart}>
-              <View style={styles.startDot} />
-              <Text style={styles.pointText} numberOfLines={1}>{pickupCity}</Text>
-            </View>
-
-            <View style={styles.mapConnectingLine}>
-              <View style={styles.mapProgressFill} />
-            </View>
-
-            {/* Moving Truck Marker */}
-            <View style={styles.truckMarkerContainer}>
-              <View style={styles.markerPulse} />
-              <View style={styles.markerTruckCircle}>
-                <Truck size={17} color={Colors.white} strokeWidth={2.4} />
-              </View>
-              <View style={styles.speedPill}>
-                <Text style={styles.speedText}>
-                  {telemetry?.speedKmh ? `${telemetry.speedKmh} km/h` : '36 km/h'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.mapPointEnd}>
-              <View style={styles.endDot} />
-              <Text style={styles.pointText} numberOfLines={1}>{dropCity}</Text>
-            </View>
-          </View>
-        </LinearGradient>
+        {/* Floating Transit Speed Pill */}
+        <View style={styles.speedFloatingPill}>
+          <Truck size={12} color={Colors.marigoldDark} />
+          <Text style={styles.speedFloatingText}>
+            {telemetry?.speedKmh ? `${telemetry.speedKmh} km/h` : '36 km/h'}
+          </Text>
+        </View>
       </View>
 
       {/* Booking Overview Card (Pure White Card) */}
@@ -346,128 +445,52 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    height: 200,
+    backgroundColor: '#091524',
+    position: 'relative',
     ...Shadow.sm,
   },
-  mapCanvas: {
-    height: 190,
-    padding: Spacing.md,
-    justifyContent: 'space-between',
-  },
-  gpsGridRow: {
-    ...StyleSheet.absoluteFill,
-    opacity: 0.25,
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  gpsGridLine: {
-    height: 1,
-    backgroundColor: Colors.navy,
-  },
   gpsLiveBadge: {
+    position: 'absolute',
+    top: Spacing.sm,
+    left: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
-    alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(13, 31, 55, 0.1)',
+    zIndex: 10,
     ...Shadow.sm,
   },
   gpsLiveText: {
     color: Colors.navy,
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
   },
-  mapRouteGraphic: {
+  speedFloatingPill: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  mapPointStart: {
-    alignItems: 'center',
     gap: 4,
-  },
-  startDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.marigold,
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  mapPointEnd: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  endDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.navy,
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  pointText: {
-    color: Colors.navy,
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-  },
-  mapConnectingLine: {
-    flex: 1,
-    height: 4,
-    backgroundColor: Colors.cardBorder,
-    marginHorizontal: 8,
-    position: 'relative',
-    borderRadius: 2,
-  },
-  mapProgressFill: {
-    width: '65%',
-    height: '100%',
-    backgroundColor: Colors.navy,
-    borderRadius: 2,
-  },
-  truckMarkerContainer: {
-    position: 'absolute',
-    left: '52%',
-    top: -24,
-    alignItems: 'center',
-  },
-  markerPulse: {
-    position: 'absolute',
-    top: 4,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(13, 31, 55, 0.15)',
-  },
-  markerTruckCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadow.sm,
-  },
-  speedPill: {
-    backgroundColor: Colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderRadius: BorderRadius.full,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginTop: 2,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 4,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: 'rgba(13, 31, 55, 0.1)',
+    zIndex: 10,
     ...Shadow.sm,
   },
-  speedText: {
-    color: Colors.navy,
-    fontSize: 8,
+  speedFloatingText: {
+    color: Colors.navyDark,
+    fontSize: 10,
     fontWeight: FontWeight.bold,
   },
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, ShieldCheck, Quote, Star, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Phone, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, token } from '../lib/api';
 import { ApiError } from '../lib/api';
 import styles from './page.module.css';
@@ -183,11 +183,8 @@ export default function LoginPage() {
                   &quot;Triveni Transports made my move from Thane to Pune absolutely effortless. The itemised, transparent pricing is a game changer.&quot;
                 </p>
                 <div className={styles.author}>
-                  <div className={styles.authorStars}>
-                    {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill="currentColor" />)}
-                  </div>
                   <p className={styles.authorName}>Rahul Sharma</p>
-                  <p className={styles.authorRole}>Moved to Pune</p>
+                  <p className={styles.authorRole}>Moved to Pune • Verified Customer</p>
                 </div>
               </div>
             </div>

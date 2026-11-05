@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   FileText,
   Globe,
-  Star,
+  Award,
   Headphones,
   ChevronRight,
   LogOut,
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
       onPress: () => {},
     },
     {
-      icon: Star,
+      icon: Award,
       label: 'Rate Experience',
       subtitle: 'Help us improve service quality',
       onPress: () => {},
@@ -114,8 +114,8 @@ export default function ProfileScreen() {
           <Text style={styles.statLabel}>Goods Relocated</Text>
         </View>
         <View style={styles.statBox}>
-          <Star size={18} color={Colors.marigold} fill={Colors.marigold} />
-          <Text style={styles.statValue}>4.9</Text>
+          <Award size={18} color={Colors.marigold} />
+          <Text style={styles.statValue}>4.9/5</Text>
           <Text style={styles.statLabel}>Avg Experience</Text>
         </View>
       </View>

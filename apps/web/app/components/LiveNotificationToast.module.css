@@ -1,0 +1,93 @@
+.toastContainer {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 990;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(13, 31, 55, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1rem;
+  padding: 12px 16px;
+  max-width: 340px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35),
+              0 0 0 1px rgba(247, 163, 0, 0.1) inset;
+  color: #ffffff;
+}
+
+.iconWrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.textCol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+
+.time {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+.desc {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.35;
+  margin: 0;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+  margin-top: 2px;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .toastContainer {
+    display: none; /* Hide on mobile so it doesn't obstruct quick quote */
+  }
+}

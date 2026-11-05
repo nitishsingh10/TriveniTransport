@@ -20,20 +20,36 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { driverAuthApi } from '@/lib/api';
 
 export default function DriverLoginScreen() {
-  const [phone, setPhone] = useState('9888888888'); // Seed vendor phone
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSendOtp = async () => {
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length !== 10) return;
 
     setLoading(true);
-    // Simulated network dispatch (can hit POST /api/v1/auth/otp/request with role: 'vendor')
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+    setErrorMsg('');
+    try {
+      await driverAuthApi.requestOtp(cleaned);
+      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+    } catch (e: any) {
+      if (e.status === 429) {
+        setErrorMsg('Too many OTP requests. Please wait a few minutes.');
+      } else if (e.status === 404) {
+        setErrorMsg('No partner account found for this number. Please contact support.');
+      } else if (e.status === 403) {
+        setErrorMsg('Your partner account is inactive. Please contact Triveni support.');
+      } else {
+        // Allow dev mode to proceed to OTP screen
+        router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -101,10 +117,13 @@ export default function DriverLoginScreen() {
                 />
                 <Phone size={18} color={Colors.textMuted} style={styles.inputIcon} />
               </View>
-              <Text style={styles.inputHint}>
-                Test vendor partner phone: <Text style={styles.boldText}>9888888888</Text> (OTP: 123456)
-              </Text>
             </View>
+
+            {!!errorMsg && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              </View>
+            )}
 
             {/* Submit Button */}
             <TouchableOpacity
@@ -428,5 +447,18 @@ const styles = StyleSheet.create({
     color: Colors.navy,
     fontSize: 11,
     fontWeight: FontWeight.semibold,
+  },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
   },
 });

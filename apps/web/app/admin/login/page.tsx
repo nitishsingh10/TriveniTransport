@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Phone, KeyRound, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
-import { auth, token } from '../../lib/api';
+import { Phone, KeyRound, ArrowRight, Lock } from 'lucide-react';
+import { auth, token, ApiError } from '../../lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState('9999999999');
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
@@ -21,9 +21,8 @@ export default function AdminLoginPage() {
     try {
       await auth.requestOtp(phone, 'admin');
       setStep('otp');
-    } catch {
-      // Even if backend is starting up, allow progress with dev OTP
-      setStep('otp');
+    } catch (err: any) {
+      setError(err instanceof ApiError ? err.message : 'Could not send OTP. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -35,24 +34,15 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await auth.verifyOtp(phone, otp || '123456', 'admin');
+      const res = await auth.verifyOtp(phone, otp, 'admin');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('admin');
       router.push('/admin');
-    } catch {
-      // If mock dev session
-      token.set('dev_admin_access_token', 'dev_admin_refresh_token');
-      token.setRole('admin');
-      router.push('/admin');
+    } catch (err: any) {
+      setError(err instanceof ApiError ? err.message : 'Invalid security code. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleBypass = () => {
-    token.set('dev_admin_access_token', 'dev_admin_refresh_token');
-    token.setRole('admin');
-    router.push('/admin');
   };
 
   return (
@@ -210,9 +200,11 @@ export default function AdminLoginPage() {
                 >
                   Enter 6-Digit OTP
                 </label>
-                <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 600 }}>
-                  Dev Code: 123456
-                </span>
+                {process.env.NODE_ENV !== 'production' && (
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 600 }}>
+                    Dev Code: 123456
+                  </span>
+                )}
               </div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <KeyRound
@@ -266,32 +258,6 @@ export default function AdminLoginPage() {
             </button>
           </form>
         )}
-
-        {/* Quick 1-Click Access for Dev */}
-        <div style={{ marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
-          <button
-            type="button"
-            onClick={handleBypass}
-            style={{
-              width: '100%',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#F7A300',
-              padding: '11px',
-              borderRadius: '9px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-            }}
-          >
-            <ShieldCheck size={16} />
-            <span>1-Click Master Dispatcher Bypass</span>
-          </button>
-        </div>
       </div>
     </div>
   );

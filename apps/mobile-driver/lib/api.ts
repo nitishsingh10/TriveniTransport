@@ -6,11 +6,22 @@
 
 import { Platform, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import type { BookingStatus } from '@triveni/shared-types';
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1');
+const getBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:3001/api/v1`;
+    }
+  }
+  return Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1';
+};
+
+const BASE_URL = getBaseUrl();
 
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'triveni_driver_access_token',
@@ -115,6 +126,7 @@ export const driverAuthApi = {
       accessToken: string;
       refreshToken: string;
       userId: string;
+      user?: { id: string; role: string; name: string; phone: string };
     }>('/auth/otp/verify', {
       method: 'POST',
       body: JSON.stringify({ phone, code, role: 'vendor' }),

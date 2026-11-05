@@ -41,6 +41,14 @@
       "esbuild",
       "msgpackr-extract",
       "prisma"
-    ]
+    ],
+    "overrides": {
+      "proxy-addr": "^2.0.8",
+      "tar": ">=7.5.19",
+      "follow-redirects": ">=1.16.1",
+      "source-map-js": ">=1.2.2",
+      "braces": ">=3.0.3",
+      "brace-expansion": ">=1.1.20"
+    }
   }
 }

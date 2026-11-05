@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import {
   MapPin,
   Search,
@@ -72,7 +73,10 @@ export function GoogleMapsLocationModal({
 
   const debounceTimer = useRef<any>(null);
   const reverseGeocodeTimer = useRef<any>(null);
-  const iframeRef = useRef<any>(null);
+  const webViewRef = useRef<WebView>(null);
+  const initialMapCoords = useRef({ lat: 18.5679, lng: 73.9143 });
+  const isMapReadyRef = useRef(false);
+  const pendingFlyTo = useRef<{ lat: number; lng: number } | null>(null);
 
   // Sync state on open
   useEffect(() => {
@@ -80,11 +84,26 @@ export function GoogleMapsLocationModal({
       setActiveType(initialType);
       setQuery(initialValue);
       setSelectedAddress(initialValue);
+      isMapReadyRef.current = false;
       if (initialValue.trim()) {
         geocodeInput(initialValue);
       }
     }
   }, [visible, initialType, initialValue]);
+
+  // Find nearest known landmark as fallback when offline or reverse-geocode fails
+  const findNearestHub = useCallback((lat: number, lng: number) => {
+    let closest = POPULAR_HUBS[0];
+    let minDiff = Infinity;
+    for (const hub of POPULAR_HUBS) {
+      const d = Math.hypot(hub.lat - lat, hub.lng - lng);
+      if (d < minDiff) {
+        minDiff = d;
+        closest = hub;
+      }
+    }
+    return closest;
+  }, []);
 
   // Geocode address text into coords
   const geocodeInput = async (addr: string) => {
@@ -106,44 +125,92 @@ export function GoogleMapsLocationModal({
     reverseGeocodeTimer.current = setTimeout(async () => {
       try {
         const rev = await mapsApi.reverseGeocode(lat, lng);
-        setSelectedAddress(rev.address);
-        setSelectedCity(rev.city || 'Pune');
-        setAreaHeadline(rev.address.split(',')[0] || 'Selected Spot');
-        setQuery(rev.address);
+        if (rev && rev.address) {
+          setSelectedAddress(rev.address);
+          setSelectedCity(rev.city || 'Pune');
+          setAreaHeadline(rev.address.split(',')[0] || 'Selected Spot');
+          setQuery(rev.address);
+        } else {
+          const nearest = findNearestHub(lat, lng);
+          const fallback = `${nearest.name}, ${nearest.landmark}, ${nearest.city}, Maharashtra`;
+          setSelectedAddress(fallback);
+          setSelectedCity(nearest.city);
+          setAreaHeadline(nearest.name);
+          setQuery(fallback);
+        }
       } catch {
-        setSelectedAddress(`${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`);
-        setAreaHeadline('Pinned Location');
+        const nearest = findNearestHub(lat, lng);
+        const fallback = `${nearest.name}, ${nearest.landmark}, ${nearest.city}, Maharashtra`;
+        setSelectedAddress(fallback);
+        setSelectedCity(nearest.city);
+        setAreaHeadline(nearest.name);
+        setQuery(fallback);
       } finally {
         setIsResolvingAddress(false);
       }
-    }, 380);
-  }, []);
+    }, 320);
+  }, [findNearestHub]);
 
-  // Listen for Leaflet map postMessage events
+  // Handle messages coming from either Web iframe or Native WebView
+  const handleEventData = useCallback((data: any) => {
+    if (!data) return;
+    if (data.type === 'MAP_READY') {
+      isMapReadyRef.current = true;
+      if (pendingFlyTo.current) {
+        panMapTo(pendingFlyTo.current.lat, pendingFlyTo.current.lng);
+        pendingFlyTo.current = null;
+      }
+    } else if (data.type === 'PIN_COORDS') {
+      const { lat, lng } = data;
+      setSelectedCoords({ lat, lng });
+      handleCoordsChanged(lat, lng);
+    } else if (data.type === 'MAP_DRAGGING') {
+      setIsMapMoving(true);
+    }
+  }, [handleCoordsChanged]);
+
+  // Listen for Web iframe postMessage events
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
     const onMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'PIN_COORDS') {
-        const { lat, lng } = event.data;
-        setSelectedCoords({ lat, lng });
-        handleCoordsChanged(lat, lng);
-      } else if (event.data && event.data.type === 'MAP_DRAGGING') {
-        setIsMapMoving(true);
+      let data = event.data;
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch {}
       }
+      handleEventData(data);
     };
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [handleCoordsChanged]);
+  }, [handleEventData]);
 
-  // Send pan command to map iframe
+  // Native WebView message handler
+  const handleNativeMessage = (event: any) => {
+    let data = event.nativeEvent?.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch {}
+    }
+    handleEventData(data);
+  };
+
+  // Send pan command to map (Web iframe or Native WebView)
   const panMapTo = (lat: number, lng: number) => {
+    if (!isMapReadyRef.current) {
+      pendingFlyTo.current = { lat, lng };
+    }
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const iframe = document.getElementById('triveni-map-iframe') as HTMLIFrameElement;
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage({ type: 'FLY_TO', lat, lng }, '*');
       }
+    } else if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        if (window.flyToSpot) {
+          window.flyToSpot(${lat}, ${lng});
+        }
+        true;
+      `);
     }
   };
 
@@ -157,17 +224,29 @@ export function GoogleMapsLocationModal({
       return;
     }
 
+    // Instant local match (0ms latency)
+    const localMatches = mapsApi.getLocalMatches(text);
+    if (localMatches.length > 0) {
+      setSuggestions(localMatches);
+    }
     setLoading(true);
+
     debounceTimer.current = setTimeout(async () => {
       try {
         const results = await mapsApi.searchPlaces(text);
-        setSuggestions(results);
+        if (results && results.length > 0) {
+          setSuggestions((prev) => {
+            const seen = new Set(results.map((r) => r.placeId || r.description));
+            const merged = [...results, ...prev.filter((p) => !seen.has(p.placeId || p.description))];
+            return merged.slice(0, 7);
+          });
+        }
       } catch {
-        setSuggestions([]);
+        // Keep local matches
       } finally {
         setLoading(false);
       }
-    }, 280);
+    }, 250);
   };
 
   const handleSelectSuggestion = (place: PlaceLocation) => {
@@ -193,7 +272,7 @@ export function GoogleMapsLocationModal({
 
   const handleUseCurrentLocation = () => {
     setLoading(true);
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const lat = pos.coords.latitude;
@@ -234,77 +313,98 @@ export function GoogleMapsLocationModal({
   const pinColor = isPickup ? Colors.marigold : Colors.navy;
   const pinGradientBg = isPickup ? [Colors.marigold, '#E09200'] : [Colors.navy, '#1A365D'];
 
-  // Uber-like custom dark Triveni theme map HTML
-  const mapHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style>
-          * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-          html, body, #map {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background: #091524;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  // Memoize map HTML so dragging the pin NEVER causes iframe/webview reload loops
+  const mapHtml = useMemo(() => {
+    const startLat = initialMapCoords.current.lat || 18.5679;
+    const startLng = initialMapCoords.current.lng || 73.9143;
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body, #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #091524;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .leaflet-control-attribution, .leaflet-control-zoom {
+        display: none !important;
+      }
+      .leaflet-tile {
+        transition: opacity 0.2s linear;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      function postToApp(data) {
+        try {
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify(data));
           }
-          /* Custom Uber-like Triveni midnight theme filter */
-          .leaflet-tile-pane {
-            filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(200deg) saturate(0.35);
+        } catch (e) {}
+        try {
+          if (window.parent && window.parent.postMessage) {
+            window.parent.postMessage(data, '*');
           }
-          .leaflet-control-attribution, .leaflet-control-zoom {
-            display: none !important;
-          }
-          /* Smooth tile rendering */
-          .leaflet-tile {
-            transition: opacity 0.2s linear;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script>
-          var map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false,
-            inertia: true,
-            inertiaDeceleration: 3000
-          }).setView([${selectedCoords.lat}, ${selectedCoords.lng}], 15);
+        } catch (e) {}
+      }
 
-          // CartoDB Dark Matter luxury dark tiles
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd'
-          }).addTo(map);
+      var map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false,
+        inertia: true,
+        inertiaDeceleration: 3000
+      }).setView([${startLat}, ${startLng}], 15);
+      window.map = map;
 
-          map.on('movestart', function() {
-            window.parent.postMessage({ type: 'MAP_DRAGGING' }, '*');
-          });
+      // CartoDB Dark Matter luxury midnight tiles (already dark styled, no invert distortion)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(map);
 
-          map.on('moveend', function() {
-            var c = map.getCenter();
-            window.parent.postMessage({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng }, '*');
-          });
+      map.whenReady(function() {
+        postToApp({ type: 'MAP_READY' });
+      });
 
-          map.on('click', function(e) {
-            map.flyTo(e.latlng, map.getZoom(), { duration: 0.8 });
-          });
+      map.on('movestart', function() {
+        postToApp({ type: 'MAP_DRAGGING' });
+      });
 
-          window.addEventListener('message', function(ev) {
-            if (ev.data && ev.data.type === 'FLY_TO') {
-              map.flyTo([ev.data.lat, ev.data.lng], 16, { duration: 1.2 });
-            }
-          });
-        </script>
-      </body>
-    </html>
-  `;
+      map.on('moveend', function() {
+        var c = map.getCenter();
+        postToApp({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng });
+      });
+
+      map.on('click', function(e) {
+        map.flyTo(e.latlng, map.getZoom(), { duration: 0.6 });
+      });
+
+      window.flyToSpot = function(lat, lng) {
+        if (window.map) {
+          window.map.flyTo([lat, lng], 16, { duration: 1.0 });
+        }
+      };
+
+      window.addEventListener('message', function(ev) {
+        if (ev.data && ev.data.type === 'FLY_TO') {
+          window.flyToSpot(ev.data.lat, ev.data.lng);
+        }
+      });
+    </script>
+  </body>
+</html>`;
+  }, [visible]);
 
   return (
     <Modal
@@ -326,16 +426,21 @@ export function GoogleMapsLocationModal({
                 border: 'none',
                 background: '#091524',
               }}
-              title="Triveni Uber-Themed Interactive Map"
+              title="Triveni Interactive Map"
             />
           ) : (
-            <View style={styles.nativeMapGraphic}>
-              <Compass size={40} color={isPickup ? Colors.marigold : Colors.navy} />
-              <Text style={styles.nativeMapText}>Interactive Map Active</Text>
-              <Text style={styles.nativeCoordsText}>
-                {selectedCoords.lat.toFixed(4)}° N, {selectedCoords.lng.toFixed(4)}° E
-              </Text>
-            </View>
+            <WebView
+              ref={webViewRef}
+              source={{ html: mapHtml }}
+              onMessage={handleNativeMessage}
+              style={styles.mapViewport}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              originWhitelist={['*']}
+              scrollEnabled={false}
+              bounces={false}
+              overScrollMode="never"
+            />
           )}
 
           {/* Central Fixed Uber-style Animated Pin */}

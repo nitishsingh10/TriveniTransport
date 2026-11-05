@@ -53,6 +53,15 @@ export default function Navbar() {
               <Link href="/" onClick={closeMenu}>Home</Link>
             </li>
             <li>
+              <Link href="/services" onClick={closeMenu}>Services</Link>
+            </li>
+            <li>
+              <Link href="/packers-and-movers-mumbai" onClick={closeMenu}>Mumbai</Link>
+            </li>
+            <li>
+              <Link href="/packers-and-movers-thane" onClick={closeMenu}>Thane</Link>
+            </li>
+            <li>
               <Link href="/quote" onClick={closeMenu}>Get Quote</Link>
             </li>
             <li>

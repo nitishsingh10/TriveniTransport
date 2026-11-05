@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Smartphone, Phone, ArrowLeft, Clock, Star } from 'lucide-react';
+import { Smartphone, Phone, ArrowLeft, Clock, ShieldCheck } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import styles from './page.module.css';
 
@@ -50,12 +50,10 @@ export default function DownloadPage() {
             </span>
           </a>
 
-          {/* Stars */}
+          {/* Trust rating */}
           <div className={styles.stars}>
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={16} fill="currentColor" strokeWidth={0} />
-            ))}
-            <span className={styles.starsLabel}>4.9 · 10,000+ happy moves</span>
+            <ShieldCheck size={18} color="var(--color-primary-light)" />
+            <span className={styles.starsLabel}>4.9/5 · 10,000+ happy moves</span>
           </div>
 
           {/* Back link */}

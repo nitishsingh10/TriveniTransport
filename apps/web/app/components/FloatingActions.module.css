@@ -1,0 +1,143 @@
+.container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quotePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 10px;
+  background: linear-gradient(135deg, #0D1F37 0%, #1c385b 100%);
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(13, 31, 55, 0.28),
+              0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.quotePill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  animation: pillGleam 4s infinite ease-in-out;
+}
+
+@keyframes pillGleam {
+  0% { transform: translateX(-100%); }
+  40%, 100% { transform: translateX(350%); }
+}
+
+.quotePill:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 28px rgba(13, 31, 55, 0.35),
+              0 0 16px rgba(247, 163, 0, 0.35);
+  color: #ffffff;
+}
+
+.pillIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-500, #F7A300);
+  color: #0D1F37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pillText {
+  letter-spacing: 0.02em;
+}
+
+.pillArrow {
+  transition: transform 0.2s ease;
+  color: var(--accent-500, #F7A300);
+}
+
+.quotePill:hover .pillArrow {
+  transform: translateX(3px);
+}
+
+.scrollTopBtn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+}
+
+.scrollTopBtn:hover {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  background: #ffffff;
+}
+
+.progressRing {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.progressRingBg {
+  fill: none;
+  stroke: rgba(13, 31, 55, 0.1);
+  stroke-width: 3;
+}
+
+.progressRingIndicator {
+  fill: none;
+  stroke: var(--accent-500, #F7A300);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.12s linear;
+}
+
+.arrowIcon {
+  color: #0D1F37;
+  transition: transform 0.2s ease;
+}
+
+.scrollTopBtn:hover .arrowIcon {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 640px) {
+  .container {
+    bottom: 18px;
+    right: 18px;
+    gap: 8px;
+  }
+  
+  .quotePill {
+    padding: 7px 12px 7px 8px;
+    font-size: 0.78rem;
+  }
+}

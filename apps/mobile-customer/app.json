@@ -14,15 +14,22 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.triveniransports.customer"
+      "bundleIdentifier": "com.trivenitransports.customer",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Triveni Transports uses your location to automatically set your moving pickup address."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0D1F37",
-        "foregroundImage": "./assets/adaptive-icon.png"
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.triveniransports.customer",
-      "predictiveBackGestureEnabled": false
+      "package": "com.trivenitransports.customer",
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",

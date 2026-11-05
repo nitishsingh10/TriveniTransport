@@ -1,0 +1,91 @@
+.legalPage {
+  min-height: 100vh;
+  background: var(--brand-900);
+  padding: calc(var(--space-12) + 40px) var(--space-4) var(--space-16);
+  color: #FFFFFF;
+}
+
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-10);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(247, 163, 0, 0.12);
+  border: 1px solid rgba(247, 163, 0, 0.35);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-size: clamp(2rem, 3.8vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  margin-bottom: var(--space-3);
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.95rem;
+}
+
+.contentCard {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.section {
+  margin-bottom: var(--space-8);
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sectionText {
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.7;
+  font-size: 0.94rem;
+  margin-bottom: var(--space-3);
+}
+
+.list {
+  padding-left: var(--space-6);
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.7;
+  font-size: 0.94rem;
+}
+
+.list li {
+  margin-bottom: var(--space-2);
+}
+

@@ -9,6 +9,7 @@ const RequestOtpSchema = z.object({
     .trim()
     .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number format. Please provide a valid 10-15 digit number.'),
   role: z.enum(['customer', 'vendor', 'admin']),
+  isSignup: z.boolean().optional(),
 });
 
 const VerifyOtpSchema = z.object({
@@ -21,13 +22,15 @@ const VerifyOtpSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{6}$/, 'OTP must be exactly 6 numeric digits.'),
+  name: z.string().trim().min(2).max(150).optional(),
+  isSignup: z.boolean().optional(),
 });
 
 export class AuthController {
   static async requestOtp(req: Request, res: Response, next: NextFunction) {
     try {
       const data = RequestOtpSchema.parse(req.body);
-      await AuthService.requestOtp(data.phone, data.role as UserRole);
+      await AuthService.requestOtp(data.phone, data.role as UserRole, data.isSignup);
       res.status(200).json({ message: 'OTP sent successfully' });
     } catch (e: any) {
       if (e instanceof z.ZodError) {
@@ -40,8 +43,8 @@ export class AuthController {
   static async verifyOtp(req: Request, res: Response, next: NextFunction) {
     try {
       const data = VerifyOtpSchema.parse(req.body);
-      const tokens = await AuthService.verifyOtp(data.phone, data.role as UserRole, data.code);
-      res.status(200).json(tokens);
+      const result = await AuthService.verifyOtp(data.phone, data.role as UserRole, data.code, data.name, data.isSignup);
+      res.status(200).json(result);
     } catch (e: any) {
       if (e instanceof z.ZodError) {
         return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: e.errors[0]?.message || 'Invalid input data' });

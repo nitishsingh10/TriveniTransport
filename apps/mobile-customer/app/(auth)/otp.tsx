@@ -68,7 +68,7 @@ export default function OtpScreen() {
         {
           id: res.userId,
           role: 'customer',
-          name: 'Verified Customer',
+          name: res.user?.name || 'Customer',
           phone: `+91${phone}`,
         },
         res.accessToken
@@ -78,9 +78,9 @@ export default function OtpScreen() {
     } catch (e: any) {
       console.log('Backend verifyOtp error:', e.message);
       // Fallback for dev OTP
-      if (finalOtp === '123456') {
+      if (__DEV__ && finalOtp === '123456') {
         setAuth(
-          { id: 'cust_seed', role: 'customer', name: 'Verified Customer', phone: `+91${phone}` },
+          { id: 'cust_seed', role: 'customer', name: 'Customer', phone: `+91${phone}` },
           'dev_customer_token'
         );
         setLoading(false);
@@ -137,12 +137,14 @@ export default function OtpScreen() {
               </Text>
             </View>
 
-            {/* Dev hint banner (Matching web login page) */}
-            <View style={styles.devHint}>
-              <Text style={styles.devHintText}>
-                Dev mode: use OTP <Text style={{ fontWeight: 'bold' }}>123456</Text>
-              </Text>
-            </View>
+            {/* Dev hint banner - only in development */}
+            {__DEV__ && (
+              <View style={styles.devHint}>
+                <Text style={styles.devHintText}>
+                  Dev mode: use OTP <Text style={{ fontWeight: 'bold' }}>123456</Text>
+                </Text>
+              </View>
+            )}
 
             {/* OTP Boxes */}
             <View style={styles.otpRow}>

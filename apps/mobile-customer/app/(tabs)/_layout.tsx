@@ -54,10 +54,13 @@ function HeaderCallButton() {
     <TouchableOpacity
       style={styles.headerCallBtn}
       onPress={() => Linking.openURL('tel:8828647785')}
-      activeOpacity={0.8}
+      activeOpacity={0.78}
+      accessibilityLabel="Call 24/7 Helpline"
     >
-      <PhoneCall size={14} color={Colors.navy} />
-      <Text style={styles.headerCallText}>8828647785</Text>
+      <View style={styles.callIconBox}>
+        <PhoneCall size={12} color={Colors.navy} strokeWidth={2.4} />
+      </View>
+      <Text style={styles.headerCallText}>Support</Text>
     </TouchableOpacity>
   );
 }
@@ -220,18 +223,27 @@ const styles = StyleSheet.create({
   headerCallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: Spacing.sm + 2,
+    gap: 6,
+    paddingHorizontal: 10,
     paddingVertical: 5,
     marginRight: Spacing.md,
-    backgroundColor: Colors.marigoldSubtle,
+    backgroundColor: 'rgba(247, 163, 0, 0.12)',
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.marigoldBorder,
+    borderColor: 'rgba(247, 163, 0, 0.3)',
+  },
+  callIconBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCallText: {
     color: Colors.navy,
-    fontSize: FontSize.xxs,
+    fontSize: 11,
     fontWeight: FontWeight.bold,
+    letterSpacing: 0.2,
   },
 });

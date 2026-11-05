@@ -2,35 +2,58 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Phone, ShieldCheck, Quote, Star, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Phone, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
+import { auth, token, ApiError } from '../../lib/api';
 import styles from './page.module.css';
 
 export default function VendorLoginPage() {
+  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const requestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 10) return;
+    setError('');
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/request (vendor role)
-    setTimeout(() => {
+    try {
+      await auth.requestOtp(phone, 'vendor', false);
       setOtpSent(true);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Could not connect to partner dispatch service. Please try again.');
+      }
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 6) return;
+    setError('');
     setLoading(true);
-    // In production: POST /api/v1/auth/otp/verify (vendor role)
-    setTimeout(() => {
+    try {
+      const res = await auth.verifyOtp(phone, otp, 'vendor');
+      token.set(res.accessToken, res.refreshToken);
+      token.setRole('vendor');
+      const next = new URLSearchParams(window.location.search).get('next') ?? '/admin/fleet';
+      router.push(next);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Partner verification failed. Please try again.');
+      }
+    } finally {
       setLoading(false);
-      window.location.href = '/vendor/dashboard';
-    }, 800);
+    }
   };
 
   return (
@@ -54,6 +77,13 @@ export default function VendorLoginPage() {
             <div className={styles.formWrapper}>
               <h1 className={styles.title}>Partner Login</h1>
               <p className={styles.subtitle}>Welcome back to the Triveni Partner network.</p>
+
+              {error && (
+                <div className={styles.errorBanner}>
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
 
               {!otpSent ? (
                 <form className={styles.form} onSubmit={requestOtp}>
@@ -108,6 +138,11 @@ export default function VendorLoginPage() {
                       <ShieldCheck size={18} className={styles.inputIcon} />
                     </div>
                     <span className={styles.hint}>Sent to +91 {phone}</span>
+                    {process.env.NODE_ENV !== 'production' && (
+                      <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
+                        Dev mode: use OTP <strong>123456</strong>
+                      </span>
+                    )}
                   </div>
 
                   <button 
@@ -144,11 +179,8 @@ export default function VendorLoginPage() {
                   &quot;Partnering with Triveni as a vendor has boosted my bookings by 40%. The platform is seamless and the payments are always on time.&quot;
                 </p>
                 <div className={styles.author}>
-                  <div className={styles.authorStars}>
-                    {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill="currentColor" />)}
-                  </div>
                   <p className={styles.authorName}>Vikram Singh</p>
-                  <p className={styles.authorRole}>Fleet Owner, Thane</p>
+                  <p className={styles.authorRole}>Fleet Owner, Thane • Verified Partner</p>
                 </div>
               </div>
             </div>

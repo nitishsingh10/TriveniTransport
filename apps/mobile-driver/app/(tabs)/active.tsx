@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Linking,
   Switch,
   Alert,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -26,6 +27,43 @@ import {
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useDriverStore } from '@/store/driverStore';
 import type { BookingStatus } from '@triveni/shared-types';
+
+let WebViewComponent: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    WebViewComponent = require('react-native-webview').WebView;
+  } catch (e) {
+    console.warn('react-native-webview not available', e);
+  }
+}
+
+const KNOWN_HUBS: { match: string; lat: number; lng: number }[] = [
+  { match: 'viman', lat: 18.5679, lng: 73.9143 },
+  { match: 'baner', lat: 18.5590, lng: 73.7868 },
+  { match: 'kothrud', lat: 18.5074, lng: 73.8077 },
+  { match: 'hinjewadi', lat: 18.5913, lng: 73.7389 },
+  { match: 'kharadi', lat: 18.5516, lng: 73.9348 },
+  { match: 'wakad', lat: 18.5987, lng: 73.7661 },
+  { match: 'aundh', lat: 18.5580, lng: 73.8075 },
+  { match: 'magarpatta', lat: 18.5158, lng: 73.9272 },
+  { match: 'hadapsar', lat: 18.5089, lng: 73.9259 },
+  { match: 'bandra', lat: 19.0596, lng: 72.8295 },
+  { match: 'powai', lat: 19.1176, lng: 72.9060 },
+  { match: 'thane', lat: 19.2183, lng: 72.9781 },
+  { match: 'andheri', lat: 19.1136, lng: 72.8697 },
+  { match: 'bkc', lat: 19.0657, lng: 72.8687 },
+  { match: 'vashi', lat: 19.0771, lng: 72.9986 },
+  { match: 'whitefield', lat: 12.9698, lng: 77.7500 },
+  { match: 'indiranagar', lat: 12.9784, lng: 77.6408 },
+  { match: 'koramangala', lat: 12.9352, lng: 77.6245 },
+];
+
+function resolveAddress(addr: string, fallback: { lat: number; lng: number }) {
+  if (!addr) return fallback;
+  const lower = addr.toLowerCase();
+  const found = KNOWN_HUBS.find((h) => lower.includes(h.match));
+  return found ? { lat: found.lat, lng: found.lng } : fallback;
+}
 
 export default function ActiveMoveConsole() {
   const activeJob = useDriverStore((s) => s.activeJob);
@@ -77,6 +115,101 @@ export default function ActiveMoveConsole() {
       Alert.alert('Navigation Error', 'Could not open Google Maps navigation.');
     });
   };
+
+  const pickupCoords = useMemo(
+    () => resolveAddress(activeJob.pickupAddress, { lat: 18.5679, lng: 73.9143 }),
+    [activeJob.pickupAddress]
+  );
+  const dropCoords = useMemo(
+    () => resolveAddress(activeJob.dropAddress, { lat: 18.5590, lng: 73.7868 }),
+    [activeJob.dropAddress]
+  );
+
+  const liveMapHtml = useMemo(() => {
+    const truckLat = gps.latitude || (pickupCoords.lat + dropCoords.lat) / 2;
+    const truckLng = gps.longitude || (pickupCoords.lng + dropCoords.lng) / 2;
+
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body, #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #091524;
+        overflow: hidden;
+      }
+      .leaflet-control-attribution, .leaflet-control-zoom {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var pickup = [${pickupCoords.lat}, ${pickupCoords.lng}];
+      var drop = [${dropCoords.lat}, ${dropCoords.lng}];
+      var truck = [${truckLat}, ${truckLng}];
+
+      var map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: true,
+        touchZoom: true
+      }).setView(truck, 12);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+      }).addTo(map);
+
+      // Route dashed line
+      var polyline = L.polyline([pickup, truck, drop], {
+        color: '#F7A300',
+        weight: 3.5,
+        opacity: 0.9,
+        dashArray: '6, 8'
+      }).addTo(map);
+
+      // Pickup pin (Gold)
+      L.circleMarker(pickup, {
+        radius: 6,
+        fillColor: '#F7A300',
+        color: '#FFFFFF',
+        weight: 2,
+        fillOpacity: 1
+      }).addTo(map);
+
+      // Drop pin (Cyan)
+      L.circleMarker(drop, {
+        radius: 6,
+        fillColor: '#0D1F37',
+        color: '#38BDF8',
+        weight: 2.5,
+        fillOpacity: 1
+      }).addTo(map);
+
+      // Moving Truck Marker
+      var truckIcon = L.divIcon({
+        className: 'driver-truck',
+        html: '<div style="width:30px;height:30px;border-radius:15px;background:#F7A300;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px #F7A300;border:2px solid #FFFFFF;"><span style="font-size:14px;line-height:30px;text-align:center;">🚚</span></div>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+      L.marker(truck, { icon: truckIcon }).addTo(map);
+
+      map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+    </script>
+  </body>
+</html>`;
+  }, [pickupCoords, dropCoords, gps.latitude, gps.longitude]);
 
   return (
     <ScrollView
@@ -192,6 +325,56 @@ export default function ActiveMoveConsole() {
         <Text style={styles.gpsHint}>
           Live coordinates are transmitted to customer app and operations while duty is active.
         </Text>
+      </View>
+
+      {/* Live Route Radar Map */}
+      <View style={styles.mapCard}>
+        <View style={styles.mapCardHeader}>
+          <View style={styles.mapHeaderTitleRow}>
+            <View style={styles.mapPulseDot} />
+            <Text style={styles.mapHeaderTitle}>LIVE TRANSIT RADAR</Text>
+          </View>
+          <View style={styles.statusSubBadge}>
+            <Text style={styles.statusSubBadgeText}>
+              {gps.speedKmh > 0 ? `${gps.speedKmh} km/h` : 'STATIONARY'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.mapCanvasWrapper}>
+          {Platform.OS === 'web' ? (
+            <iframe
+              srcDoc={liveMapHtml}
+              style={{
+                width: '100%',
+                height: 180,
+                border: 'none',
+                backgroundColor: '#091524',
+              }}
+              title="Triveni Driver Live Route Map"
+            />
+          ) : WebViewComponent ? (
+            <WebViewComponent
+              originWhitelist={['*']}
+              source={{ html: liveMapHtml }}
+              style={{ width: '100%', height: 180, backgroundColor: '#091524' }}
+              scrollEnabled={false}
+              bounces={false}
+            />
+          ) : (
+            <View style={styles.mapFallback}>
+              <Truck size={24} color={Colors.marigold} />
+              <Text style={styles.mapFallbackText}>Active Route Loaded</Text>
+            </View>
+          )}
+
+          <View style={styles.mapFloatingRouteBadge}>
+            <View style={styles.dotGold} />
+            <Text style={styles.mapFloatingText} numberOfLines={1}>
+              {activeJob.pickupAddress.split(',')[0]} → {activeJob.dropAddress.split(',')[0]}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Navigation Quick Triggers */}
@@ -502,6 +685,103 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textSecondary,
     lineHeight: 14,
+  },
+
+  // Map Card
+  mapCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: Spacing.sm,
+    gap: Spacing.xs + 2,
+    ...Shadow.sm,
+  },
+  mapCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xs,
+    paddingTop: 2,
+  },
+  mapHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mapPulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.success,
+  },
+  mapHeaderTitle: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.navyDark,
+    letterSpacing: 0.5,
+  },
+  statusSubBadge: {
+    backgroundColor: Colors.surfaceSubtle,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  statusSubBadgeText: {
+    fontSize: 9.5,
+    fontWeight: FontWeight.bold,
+    color: Colors.navyDark,
+  },
+  mapCanvasWrapper: {
+    position: 'relative',
+    height: 180,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: '#091524',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  mapFallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#091524',
+  },
+  mapFallbackText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+  mapFloatingRouteBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(9, 21, 36, 0.88)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    gap: 6,
+  },
+  dotGold: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.marigold,
+  },
+  mapFloatingText: {
+    color: Colors.white,
+    fontSize: 9.5,
+    fontWeight: FontWeight.bold,
+    letterSpacing: 0.2,
+    flex: 1,
   },
 
   // Navigation Card

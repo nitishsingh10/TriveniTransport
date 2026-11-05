@@ -13,6 +13,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ShieldCheck, ArrowLeft, RotateCcw, CheckCircle2 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
+import { driverAuthApi } from '@/lib/api';
 
 export default function DriverOtpScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
@@ -69,25 +70,49 @@ export default function DriverOtpScreen() {
     setError(null);
 
     try {
-      // Simulate verification (in dev mode, accepts 123456 or calls backend /api/v1/auth/otp/verify)
-      await new Promise((r) => setTimeout(r, 600));
-
+      const res = await driverAuthApi.verifyOtp(phone || '9888888888', code);
       setAuth(
         {
-          id: 'vendor-triveni-partner-001',
+          id: res.userId,
           role: 'vendor',
-          name: 'Triveni Driver Partner',
+          name: res.user?.name || 'Driver Partner',
           phone: phone || '9888888888',
         },
-        'mock-vendor-jwt-token'
+        res.accessToken
       );
-
       router.replace('/(tabs)');
     } catch (err: any) {
-      setError(err?.message || 'Invalid OTP code. Please try again.');
+      if (__DEV__ && code === '123456') {
+        // Fallback for local offline dev
+        setAuth(
+          {
+            id: 'vendor-triveni-partner-001',
+            role: 'vendor',
+            name: 'Driver Partner',
+            phone: phone || '9888888888',
+          },
+          'mock-vendor-jwt-token'
+        );
+        router.replace('/(tabs)');
+      } else {
+        setError(err?.message || 'Invalid verification code. Please check and try again.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    if (timer > 0) return;
+    setOtp(Array(6).fill(''));
+    setTimer(30);
+    setError(null);
+    try {
+      await driverAuthApi.requestOtp(phone || '9888888888');
+    } catch (e: any) {
+      console.log('Driver resend error:', e.message);
+    }
+    inputs.current[0]?.focus();
   };
 
   return (
@@ -141,17 +166,19 @@ export default function DriverOtpScreen() {
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            {/* Dev helper pill */}
-            <TouchableOpacity
-              style={styles.devPill}
-              onPress={() => {
-                setOtp(['1', '2', '3', '4', '5', '6']);
-              }}
-              activeOpacity={0.8}
-            >
-              <CheckCircle2 size={13} color={Colors.marigold} />
-              <Text style={styles.devPillText}>Dev Mode: Tap to auto-fill code 123456</Text>
-            </TouchableOpacity>
+            {/* Dev helper pill - only in development builds */}
+            {__DEV__ && (
+              <TouchableOpacity
+                style={styles.devPill}
+                onPress={() => {
+                  setOtp(['1', '2', '3', '4', '5', '6']);
+                }}
+                activeOpacity={0.8}
+              >
+                <CheckCircle2 size={13} color={Colors.marigold} />
+                <Text style={styles.devPillText}>Dev Mode: Tap to auto-fill code 123456</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Verify Button */}
             <TouchableOpacity
@@ -177,7 +204,7 @@ export default function DriverOtpScreen() {
               ) : (
                 <TouchableOpacity
                   style={styles.resendBtn}
-                  onPress={() => setTimer(30)}
+                  onPress={handleResend}
                   activeOpacity={0.8}
                 >
                   <RotateCcw size={13} color={Colors.navy} />

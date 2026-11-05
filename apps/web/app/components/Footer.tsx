@@ -43,7 +43,7 @@ export default function Footer() {
               </div>
               <div className={styles.contactDivider} />
               <span className={styles.contactText}>
-                Shop No.4, HNO.372, Durganagar, near New Parshwanath college, GB road, Thane west.
+                Shop No.4, HNO.372, Durganagar, near New Parshwanath college, GB road, Thane West, Maharashtra 400601.
               </span>
             </div>
           </div>
@@ -53,9 +53,11 @@ export default function Footer() {
           <div className={styles.col}>
             <h4>Services</h4>
             <ul>
-              <li><Link href="/quote">Get a Quote</Link></li>
+              <li><Link href="/quote">Get an Instant Quote</Link></li>
+              <li><Link href="/services">Relocation Services</Link></li>
               <li><Link href="/trust">Why Choose Us</Link></li>
-              <li><Link href="/vendor/signup">Work with Us</Link></li>
+              <li><Link href="/#faqs">Relocation FAQs</Link></li>
+              <li><Link href="/vendor/signup">Work with Us (Captains)</Link></li>
               <li><Link href="/login">Customer Login</Link></li>
               <li><Link href="/vendor/login">Partner Portal</Link></li>
             </ul>
@@ -63,19 +65,20 @@ export default function Footer() {
           <div className={styles.col}>
             <h4>Service Areas</h4>
             <ul>
-              <li>Thane</li>
-              <li>Mumbai South</li>
-              <li>Western Suburbs</li>
-              <li>Eastern Suburbs</li>
-              <li>Pune (Long Route)</li>
-              <li>Gujarat (Long Route)</li>
+              <li><Link href="/packers-and-movers-thane">Packers &amp; Movers Thane</Link></li>
+              <li><Link href="/packers-and-movers-mumbai">Packers &amp; Movers Mumbai</Link></li>
+              <li><Link href="/packers-and-movers-mumbai">Western &amp; Eastern Suburbs</Link></li>
+              <li><Link href="/packers-and-movers-mumbai">South Mumbai Relocation</Link></li>
+              <li><Link href="/quote?destination=Pune">Mumbai to Pune Express</Link></li>
+              <li><Link href="/quote?destination=Gujarat">Gujarat Long Route</Link></li>
             </ul>
           </div>
           <div className={styles.col}>
-            <h4>Legal & Safety</h4>
+            <h4>Legal &amp; Trust</h4>
             <ul>
-              <li><Link href="/terms">Terms & Conditions</Link></li>
+              <li><Link href="/terms">Terms &amp; Conditions</Link></li>
               <li><Link href="/privacy">Privacy Policy</Link></li>
+              <li><Link href="/trust">₹5L Transit Insurance</Link></li>
             </ul>
           </div>
         </div>
@@ -83,7 +86,7 @@ export default function Footer() {
 
       <div className={styles.bottom}>
         <div className="container">
-          <p>© {new Date().getFullYear()} Triveni Transports. All rights reserved. Thane, Mumbai.</p>
+          <p>© {new Date().getFullYear()} Triveni Transports. All rights reserved. Thane, Mumbai, Maharashtra.</p>
         </div>
       </div>
     </footer>
