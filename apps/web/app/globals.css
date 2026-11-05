@@ -24,6 +24,7 @@
   --accent-300: #f6ad55;
   --accent-400: #ed8936;
   --accent-500: #F7A300; /* Core Logo Yellow-Orange */
+  --accent:     #F7A300; /* Shorthand alias for accent-500 */
   --accent-600: #dd6b20;
   --accent-700: #c05621;
 
