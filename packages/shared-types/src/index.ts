@@ -50,7 +50,7 @@ export type ConfigurationType = '1bhk' | '2bhk' | '3bhk' | '4bhk' | 'villa' | 'o
 export interface Customer {
   id: string;
   name: string;
-  phone: string;
+  phone?: string | null;
   email?: string | null;
   savedAddresses: SavedAddress[];
   createdAt: string;
@@ -67,6 +67,7 @@ export interface Vendor {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
   status: VendorStatus;
   serviceAreas: string[]; // zone IDs
   createdAt: string;
@@ -76,6 +77,7 @@ export interface AdminUser {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
   createdAt: string;
 }
 
@@ -249,14 +251,21 @@ export interface Notification {
 
 // Auth
 export interface OtpRequestBody {
-  phone: string;
+  identifier?: string;
+  phone?: string;
+  email?: string;
   role?: UserRole;
+  isSignup?: boolean;
 }
 
 export interface OtpVerifyBody {
-  phone: string;
+  identifier?: string;
+  phone?: string;
+  email?: string;
   otp: string;
   role: UserRole;
+  fullName?: string;
+  isSignup?: boolean;
 }
 
 export interface AuthTokens {
@@ -269,7 +278,8 @@ export interface AuthUser {
   id: string;
   role: UserRole;
   name: string;
-  phone: string;
+  phone?: string | null;
+  email?: string | null;
 }
 
 export interface AuthResponse {

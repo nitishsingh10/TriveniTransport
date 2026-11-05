@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import {
   Phone,
+  Mail,
   ShieldCheck,
   Package,
   CheckCircle2,
@@ -22,20 +23,33 @@ import {
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { authApi } from '@/lib/api';
 
+type Method = 'phone' | 'email';
+
 export default function LoginScreen() {
-  const [phone, setPhone] = useState('');
+  const [method, setMethod] = useState<Method>('phone');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+  const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
+  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+
+  const switchMethod = (m: Method) => {
+    setMethod(m);
+    setIdentifier('');
+    setErrorMsg('');
+  };
+
   const handleSendOtp = async () => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length !== 10) return;
+    if (!canSubmit) return;
 
     setLoading(true);
     setErrorMsg('');
     try {
-      await authApi.requestOtp(cleaned);
-      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+      await authApi.requestOtp(resolvedIdentifier);
+      router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
     } catch (e: any) {
       console.log('Backend requestOtp failed or fallback:', e.message);
       if (e.status === 429) {
@@ -43,7 +57,7 @@ export default function LoginScreen() {
         return;
       }
       // Allow moving to OTP screen in dev mode so dev code 123456 can be used
-      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+      router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
     } finally {
       setLoading(false);
     }
@@ -89,7 +103,7 @@ export default function LoginScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Welcome back</Text>
             <Text style={styles.cardSubtitle}>
-              Please enter your 10-digit mobile number to track moves and manage bookings.
+              Sign in with your mobile number or email to track moves and manage bookings.
             </Text>
 
             {!!errorMsg && (
@@ -98,37 +112,82 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* Phone Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <View style={styles.inputWrapper}>
-                <View style={styles.countryCodeBox}>
-                  <Text style={styles.countryCode}>+91</Text>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="99999 99999"
-                  placeholderTextColor={Colors.inputPlaceholder}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={setPhone}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSendOtp}
-                />
-                <Phone size={18} color={Colors.textMuted} style={styles.inputIcon} />
-              </View>
+            {/* Method Toggle */}
+            <View style={styles.methodToggle}>
+              <TouchableOpacity
+                style={[styles.methodTab, method === 'phone' && styles.methodTabActive]}
+                onPress={() => switchMethod('phone')}
+                activeOpacity={0.8}
+              >
+                <Phone size={13} color={method === 'phone' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.methodTabText, method === 'phone' && styles.methodTabTextActive]}>
+                  Mobile
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.methodTab, method === 'email' && styles.methodTabActive]}
+                onPress={() => switchMethod('email')}
+                activeOpacity={0.8}
+              >
+                <Mail size={13} color={method === 'email' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
+                  Email
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* Input */}
+            {method === 'phone' ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryCode}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="99999 99999"
+                    placeholderTextColor={Colors.inputPlaceholder}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSendOtp}
+                  />
+                  <Phone size={18} color={Colors.textMuted} style={styles.inputIcon} />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email Address</Text>
+                <View style={styles.inputWrapperEmail}>
+                  <TextInput
+                    style={[styles.input, styles.inputEmail]}
+                    placeholder="you@example.com"
+                    placeholderTextColor={Colors.inputPlaceholder}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSendOtp}
+                  />
+                  <Mail size={18} color={Colors.textMuted} style={styles.inputIcon} />
+                </View>
+              </View>
+            )}
 
             {/* Submit Button (Matching website .submitBtn: Deep Navy with white text) */}
             <TouchableOpacity
               style={[
                 styles.submitBtn,
-                (loading || phone.replace(/\D/g, '').length !== 10) && styles.submitBtnDisabled,
+                (!canSubmit || loading) && styles.submitBtnDisabled,
               ]}
               onPress={handleSendOtp}
               activeOpacity={0.88}
-              disabled={loading || phone.replace(/\D/g, '').length !== 10}
+              disabled={!canSubmit || loading}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
@@ -286,6 +345,42 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
 
+  // Method Toggle
+  methodToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  methodTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  methodTabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  methodTabText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textMuted,
+  },
+  methodTabTextActive: {
+    color: Colors.navy,
+  },
+
   // Input
   inputGroup: {
     gap: 6,
@@ -297,6 +392,15 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.inputBorder,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.inputBg,
+    overflow: 'hidden',
+  },
+  inputWrapperEmail: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -324,6 +428,9 @@ const styles = StyleSheet.create({
     color: Colors.navy,
     fontSize: FontSize.md,
     fontWeight: FontWeight.medium,
+  },
+  inputEmail: {
+    paddingLeft: Spacing.md,
   },
   inputIcon: {
     marginRight: Spacing.md,

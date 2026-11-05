@@ -3,25 +3,54 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
 import styles from './page.module.css';
 
+type Method = 'phone' | 'email';
+
 export default function VendorLoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [method, setMethod] = useState<Method>('phone');
+  const [identifier, setIdentifier] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+  const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
+  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+
+  const switchMethod = (m: Method) => {
+    setMethod(m);
+    setIdentifier('');
+    setError('');
+    setOtpSent(false);
+    setOtp('');
+  };
+
+  const handleIdentifierChange = (val: string) => {
+    if (method === 'phone' && (val.includes('@') || /[a-zA-Z]/.test(val))) {
+      setMethod('email');
+      setIdentifier(val);
+      return;
+    }
+    if (method === 'phone') {
+      setIdentifier(val.replace(/\D/g, ''));
+    } else {
+      setIdentifier(val);
+    }
+  };
+
   const requestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < 10) return;
+    if (!canSubmit) return;
     setError('');
     setLoading(true);
     try {
-      await auth.requestOtp(phone, 'vendor', false);
+      await auth.requestOtp(resolvedIdentifier, 'vendor', false);
       setOtpSent(true);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -40,7 +69,7 @@ export default function VendorLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await auth.verifyOtp(phone, otp, 'vendor');
+      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('vendor');
       const next = new URLSearchParams(window.location.search).get('next') ?? '/admin/fleet';
@@ -87,23 +116,94 @@ export default function VendorLoginPage() {
 
               {!otpSent ? (
                 <form className={styles.form} onSubmit={requestOtp}>
-                  <div className={styles.inputGroup}>
-                    <label>Registered Mobile Number</label>
-                    <div className={styles.inputWrapper}>
-                      <span className={styles.countryCode}>+91</span>
-                      <input
-                        className={styles.input}
-                        type="tel"
-                        placeholder="99999 99999"
-                        maxLength={10}
-                        value={phone}
-                        onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
-                        required
-                        autoFocus
-                      />
-                      <Phone size={18} className={styles.inputIcon} />
-                    </div>
+                  {/* Method Toggle */}
+                  <div className={styles.methodToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.methodTab} ${method === 'phone' ? styles.methodTabActive : ''}`}
+                      onClick={() => switchMethod('phone')}
+                    >
+                      <Phone size={14} />
+                      Mobile Number
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.methodTab} ${method === 'email' ? styles.methodTabActive : ''}`}
+                      onClick={() => switchMethod('email')}
+                    >
+                      <Mail size={14} />
+                      Email Address
+                    </button>
                   </div>
+
+                  {method === 'phone' ? (
+                    <div className={styles.inputGroup}>
+                      <label>Registered Mobile Number</label>
+                      <div className={styles.inputWrapper}>
+                        <span className={styles.countryCode}>+91</span>
+                        <input
+                          className={styles.input}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="99999 99999"
+                          maxLength={10}
+                          value={identifier}
+                          onChange={e => handleIdentifierChange(e.target.value)}
+                          required
+                          autoFocus
+                        />
+                        <Phone size={18} className={styles.inputIcon} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => switchMethod('email')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#2563EB',
+                          fontSize: '0.8rem',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          padding: '4px 0 0 2px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        ✉️ Sign in with Email Address instead
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.inputGroup}>
+                      <label>Registered Email Address</label>
+                      <div className={styles.inputWrapper}>
+                        <input
+                          className={`${styles.input} ${styles.inputEmail}`}
+                          type="email"
+                          placeholder="partner@example.com"
+                          value={identifier}
+                          onChange={e => handleIdentifierChange(e.target.value)}
+                          required
+                          autoFocus
+                        />
+                        <Mail size={18} className={styles.inputIcon} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => switchMethod('phone')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#2563EB',
+                          fontSize: '0.8rem',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          padding: '4px 0 0 2px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        📱 Sign in with Mobile Number instead
+                      </button>
+                    </div>
+                  )}
                   
                   <div className={styles.formOptions}>
                     <label className={styles.checkboxLabel}>
@@ -115,7 +215,7 @@ export default function VendorLoginPage() {
                   <button 
                     type="submit"
                     className={styles.submitBtn} 
-                    disabled={phone.length < 10 || loading}
+                    disabled={!canSubmit || loading}
                   >
                     {loading ? <span className={styles.spinner} /> : 'Send OTP'}
                   </button>
@@ -137,7 +237,9 @@ export default function VendorLoginPage() {
                       />
                       <ShieldCheck size={18} className={styles.inputIcon} />
                     </div>
-                    <span className={styles.hint}>Sent to +91 {phone}</span>
+                    <span className={styles.hint}>
+                      {method === 'phone' ? `Sent via SMS to +91 ${identifier}` : `Sent via email to ${identifier}`}
+                    </span>
                     {process.env.NODE_ENV !== 'production' && (
                       <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
                         Dev mode: use OTP <strong>123456</strong>
@@ -158,7 +260,7 @@ export default function VendorLoginPage() {
                     className={styles.backBtn} 
                     onClick={() => setOtpSent(false)}
                   >
-                    <ArrowLeft size={16} /> Change mobile number
+                    <ArrowLeft size={16} /> Change {method === 'phone' ? 'mobile number' : 'email'}
                   </button>
                 </form>
               )}

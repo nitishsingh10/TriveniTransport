@@ -2,16 +2,32 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Phone, KeyRound, ArrowRight, Lock } from 'lucide-react';
+import { Phone, Mail, KeyRound, ArrowRight, Lock } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
+
+type Method = 'phone' | 'email';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [method, setMethod] = useState<Method>('phone');
+  const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+  const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
+  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+
+  const switchMethod = (m: Method) => {
+    setMethod(m);
+    setIdentifier('');
+    setError(null);
+    setStep('identifier');
+    setOtp('');
+  };
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +35,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      await auth.requestOtp(phone, 'admin');
+      await auth.requestOtp(resolvedIdentifier, 'admin');
       setStep('otp');
     } catch (err: any) {
       setError(err instanceof ApiError ? err.message : 'Could not send OTP. Please check your connection.');
@@ -34,7 +50,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await auth.verifyOtp(phone, otp, 'admin');
+      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'admin');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('admin');
       router.push('/admin');
@@ -43,6 +59,18 @@ export default function AdminLoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: '#081220',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    padding: '12px 14px 12px 42px',
+    borderRadius: '10px',
+    color: '#FFFFFF',
+    fontSize: '15px',
+    outline: 'none',
+    boxSizing: 'border-box',
   };
 
   return (
@@ -93,7 +121,7 @@ export default function AdminLoginPage() {
             Triveni Super Admin
           </h1>
           <p style={{ fontSize: '13px', color: '#94A3B8', margin: 0 }}>
-            Restricted Central Dispatch & Financial Console
+            Restricted Central Dispatch &amp; Financial Console
           </p>
         </div>
 
@@ -113,8 +141,47 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        {step === 'phone' ? (
+        {step === 'identifier' ? (
           <form onSubmit={handleRequestOtp}>
+            {/* Method Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '10px',
+                padding: '4px',
+                marginBottom: '20px',
+                gap: '4px',
+              }}
+            >
+              {(['phone', 'email'] as Method[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchMethod(m)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px',
+                    borderRadius: '7px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    background: method === m ? '#F7A300' : 'transparent',
+                    color: method === m ? '#081220' : '#94A3B8',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {m === 'phone' ? <Phone size={13} /> : <Mail size={13} />}
+                  {m === 'phone' ? 'Mobile' : 'Email'}
+                </button>
+              ))}
+            </div>
+
             <div style={{ marginBottom: '20px' }}>
               <label
                 style={{
@@ -127,36 +194,29 @@ export default function AdminLoginPage() {
                   marginBottom: '8px',
                 }}
               >
-                Admin Phone Number
+                {method === 'phone' ? 'Admin Phone Number' : 'Admin Email Address'}
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <Phone
-                  size={16}
-                  style={{ position: 'absolute', left: 14, color: '#64748B' }}
-                />
+                {method === 'phone' ? (
+                  <Phone size={16} style={{ position: 'absolute', left: 14, color: '#64748B' }} />
+                ) : (
+                  <Mail size={16} style={{ position: 'absolute', left: 14, color: '#64748B' }} />
+                )}
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="9999999999"
+                  type={method === 'phone' ? 'tel' : 'email'}
+                  value={identifier}
+                  onChange={e => setIdentifier(method === 'phone' ? e.target.value.replace(/\D/g, '') : e.target.value)}
+                  placeholder={method === 'phone' ? '9999999999' : 'admin@triveni.com'}
+                  maxLength={method === 'phone' ? 10 : undefined}
                   required
-                  style={{
-                    width: '100%',
-                    background: '#081220',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    padding: '12px 14px 12px 42px',
-                    borderRadius: '10px',
-                    color: '#FFFFFF',
-                    fontSize: '15px',
-                    outline: 'none',
-                  }}
+                  style={inputStyle}
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !canSubmit}
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #F7A300 0%, #D48800 100%)',
@@ -166,7 +226,8 @@ export default function AdminLoginPage() {
                 borderRadius: '10px',
                 fontWeight: 800,
                 fontSize: '15px',
-                cursor: 'pointer',
+                cursor: loading || !canSubmit ? 'not-allowed' : 'pointer',
+                opacity: loading || !canSubmit ? 0.6 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -206,6 +267,9 @@ export default function AdminLoginPage() {
                   </span>
                 )}
               </div>
+              <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '10px' }}>
+                {method === 'phone' ? `Sent via SMS to +91 ${identifier}` : `Sent via email to ${identifier}`}
+              </p>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <KeyRound
                   size={16}
@@ -215,20 +279,10 @@ export default function AdminLoginPage() {
                   type="text"
                   maxLength={6}
                   value={otp}
-                  onChange={e => setOtp(e.target.value)}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
                   required
-                  style={{
-                    width: '100%',
-                    background: '#081220',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    padding: '12px 14px 12px 42px',
-                    borderRadius: '10px',
-                    color: '#FFFFFF',
-                    fontSize: '18px',
-                    letterSpacing: '0.25em',
-                    outline: 'none',
-                  }}
+                  style={{ ...inputStyle, fontSize: '18px', letterSpacing: '0.25em' }}
                 />
               </div>
             </div>
@@ -255,6 +309,23 @@ export default function AdminLoginPage() {
             >
               <span>{loading ? 'Authenticating...' : 'Authorize Dispatcher Access'}</span>
               <Lock size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setStep('identifier'); setOtp(''); setError(null); }}
+              style={{
+                width: '100%',
+                marginTop: '12px',
+                background: 'transparent',
+                color: '#64748B',
+                border: 'none',
+                fontSize: '13px',
+                cursor: 'pointer',
+                padding: '8px',
+              }}
+            >
+              ← Change {method === 'phone' ? 'phone number' : 'email'}
             </button>
           </form>
         )}

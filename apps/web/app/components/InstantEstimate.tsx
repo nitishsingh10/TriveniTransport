@@ -162,7 +162,7 @@ export default function InstantEstimate() {
     <>
       <div className={styles.widget}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Instant Estimate</h2>
+          <div className={styles.title}>Instant Fare Calculator</div>
           <p className={styles.subtitle}>
             Get a quick price range for your move — no commitment
           </p>

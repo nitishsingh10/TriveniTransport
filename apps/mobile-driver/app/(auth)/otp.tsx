@@ -16,7 +16,9 @@ import { useAuthStore } from '@/store/authStore';
 import { driverAuthApi } from '@/lib/api';
 
 export default function DriverOtpScreen() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { identifier, phone: legacyPhone } = useLocalSearchParams<{ identifier: string; phone: string }>();
+  const resolvedIdentifier = identifier || legacyPhone || '';
+  const isEmail = resolvedIdentifier.includes('@');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
@@ -70,13 +72,13 @@ export default function DriverOtpScreen() {
     setError(null);
 
     try {
-      const res = await driverAuthApi.verifyOtp(phone || '9888888888', code);
+      const res = await driverAuthApi.verifyOtp(resolvedIdentifier || '9888888888', code);
       setAuth(
         {
           id: res.userId,
           role: 'vendor',
           name: res.user?.name || 'Driver Partner',
-          phone: phone || '9888888888',
+          phone: res.user?.phone || resolvedIdentifier,
         },
         res.accessToken
       );
@@ -89,7 +91,7 @@ export default function DriverOtpScreen() {
             id: 'vendor-triveni-partner-001',
             role: 'vendor',
             name: 'Driver Partner',
-            phone: phone || '9888888888',
+            phone: resolvedIdentifier || '9888888888',
           },
           'mock-vendor-jwt-token'
         );
@@ -108,7 +110,7 @@ export default function DriverOtpScreen() {
     setTimer(30);
     setError(null);
     try {
-      await driverAuthApi.requestOtp(phone || '9888888888');
+      await driverAuthApi.requestOtp(resolvedIdentifier || '9888888888');
     } catch (e: any) {
       console.log('Driver resend error:', e.message);
     }
@@ -141,7 +143,9 @@ export default function DriverOtpScreen() {
             <Text style={styles.title}>Enter OTP Code</Text>
             <Text style={styles.subtitle}>
               We sent a 6-digit verification code to{' '}
-              <Text style={styles.phoneHighlight}>+91 {phone ?? '9888888888'}</Text>
+              <Text style={styles.phoneHighlight}>
+                {isEmail ? resolvedIdentifier : `+91 ${resolvedIdentifier ?? '9888888888'}`}
+              </Text>
             </Text>
 
             {/* OTP 6-Box Inputs */}

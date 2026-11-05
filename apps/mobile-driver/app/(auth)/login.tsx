@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import {
   Phone,
+  Mail,
   ShieldCheck,
   ArrowRight,
   Wallet,
@@ -22,30 +23,43 @@ import {
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { driverAuthApi } from '@/lib/api';
 
+type Method = 'phone' | 'email';
+
 export default function DriverLoginScreen() {
-  const [phone, setPhone] = useState('');
+  const [method, setMethod] = useState<Method>('phone');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+  const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
+  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+
+  const switchMethod = (m: Method) => {
+    setMethod(m);
+    setIdentifier('');
+    setErrorMsg('');
+  };
+
   const handleSendOtp = async () => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length !== 10) return;
+    if (!canSubmit) return;
 
     setLoading(true);
     setErrorMsg('');
     try {
-      await driverAuthApi.requestOtp(cleaned);
-      router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+      await driverAuthApi.requestOtp(resolvedIdentifier);
+      router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
     } catch (e: any) {
       if (e.status === 429) {
         setErrorMsg('Too many OTP requests. Please wait a few minutes.');
       } else if (e.status === 404) {
-        setErrorMsg('No partner account found for this number. Please contact support.');
+        setErrorMsg('No partner account found. Please contact support.');
       } else if (e.status === 403) {
         setErrorMsg('Your partner account is inactive. Please contact Triveni support.');
       } else {
         // Allow dev mode to proceed to OTP screen
-        router.push({ pathname: '/(auth)/otp', params: { phone: cleaned } });
+        router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
       }
     } finally {
       setLoading(false);
@@ -94,30 +108,8 @@ export default function DriverLoginScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Driver Sign In</Text>
             <Text style={styles.cardSubtitle}>
-              Enter your registered mobile number to access your assignments, navigation, and payouts.
+              Enter your registered mobile number or email to access your assignments and payouts.
             </Text>
-
-            {/* Phone Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Registered Partner Phone</Text>
-              <View style={styles.inputWrapper}>
-                <View style={styles.countryCodeBox}>
-                  <Text style={styles.countryCode}>+91</Text>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="98888 88888"
-                  placeholderTextColor={Colors.inputPlaceholder}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={setPhone}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSendOtp}
-                />
-                <Phone size={18} color={Colors.textMuted} style={styles.inputIcon} />
-              </View>
-            </View>
 
             {!!errorMsg && (
               <View style={styles.errorBox}>
@@ -125,15 +117,82 @@ export default function DriverLoginScreen() {
               </View>
             )}
 
+            {/* Method Toggle */}
+            <View style={styles.methodToggle}>
+              <TouchableOpacity
+                style={[styles.methodTab, method === 'phone' && styles.methodTabActive]}
+                onPress={() => switchMethod('phone')}
+                activeOpacity={0.8}
+              >
+                <Phone size={13} color={method === 'phone' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.methodTabText, method === 'phone' && styles.methodTabTextActive]}>
+                  Mobile
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.methodTab, method === 'email' && styles.methodTabActive]}
+                onPress={() => switchMethod('email')}
+                activeOpacity={0.8}
+              >
+                <Mail size={13} color={method === 'email' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
+                  Email
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Input */}
+            {method === 'phone' ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Registered Partner Phone</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryCode}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="98888 88888"
+                    placeholderTextColor={Colors.inputPlaceholder}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSendOtp}
+                  />
+                  <Phone size={18} color={Colors.textMuted} style={styles.inputIcon} />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Registered Partner Email</Text>
+                <View style={styles.inputWrapperEmail}>
+                  <TextInput
+                    style={[styles.input, styles.inputEmail]}
+                    placeholder="partner@example.com"
+                    placeholderTextColor={Colors.inputPlaceholder}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSendOtp}
+                  />
+                  <Mail size={18} color={Colors.textMuted} style={styles.inputIcon} />
+                </View>
+              </View>
+            )}
+
             {/* Submit Button */}
             <TouchableOpacity
               style={[
                 styles.submitBtn,
-                (loading || phone.replace(/\D/g, '').length !== 10) && styles.submitBtnDisabled,
+                (!canSubmit || loading) && styles.submitBtnDisabled,
               ]}
               onPress={handleSendOtp}
               activeOpacity={0.88}
-              disabled={loading || phone.replace(/\D/g, '').length !== 10}
+              disabled={!canSubmit || loading}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
@@ -295,44 +354,53 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.md,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   cardTitle: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     color: Colors.navyDark,
     letterSpacing: -0.5,
   },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Colors.successLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.successBorder,
-  },
-  greenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.success,
-  },
-  activePillText: {
-    color: Colors.success,
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-  },
   cardSubtitle: {
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
     lineHeight: 20,
     marginTop: -4,
+  },
+
+  // Method Toggle
+  methodToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  methodTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  methodTabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  methodTabText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textMuted,
+  },
+  methodTabTextActive: {
+    color: Colors.navy,
   },
 
   // Input
@@ -346,6 +414,15 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.inputBorder,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.inputBg,
+    overflow: 'hidden',
+  },
+  inputWrapperEmail: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -374,17 +451,11 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: FontWeight.medium,
   },
+  inputEmail: {
+    paddingLeft: Spacing.md,
+  },
   inputIcon: {
     marginRight: Spacing.md,
-  },
-  inputHint: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  boldText: {
-    fontWeight: FontWeight.bold,
-    color: Colors.navy,
   },
 
   // Submit Button

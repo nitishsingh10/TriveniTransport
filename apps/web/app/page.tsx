@@ -341,12 +341,11 @@ export default function Home() {
               </motion.div>
 
               <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }} className={styles.heroTitle}>
-                Move Smarter.<br /><span className={styles.heroAccent}>Pay Fairly.</span>
+                Trusted Packers &amp; Movers in Mumbai &amp; Thane.<br /><span className={styles.heroAccent}>Move Smarter, Pay Fairly.</span>
               </motion.h1>
 
               <motion.p initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }} className={styles.heroDesc}>
-                Triveni Transports offers transparent, itemised pricing for every move —
-                no hidden charges, verified captains, and a team that treats your belongings like their own.
+                Triveni Transports is your trusted packers and movers in Mumbai and Thane. Move smarter and pay fairly with transparent, itemised pricing for every home or office shifting — no hidden charges, verified captains, ₹5L transit insurance, and a professional crew that treats your belongings like their own.
               </motion.p>
 
               <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.4, ease: [0.16, 1, 0.3, 1] }} className={styles.heroStats}>

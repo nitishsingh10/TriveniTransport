@@ -23,7 +23,10 @@ import { authApi } from '@/lib/api';
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { identifier, phone: legacyPhone } = useLocalSearchParams<{ identifier: string; phone: string }>();
+  // Support legacy `phone` param for backward compatibility
+  const resolvedIdentifier = identifier || legacyPhone || '';
+  const isEmail = resolvedIdentifier.includes('@');
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
@@ -63,13 +66,14 @@ export default function OtpScreen() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await authApi.verifyOtp(phone || '9820098200', finalOtp);
+      const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp);
       setAuth(
         {
           id: res.userId,
           role: 'customer',
           name: res.user?.name || 'Customer',
-          phone: `+91${phone}`,
+          phone: res.user?.phone ? `+91${res.user.phone}` : undefined,
+          email: res.user?.email ?? undefined,
         },
         res.accessToken
       );
@@ -80,7 +84,7 @@ export default function OtpScreen() {
       // Fallback for dev OTP
       if (__DEV__ && finalOtp === '123456') {
         setAuth(
-          { id: 'cust_seed', role: 'customer', name: 'Customer', phone: `+91${phone}` },
+          { id: 'cust_seed', role: 'customer', name: 'Customer', phone: `+91${resolvedIdentifier}` },
           'dev_customer_token'
         );
         setLoading(false);
@@ -98,7 +102,7 @@ export default function OtpScreen() {
     setResendTimer(30);
     setErrorMsg('');
     try {
-      await authApi.requestOtp(phone || '9820098200');
+      await authApi.requestOtp(resolvedIdentifier || '9820098200');
     } catch {}
     inputRefs.current[0]?.focus();
   };
@@ -121,7 +125,7 @@ export default function OtpScreen() {
             activeOpacity={0.8}
           >
             <ArrowLeft size={16} color={Colors.navy} />
-            <Text style={styles.backText}>Back to Phone Number</Text>
+            <Text style={styles.backText}>Back to Login</Text>
           </TouchableOpacity>
 
           <View style={styles.card}>
@@ -132,8 +136,10 @@ export default function OtpScreen() {
               </View>
               <Text style={styles.title}>Enter OTP Code</Text>
               <Text style={styles.subtitle}>
-                We have sent a 6-digit code to{' '}
-                <Text style={styles.phoneHighlight}>+91 {phone}</Text>
+                We sent a 6-digit code to{' '}
+                <Text style={styles.phoneHighlight}>
+                  {isEmail ? resolvedIdentifier : `+91 ${resolvedIdentifier}`}
+                </Text>
               </Text>
             </View>
 

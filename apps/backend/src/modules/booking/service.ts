@@ -3,6 +3,7 @@ import { ItemizedQuoteInput } from '@triveni/shared-validation';
 import { PricingService } from '../pricing/service';
 import { acquireSlotLock, releaseSlotLock, isSlotLocked } from '../../config/redis';
 import { BookingStatus } from '@triveni/shared-types';
+import { EmailService } from '../../services/resend';
 
 export class BookingService {
   /**
@@ -71,7 +72,10 @@ export class BookingService {
    * Confirms a booking (called after successful payment)
    */
   static async confirmBooking(bookingId: string) {
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { customer: true },
+    });
     if (!booking) throw { statusCode: 404, message: 'Booking not found' };
     
     // Validate transition
@@ -97,6 +101,17 @@ export class BookingService {
     const dummyVehicleId = 'vehicle-1'; 
     const dateStr = booking.scheduledDate.toISOString().split('T')[0];
     await releaseSlotLock(dummyVehicleId, dateStr);
+
+    // Send confirmation email asynchronously if customer has an email address
+    if (booking.customer?.email) {
+      EmailService.sendBookingConfirmationEmail(booking.customer.email, {
+        bookingId,
+        pickupAddress: booking.pickupAddress,
+        dropAddress: booking.dropAddress,
+        scheduledDate: booking.scheduledDate,
+        amount: booking.finalAmount ? Number(booking.finalAmount) : null,
+      }).catch((err) => console.error('Failed to dispatch booking confirmation email:', err));
+    }
 
     return updated;
   }

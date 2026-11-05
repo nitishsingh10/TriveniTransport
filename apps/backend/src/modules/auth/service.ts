@@ -2,47 +2,125 @@ import { prisma } from '../../config/prisma';
 import { getEnv } from '../../config/env';
 import { UserRole } from '@triveni/shared-types';
 import { sendSmsOtp } from '../../services/msg91';
+import { EmailService } from '../../services/resend';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
-import { checkPhoneOtpLimit } from '../../middleware/rateLimiter';
+import { checkIdentifierOtpLimit } from '../../middleware/rateLimiter';
 import crypto from 'crypto';
+
+export interface AuthTargetInput {
+  identifier?: string;
+  phone?: string;
+  email?: string;
+}
+
+export function resolveAuthTarget(input: AuthTargetInput | string): { type: 'email' | 'phone'; value: string } {
+  let raw = '';
+  if (typeof input === 'string') {
+    raw = input.trim();
+  } else {
+    raw = (input.email || input.phone || input.identifier || '').trim();
+  }
+
+  if (!raw) {
+    throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Email address or mobile phone number is required.' };
+  }
+
+  if (raw.includes('@')) {
+    const email = raw.toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Please provide a valid email address.' };
+    }
+    return { type: 'email', value: email };
+  } else {
+    const cleaned = raw.replace(/[^\d+]/g, '');
+    if (cleaned.length < 10) {
+      throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Please provide a valid 10-15 digit phone number.' };
+    }
+    return { type: 'phone', value: cleaned };
+  }
+}
 
 export class AuthService {
   /**
-   * Generates a 6-digit OTP, stores it in OtpChallenge, and sends it via MSG91
+   * Generates a 6-digit OTP, stores it in OtpChallenge, and dispatches via Resend (email) or MSG91 (SMS)
    */
-  static async requestOtp(phone: string, role: UserRole, isSignup?: boolean): Promise<void> {
+  static async requestOtp(
+    targetInput: AuthTargetInput | string,
+    role: UserRole,
+    isSignup?: boolean
+  ): Promise<{ message: string; channel: 'email' | 'sms'; destination: string }> {
     const { OTP_EXPIRY_MINUTES } = getEnv();
+    const target = resolveAuthTarget(targetInput);
 
-    // Check rate limit per phone number to prevent SMS bombing / balance drainage
-    await checkPhoneOtpLimit(phone);
-    
-    // Check if user exists based on role & intent
-    if (role === 'vendor') {
-      const vendor = await prisma.vendor.findUnique({ where: { phone } });
-      if (isSignup && vendor) {
-        throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'A partner account with this phone number already exists. Please sign in.' };
-      }
-      if (!isSignup) {
-        if (!vendor) {
-          throw { statusCode: 404, code: 'NOT_FOUND', message: 'No partner account found for this phone number. Please register first.' };
+    // Rate limit per target (phone or email) to prevent abuse
+    await checkIdentifierOtpLimit(target.value);
+
+    // Role-specific authorization and existence checks
+    if (target.type === 'email') {
+      const email = target.value;
+      if (role === 'vendor') {
+        const vendor = await prisma.vendor.findUnique({ where: { email } });
+        if (isSignup && vendor) {
+          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'A partner account with this email already exists. Please sign in.' };
         }
-        if (vendor.status !== 'active') {
-          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
+        if (!isSignup) {
+          if (!vendor) {
+            throw { statusCode: 404, code: 'NOT_FOUND', message: 'No partner account found for this email. Please register first.' };
+          }
+          if (vendor.status !== 'active') {
+            throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
+          }
         }
-      }
-    } else if (role === 'admin') {
-      let admin = await prisma.adminUser.findUnique({ where: { phone } });
-      // In development, auto-seed admin if trying to log in with ADMIN_PHONE
-      if (!admin && process.env.NODE_ENV !== 'production') {
-        const { ADMIN_PHONE } = getEnv();
-        if (phone === ADMIN_PHONE || phone === '9999999999') {
+      } else if (role === 'admin') {
+        let admin = await prisma.adminUser.findUnique({ where: { email } });
+        if (!admin && process.env.NODE_ENV !== 'production' && (email === 'admin@trivenitransports.com' || email.startsWith('admin@'))) {
           admin = await prisma.adminUser.create({
-            data: { phone, name: 'Triveni Admin' },
+            data: { email, name: 'Triveni Admin' },
           });
         }
+        if (!admin) {
+          throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this email address.' };
+        }
+      } else if (role === 'customer' && isSignup) {
+        const customer = await prisma.customer.findUnique({ where: { email } });
+        if (customer) {
+          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'An account with this email already exists. Please sign in.' };
+        }
       }
-      if (!admin) {
-        throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this phone number.' };
+    } else {
+      const phone = target.value;
+      if (role === 'vendor') {
+        const vendor = await prisma.vendor.findUnique({ where: { phone } });
+        if (isSignup && vendor) {
+          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'A partner account with this phone number already exists. Please sign in.' };
+        }
+        if (!isSignup) {
+          if (!vendor) {
+            throw { statusCode: 404, code: 'NOT_FOUND', message: 'No partner account found for this phone number. Please register first.' };
+          }
+          if (vendor.status !== 'active') {
+            throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
+          }
+        }
+      } else if (role === 'admin') {
+        let admin = await prisma.adminUser.findUnique({ where: { phone } });
+        if (!admin && process.env.NODE_ENV !== 'production') {
+          const { ADMIN_PHONE } = getEnv();
+          if (phone === ADMIN_PHONE || phone === '9999999999') {
+            admin = await prisma.adminUser.create({
+              data: { phone, name: 'Triveni Admin' },
+            });
+          }
+        }
+        if (!admin) {
+          throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this phone number.' };
+        }
+      } else if (role === 'customer' && isSignup) {
+        const customer = await prisma.customer.findUnique({ where: { phone } });
+        if (customer) {
+          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'An account with this phone number already exists. Please sign in.' };
+        }
       }
     }
 
@@ -51,10 +129,11 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
     const otpHash = crypto.createHash('sha256').update(code).digest('hex');
 
-    // Create a new OTP challenge
+    // Create a new OTP challenge in database
     await prisma.otpChallenge.create({
       data: {
-        phone,
+        phone: target.type === 'phone' ? target.value : null,
+        email: target.type === 'email' ? target.value : null,
         otpHash,
         expiresAt,
         attempts: 0,
@@ -62,36 +141,61 @@ export class AuthService {
       },
     });
 
-    await sendSmsOtp(phone, code);
+    // Send OTP via chosen channel
+    if (target.type === 'email') {
+      await EmailService.sendOtpEmail(target.value, code, role, isSignup);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[DEV OTP EMAIL] Sent to ${target.value}: ${code}`);
+      }
+      return {
+        message: 'Verification code sent to your email address.',
+        channel: 'email',
+        destination: target.value,
+      };
+    } else {
+      await sendSmsOtp(target.value, code);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[DEV OTP SMS] Sent to ${target.value}: ${code}`);
+      }
+      return {
+        message: 'Verification code sent via SMS to your mobile number.',
+        channel: 'sms',
+        destination: target.value,
+      };
+    }
   }
 
   /**
    * Verifies the OTP, creates user if customer/signup, issues JWTs and Session
    */
   static async verifyOtp(
-    phone: string,
+    targetInput: AuthTargetInput | string,
     role: UserRole,
     code: string,
     name?: string,
     isSignup?: boolean
   ) {
     const { OTP_MAX_ATTEMPTS } = getEnv();
-    
+    const target = resolveAuthTarget(targetInput);
+
     const challenge = await prisma.otpChallenge.findFirst({
-      where: { phone, verifiedAt: null },
+      where: {
+        ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
+        verifiedAt: null,
+      },
       orderBy: { createdAt: 'desc' },
     });
 
     if (!challenge) {
-      throw { statusCode: 400, code: 'INVALID_OTP', message: 'OTP not requested or already used' };
+      throw { statusCode: 400, code: 'INVALID_OTP', message: 'Verification code not requested or already used.' };
     }
 
     if (challenge.expiresAt < new Date()) {
-      throw { statusCode: 400, code: 'EXPIRED_OTP', message: 'OTP has expired. Please request a new one.' };
+      throw { statusCode: 400, code: 'EXPIRED_OTP', message: 'Verification code has expired. Please request a new one.' };
     }
 
     if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
-      throw { statusCode: 400, code: 'MAX_ATTEMPTS', message: 'Too many failed attempts. Request a new OTP.' };
+      throw { statusCode: 400, code: 'MAX_ATTEMPTS', message: 'Too many failed attempts. Please request a new code.' };
     }
 
     const isDevBypass = process.env.NODE_ENV !== 'production' && code === '123456';
@@ -108,12 +212,12 @@ export class AuthService {
           where: { id: challenge.id },
           data: { attempts: { increment: 1 } },
         });
-        throw { statusCode: 400, code: 'INVALID_OTP', message: 'Incorrect OTP. Please try again.' };
+        throw { statusCode: 400, code: 'INVALID_OTP', message: 'Incorrect verification code. Please check and try again.' };
       }
     }
 
     // OTP is valid. Mark verified.
-    await prisma.otpChallenge.update({ 
+    await prisma.otpChallenge.update({
       where: { id: challenge.id },
       data: { verifiedAt: new Date() },
     });
@@ -121,49 +225,89 @@ export class AuthService {
     // Fetch or create user
     let userId: string;
     let userName: string;
-    
+
     if (role === 'customer') {
-      const customer = await prisma.customer.upsert({
-        where: { phone },
-        create: { phone, name: name || 'Valued Customer' },
-        update: name ? { name } : {},
-      });
-      userId = customer.id;
-      userName = customer.name;
-    } else if (role === 'vendor') {
-      if (isSignup) {
-        const vendor = await prisma.vendor.upsert({
-          where: { phone },
+      if (target.type === 'email') {
+        const customer = await prisma.customer.upsert({
+          where: { email: target.value },
           create: {
-            phone,
-            name: name || 'Driver Partner',
-            status: 'active',
-            serviceAreas: [],
+            email: target.value,
+            name: name || 'Valued Customer',
           },
           update: name ? { name } : {},
         });
-        userId = vendor.id;
-        userName = vendor.name;
+        userId = customer.id;
+        userName = customer.name;
       } else {
-        const vendor = await prisma.vendor.findUnique({ where: { phone } });
-        if (!vendor) throw { statusCode: 404, message: 'Vendor not found' };
-        if (vendor.status !== 'active') throw { statusCode: 403, message: 'Vendor account inactive' };
+        const customer = await prisma.customer.upsert({
+          where: { phone: target.value },
+          create: {
+            phone: target.value,
+            name: name || 'Valued Customer',
+          },
+          update: name ? { name } : {},
+        });
+        userId = customer.id;
+        userName = customer.name;
+      }
+    } else if (role === 'vendor') {
+      if (isSignup) {
+        if (target.type === 'email') {
+          const vendor = await prisma.vendor.upsert({
+            where: { email: target.value },
+            create: {
+              email: target.value,
+              name: name || 'Driver Partner',
+              status: 'active',
+              serviceAreas: [],
+            },
+            update: name ? { name } : {},
+          });
+          userId = vendor.id;
+          userName = vendor.name;
+        } else {
+          const vendor = await prisma.vendor.upsert({
+            where: { phone: target.value },
+            create: {
+              phone: target.value,
+              name: name || 'Driver Partner',
+              status: 'active',
+              serviceAreas: [],
+            },
+            update: name ? { name } : {},
+          });
+          userId = vendor.id;
+          userName = vendor.name;
+        }
+      } else {
+        const vendor = target.type === 'email'
+          ? await prisma.vendor.findUnique({ where: { email: target.value } })
+          : await prisma.vendor.findUnique({ where: { phone: target.value } });
+
+        if (!vendor) throw { statusCode: 404, message: 'Partner account not found' };
+        if (vendor.status !== 'active') throw { statusCode: 403, message: 'Partner account is inactive' };
         userId = vendor.id;
         userName = vendor.name;
       }
     } else {
-      let admin = await prisma.adminUser.findUnique({ where: { phone } });
+      let admin = target.type === 'email'
+        ? await prisma.adminUser.findUnique({ where: { email: target.value } })
+        : await prisma.adminUser.findUnique({ where: { phone: target.value } });
+
       if (!admin && process.env.NODE_ENV !== 'production') {
         admin = await prisma.adminUser.create({
-          data: { phone, name: name || 'Triveni Admin' },
+          data: {
+            ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
+            name: name || 'Triveni Admin',
+          },
         });
       }
-      if (!admin) throw { statusCode: 404, message: 'Admin not found' };
+      if (!admin) throw { statusCode: 404, message: 'Admin account not found' };
       userId = admin.id;
       userName = admin.name;
     }
 
-    return this.issueTokens(userId, role, userName, phone);
+    return this.issueTokens(userId, role, userName, target.value);
   }
 
   /**
@@ -173,11 +317,10 @@ export class AuthService {
     let payload;
     try {
       payload = verifyRefreshToken(token);
-    } catch (e) {
+    } catch {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Invalid refresh token' };
     }
 
-    // Check if session exists and is not revoked
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const session = await prisma.session.findFirst({
       where: {
@@ -190,7 +333,6 @@ export class AuthService {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Session expired or revoked' };
     }
 
-    // Determine correct ID field based on role
     const userId = session.customerId || session.vendorId || session.adminUserId;
     if (!userId) throw { statusCode: 401, message: 'Invalid session state' };
 
@@ -210,18 +352,16 @@ export class AuthService {
   }
 
   // Helper
-  private static async issueTokens(userId: string, role: UserRole, name?: string, phone?: string) {
+  private static async issueTokens(userId: string, role: UserRole, name?: string, phoneOrEmail?: string) {
     const accessToken = signAccessToken(userId, role);
     const refreshToken = signRefreshToken(userId, role);
 
     const hashedRefresh = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const { JWT_REFRESH_EXPIRES_IN } = getEnv();
-    
-    // Parse '30d' into actual date
+
     const days = parseInt(JWT_REFRESH_EXPIRES_IN.replace('d', '')) || 30;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
-    // Create session (uses specific FK)
     await prisma.session.create({
       data: {
         userRole: role,
@@ -233,6 +373,8 @@ export class AuthService {
       },
     });
 
+    const isEmail = phoneOrEmail?.includes('@');
+
     return {
       accessToken,
       refreshToken,
@@ -241,7 +383,8 @@ export class AuthService {
         id: userId,
         role,
         name: name || (role === 'admin' ? 'Admin' : role === 'vendor' ? 'Partner' : 'Customer'),
-        phone: phone || '',
+        phone: isEmail ? '' : (phoneOrEmail || ''),
+        email: isEmail ? phoneOrEmail : undefined,
       },
     };
   }

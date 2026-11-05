@@ -59,35 +59,37 @@ export const mapsRateLimiter = rateLimit({
   },
 });
 
-// ── Phone number-based rate limiting (prevents SMS bombing on a single number) ─
-let phoneLimiter: RateLimiterRedis | null = null;
+// ── Identifier-based rate limiting (prevents OTP bombing on phone or email) ─
+let identifierLimiter: RateLimiterRedis | null = null;
 
-function getPhoneLimiter(): RateLimiterRedis {
-  if (!phoneLimiter) {
+function getIdentifierLimiter(): RateLimiterRedis {
+  if (!identifierLimiter) {
     const { OTP_RATE_LIMIT_MAX, OTP_RATE_LIMIT_WINDOW_MINUTES } = getEnv();
-    phoneLimiter = new RateLimiterRedis({
+    identifierLimiter = new RateLimiterRedis({
       storeClient: getRedis(),
-      keyPrefix: 'rl:otp:phone',
+      keyPrefix: 'rl:otp:id',
       points: OTP_RATE_LIMIT_MAX,
       duration: OTP_RATE_LIMIT_WINDOW_MINUTES * 60,
     });
   }
-  return phoneLimiter;
+  return identifierLimiter;
 }
 
-export async function checkPhoneOtpLimit(phone: string): Promise<void> {
+export async function checkIdentifierOtpLimit(identifier: string): Promise<void> {
   try {
-    const limiter = getPhoneLimiter();
-    await limiter.consume(phone);
+    const limiter = getIdentifierLimiter();
+    await limiter.consume(identifier.trim().toLowerCase());
   } catch (err: any) {
     if (err && err.remainingPoints === 0) {
       throw {
         statusCode: 429,
         code: 'TOO_MANY_REQUESTS',
-        message: 'Too many OTP requests for this phone number. Please try again later.',
+        message: 'Too many OTP requests. Please wait a few minutes before trying again.',
       };
     }
     // Fail-open on unexpected Redis errors so users aren't locked out during transient infra issues
-    console.warn('Phone rate limiter warning (failing open):', err);
+    console.warn('OTP rate limiter warning (failing open):', err);
   }
 }
+
+export const checkPhoneOtpLimit = checkIdentifierOtpLimit;

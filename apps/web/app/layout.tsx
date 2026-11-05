@@ -15,11 +15,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://trivenitransports.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Triveni Transports — Top Packers & Movers in Mumbai & Thane',
+    default: 'Triveni Transports — Trusted Packers & Movers in Mumbai, Thane & Pune',
     template: '%s | Triveni Transports',
   },
   description:
-    'Looking for trusted packers and movers in Mumbai & Thane? Triveni Transports provides transparent itemised pricing, ₹5L transit insurance, verified moving captains, and 0 hidden costs. Get an instant moving quote online in 30 seconds!',
+    'Triveni Transports is Mumbai & Thane\'s most trusted packers and movers. We offer transparent itemised pricing, ₹5L transit insurance, verified moving captains, and zero hidden charges. Book safe, reliable home or office shifting online in 30 seconds.',
   keywords: [
     'packers and movers in mumbai',
     'packers and movers in thane',
@@ -65,9 +65,9 @@ export const metadata: Metadata = {
     locale: 'en_IN',
     url: SITE_URL,
     siteName: 'Triveni Transports',
-    title: 'Triveni Transports — Top Packers & Movers in Mumbai & Thane',
+    title: 'Triveni Transports — Trusted Packers & Movers in Mumbai, Thane & Pune',
     description:
-      'Move smarter with transparent itemised pricing, verified moving captains, ₹5L transit insurance, and 0 hidden costs across Mumbai and Thane.',
+      'Triveni Transports: transparent itemised pricing, verified moving captains, ₹5L transit insurance, and zero hidden charges for home and office shifting across Mumbai, Thane, and Pune.',
     images: [
       {
         url: '/hero-movers.jpg',

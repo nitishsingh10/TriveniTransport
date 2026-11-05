@@ -51,7 +51,7 @@ export default function Footer() {
 
         <div className={styles.links}>
           <div className={styles.col}>
-            <h4>Services</h4>
+            <h4>Relocation Solutions</h4>
             <ul>
               <li><Link href="/quote">Get an Instant Quote</Link></li>
               <li><Link href="/services">Relocation Services</Link></li>
@@ -63,7 +63,7 @@ export default function Footer() {
             </ul>
           </div>
           <div className={styles.col}>
-            <h4>Service Areas</h4>
+            <h4>Coverage Hubs</h4>
             <ul>
               <li><Link href="/packers-and-movers-thane">Packers &amp; Movers Thane</Link></li>
               <li><Link href="/packers-and-movers-mumbai">Packers &amp; Movers Mumbai</Link></li>

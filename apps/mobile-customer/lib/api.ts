@@ -232,22 +232,33 @@ export const mapsApi = {
 
 // ── Auth Service ───────────────────────────────────────────────────
 export const authApi = {
-  async requestOtp(phone: string) {
-    return request<{ message: string }>('/auth/otp/request', {
+  async requestOtp(identifier: string) {
+    const isEmail = identifier.includes('@');
+    return request<{ message: string; channel?: string }>('/auth/otp/request', {
       method: 'POST',
-      body: JSON.stringify({ phone, role: 'customer' }),
+      body: JSON.stringify({
+        identifier,
+        ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
+        role: 'customer',
+      }),
     });
   },
 
-  async verifyOtp(phone: string, code: string) {
+  async verifyOtp(identifier: string, code: string) {
+    const isEmail = identifier.includes('@');
     const data = await request<{
       accessToken: string;
       refreshToken: string;
       userId: string;
-      user?: { id: string; role: string; name: string; phone: string };
+      user?: { id: string; role: string; name: string; phone?: string; email?: string };
     }>('/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, code, role: 'customer' }),
+      body: JSON.stringify({
+        identifier,
+        ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
+        code,
+        role: 'customer',
+      }),
     });
 
     if (data.accessToken) {

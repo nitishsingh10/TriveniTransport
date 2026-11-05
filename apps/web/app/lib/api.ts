@@ -87,28 +87,48 @@ export class ApiError extends Error {
 }
 
 export const auth = {
-  requestOtp: (phone: string, role: 'customer' | 'vendor' | 'admin' = 'customer', isSignup = false) =>
-    apiFetch<{ message: string }>('/auth/otp/request', {
+  requestOtp: (
+    identifier: string,
+    role: 'customer' | 'vendor' | 'admin' = 'customer',
+    isSignup = false
+  ) => {
+    const isEmail = identifier.includes('@');
+    return apiFetch<{ message: string; channel?: 'email' | 'sms'; destination?: string }>('/auth/otp/request', {
       method: 'POST',
-      body: JSON.stringify({ phone, role, isSignup }),
-    }),
+      body: JSON.stringify({
+        identifier,
+        ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
+        role,
+        isSignup,
+      }),
+    });
+  },
 
   verifyOtp: (
-    phone: string,
+    identifier: string,
     code: string,
     role: 'customer' | 'vendor' | 'admin' = 'customer',
     name?: string,
     isSignup = false
-  ) =>
-    apiFetch<{
+  ) => {
+    const isEmail = identifier.includes('@');
+    return apiFetch<{
       accessToken: string;
       refreshToken: string;
       userId: string;
-      user?: { id: string; role: string; name: string; phone: string };
+      user?: { id: string; role: string; name: string; phone?: string; email?: string };
     }>('/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, code, role, name, isSignup }),
-    }),
+      body: JSON.stringify({
+        identifier,
+        ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
+        code,
+        role,
+        name,
+        isSignup,
+      }),
+    });
+  },
 
   logout: () =>
     apiFetch<{ message: string }>('/auth/logout', {
