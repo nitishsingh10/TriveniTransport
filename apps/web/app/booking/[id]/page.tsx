@@ -30,6 +30,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [confirmingCod, setConfirmingCod] = useState(false);
 
   useEffect(() => {
     if (!token.isLoggedIn()) {
@@ -49,6 +50,19 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       })
       .finally(() => setLoading(false));
   }, [id, router]);
+
+  const handleConfirmCod = async () => {
+    if (!booking) return;
+    setConfirmingCod(true);
+    try {
+      const updated = await bookings.confirmCod(id);
+      setBooking(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not confirm booking.');
+    } finally {
+      setConfirmingCod(false);
+    }
+  };
 
   const handleCancel = async () => {
     if (!booking || !confirm('Are you sure you want to cancel this booking?')) return;
@@ -221,20 +235,44 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                 <h3 className={styles.cardTitle}>💳 Payment Summary</h3>
                 <div className={styles.summaryRows}>
                   <div className={styles.summaryRow}>
+                    <span>Payment Mode</span>
+                    <span style={{ fontWeight: 700, color: '#F7A300' }}>💵 Cash on Delivery</span>
+                  </div>
+                  <div className={styles.summaryRow}>
                     <span>Total Amount</span>
                     <span>₹{Number(booking.finalAmount).toLocaleString('en-IN')}</span>
                   </div>
-                  {advancePaid > 0 && (
+                  {advancePaid > 0 ? (
                     <div className={styles.summaryRow}>
                       <span>Advance Paid</span>
                       <span className={styles.paidAmount}>− ₹{advancePaid.toLocaleString('en-IN')}</span>
                     </div>
+                  ) : (
+                    <div className={styles.summaryRow}>
+                      <span>Advance Required</span>
+                      <span style={{ color: '#10B981', fontWeight: 700 }}>₹0 (Zero Advance)</span>
+                    </div>
                   )}
                   <div className={`${styles.summaryRow} ${styles.summaryRemaining}`}>
-                    <span>Balance Due</span>
+                    <span>Balance Due on Shifting</span>
                     <span>₹{remaining.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
+
+                <div style={{ marginTop: '0.85rem', padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#CBD5E1', lineHeight: 1.45 }}>
+                  ℹ️ Payment will be collected in cash or via UPI scanner directly by your moving captain on the day of relocation.
+                </div>
+
+                {(booking.status === 'REQUESTED' || booking.status === 'QUOTED') && (
+                  <button
+                    className="btn btn-primary btn-lg"
+                    style={{ width: '100%', marginTop: 'var(--space-4)' }}
+                    onClick={handleConfirmCod}
+                    disabled={confirmingCod}
+                  >
+                    {confirmingCod ? 'Confirming…' : '✓ Confirm Move (Cash on Delivery)'}
+                  </button>
+                )}
 
                 {booking.status === 'COMPLETED' && (
                   <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 'var(--space-6)' }}>

@@ -11,8 +11,9 @@ router.use(authGuard);
 router.post('/', requireRole('customer'), BookingController.createDraft);
 router.post('/:id/hold', requireRole('customer'), BookingController.holdSlot);
 router.post('/:id/cancel', requireRole('customer'), BookingController.cancel);
+router.post('/:id/confirm-cod', requireRole('customer'), BookingController.confirmCod);
 
-// Webhook confirms bookings; manual confirmation restricted to admin
+// Webhook / admin confirmation
 router.post('/:id/confirm', requireRole('admin'), BookingController.confirm);
 
 router.get('/', requireRole('customer'), BookingController.listBookings);

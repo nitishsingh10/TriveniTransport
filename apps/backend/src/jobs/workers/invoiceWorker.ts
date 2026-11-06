@@ -61,11 +61,24 @@ export const invoiceWorker = new Worker('invoice-generation', async job => {
           console.log(`[Job] Mock mode: Skipped AWS S3 upload for ${fileName}`);
         }
 
-        // Store invoice URL in booking or related table. 
-        // For now, we can update a hypothetical invoiceUrl field or just log it.
-        // Assuming we add it to the 'notes' or a dedicated table. Let's just log for phase 1.
+        // Store invoice URL in booking pricingSnapshot
+        try {
+          const currentSnapshot = (booking.pricingSnapshot as any) || {};
+          await prisma.booking.update({
+            where: { id: booking.id },
+            data: {
+              pricingSnapshot: {
+                ...currentSnapshot,
+                invoiceUrl,
+                invoiceGeneratedAt: new Date().toISOString(),
+              },
+            },
+          });
+        } catch (dbErr) {
+          console.warn('Could not update booking with invoiceUrl:', dbErr);
+        }
+
         console.log(`✅ Invoice generated: ${invoiceUrl}`);
-        
         resolve(invoiceUrl);
       } catch (err) {
         reject(err);

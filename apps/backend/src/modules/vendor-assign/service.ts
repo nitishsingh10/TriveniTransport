@@ -59,6 +59,27 @@ export class VendorService {
       }
     });
 
+    // Notify vendor about new job assignment
+    try {
+      const { enqueueNotification } = await import('../../jobs/queue');
+      await enqueueNotification('job_assigned', {
+        userId: vendor.id,
+        userRole: 'vendor',
+        bookingId,
+        payload: {
+          bookingId,
+          vehicleType: selectedVehicle.type,
+          registrationNumber: selectedVehicle.registrationNumber,
+          scheduledDate: booking.scheduledDate.toISOString().split('T')[0],
+          scheduledSlot: booking.scheduledSlot,
+          pickupAddress: booking.pickupAddress,
+          dropAddress: booking.dropAddress,
+        },
+      });
+    } catch (err) {
+      console.warn('Failed to enqueue vendor job_assigned notification:', err);
+    }
+
     return updated;
   }
 

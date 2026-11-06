@@ -31,8 +31,18 @@ export class BookingController {
   static async confirm(req: Request, res: Response, next: NextFunction) {
     try {
       const bookingId = req.params.id as string;
-      // In a real app, this is called by Razorpay webhook, not directly by user API
       const result = await BookingService.confirmBooking(bookingId);
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  static async confirmCod(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = req.user!.id;
+      const bookingId = req.params.id as string;
+      const result = await BookingService.confirmBookingWithCod(bookingId, customerId);
       res.status(200).json(result);
     } catch (e) {
       next(e);

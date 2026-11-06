@@ -1,6 +1,8 @@
 import { prisma } from '../../config/prisma';
 import { getRedis } from '../../config/redis';
 import { InstantEstimateInput, ItemizedQuoteInput } from '@triveni/shared-validation';
+import { GeocodingService } from '../geocoding/service';
+import { ZoneService } from '../geocoding/zoneService';
 
 export class PricingService {
   /**
@@ -8,10 +10,6 @@ export class PricingService {
    * Fast, relies on cached matrix or fallback heuristic rules.
    */
   static async getInstantEstimate(input: InstantEstimateInput) {
-    // In a full implementation, we'd geocode the pickup/drop addresses,
-    // match them to LocationZones, and fetch the ZoneRate from Redis cache.
-    // For now, we simulate a fast estimate based on the configurationType.
-    
     let baseRate = 3000;
     if (input.configurationType === '2bhk') baseRate = 5000;
     if (input.configurationType === '3bhk') baseRate = 8000;
@@ -98,9 +96,64 @@ export class PricingService {
       });
     }
 
-    // 4. Zone Rate (mock logic for Geocoding to Zone — in prod, use Google Maps Distance Matrix)
-    // Here we assume a flat baseline or a fallback distance band rate
-    const zoneCharge = 3500; // Mocked
+    // 4. Dynamic Route & Zone Rate Calculation
+    const route = await GeocodingService.calculateDistanceKm(input.pickupAddress, input.dropAddress);
+    const distanceKm = route.distanceKm || 15.0;
+
+    const pickupZone = await ZoneService.resolveZoneForAddress(input.pickupAddress);
+    const dropZone = await ZoneService.resolveZoneForAddress(input.dropAddress);
+
+    let distanceBand = '10-25km';
+    if (distanceKm <= 10) distanceBand = '0-10km';
+    else if (distanceKm <= 25) distanceBand = '10-25km';
+    else if (distanceKm <= 50) distanceBand = '25-50km';
+    else distanceBand = '50+km';
+
+    let zoneCharge = 3500;
+    let appliedZoneRateId: string | null = null;
+
+    if (pickupZone && dropZone) {
+      // 4a. Check direct pair
+      let zoneRate = await prisma.zoneRate.findFirst({
+        where: {
+          fromZoneId: pickupZone.id,
+          toZoneId: dropZone.id,
+          effectiveTo: null,
+        },
+      });
+
+      // 4b. Check reciprocal pair
+      if (!zoneRate) {
+        zoneRate = await prisma.zoneRate.findFirst({
+          where: {
+            fromZoneId: dropZone.id,
+            toZoneId: pickupZone.id,
+            effectiveTo: null,
+          },
+        });
+      }
+
+      // 4c. Check distance band rate
+      if (!zoneRate) {
+        zoneRate = await prisma.zoneRate.findFirst({
+          where: {
+            distanceBand,
+            effectiveTo: null,
+          },
+        });
+      }
+
+      if (zoneRate) {
+        zoneCharge = Number(zoneRate.rate);
+        appliedZoneRateId = zoneRate.id;
+      } else {
+        // Fallback default according to distance band
+        if (distanceKm <= 10) zoneCharge = 3000;
+        else if (distanceKm <= 25) zoneCharge = 4500;
+        else if (distanceKm <= 50) zoneCharge = 7000;
+        else zoneCharge = 12000;
+      }
+    }
 
     // 5. Labour Charge
     const baselineCft = getRule('baseline_cft') || 400;
@@ -149,6 +202,11 @@ export class PricingService {
       finalTotal,
       totalCft,
       totalWeight,
+      distanceKm,
+      durationMins: route.durationMins,
+      pickupZone: { id: pickupZone.id, name: pickupZone.name },
+      dropZone: { id: dropZone.id, name: dropZone.name },
+      appliedZoneRateId,
       appliedRules: activeRules.map((r) => ({ id: r.id, key: r.configKey, value: Number(r.value) })),
       items: itemSnapshots,
       inputs: input,
@@ -166,6 +224,8 @@ export class PricingService {
       metrics: {
         totalCft,
         totalWeightKg: totalWeight,
+        distanceKm,
+        durationMins: route.durationMins,
       },
       snapshot: pricingSnapshot,
     };

@@ -2,6 +2,7 @@ import { Worker } from 'bullmq';
 import { redisConnection } from '../queue';
 import { PushNotificationService } from '../../services/expo';
 import { EmailService } from '../../services/resend';
+import { sendSmsMessage, sendWhatsAppMessage } from '../../services/msg91';
 import { NotificationTemplates } from '../../modules/notifications/templates';
 import { prisma } from '../../config/prisma';
 
@@ -21,10 +22,9 @@ export const notificationWorker = new Worker('notifications', async job => {
 
   const pushToken = user.pushToken;
   const phone = user.phone;
-  // Assume basic opt-ins for this spec; in a real app, read from preferences table
   const pushOptIn = true; 
   const whatsappOptIn = true;
-  const email = user.email; // assuming email field exists or is populated
+  const email = user.email;
 
   try {
     let sentPush = false;
@@ -49,9 +49,7 @@ export const notificationWorker = new Worker('notifications', async job => {
       // @ts-ignore
       const message = tpl({ ...payload, name: user.name });
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[MOCK MSG91 WhatsApp] To: ${phone} | Text: ${message}`);
-      }
+      await sendWhatsAppMessage(phone, message);
       sentWhatsapp = true;
     }
 
@@ -61,9 +59,7 @@ export const notificationWorker = new Worker('notifications', async job => {
       // @ts-ignore
       const message = tpl({ ...payload, name: user.name });
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[MOCK MSG91 SMS Fallback] To: ${phone} | Text: ${message}`);
-      }
+      await sendSmsMessage(phone, message);
     }
 
     // 4. EMAIL (Always send if applicable and email is present)
@@ -73,7 +69,7 @@ export const notificationWorker = new Worker('notifications', async job => {
         'job_assigned': 'New Job Assignment',
       };
       const subject = subjectMap[type] || 'Update from Triveni Transports';
-      const html = `<p>Hello ${user.name},</p><p>You have a new update regarding your booking.</p>`;
+      const html = `<p>Hello ${user.name || 'Valued Customer'},</p><p>You have a new update regarding your booking (#${bookingId || 'N/A'}).</p>`;
       
       await EmailService.sendEmail(email, subject, html);
     }
@@ -86,7 +82,7 @@ export const notificationWorker = new Worker('notifications', async job => {
         channel: sentPush ? 'push' : (sentWhatsapp ? 'whatsapp' : 'sms'),
         template: type,
         payload: payload,
-        status: 'sent'
+        status: 'sent',
       }
     });
 
@@ -96,10 +92,10 @@ export const notificationWorker = new Worker('notifications', async job => {
       data: {
         bookingId: bookingId || null,
         recipientRole: userRole,
-        channel: 'sms', // assume fallback failed
+        channel: 'sms',
         template: type,
         payload: payload,
-        status: 'failed'
+        status: 'failed',
       }
     });
     // Send admin alert on failure

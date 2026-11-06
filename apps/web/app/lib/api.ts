@@ -245,10 +245,11 @@ export const bookings = {
     scheduledSlot: string;
     items: unknown[];
     addons: string[];
+    paymentMethod?: 'cash_on_delivery' | 'online';
   }) =>
     apiFetch<{ booking: Booking; quote: ItemizedQuoteResponse }>('/bookings', {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ paymentMethod: 'cash_on_delivery', ...body }),
     }),
 
   list: () => apiFetch<Booking[]>('/bookings'),
@@ -257,6 +258,9 @@ export const bookings = {
 
   cancel: (id: string) =>
     apiFetch<Booking>(`/bookings/${id}/cancel`, { method: 'POST' }),
+
+  confirmCod: (id: string) =>
+    apiFetch<Booking>(`/bookings/${id}/confirm-cod`, { method: 'POST' }),
 
   holdSlot: (id: string) =>
     apiFetch<{ success: boolean; message: string }>(`/bookings/${id}/hold`, {

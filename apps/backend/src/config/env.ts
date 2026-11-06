@@ -30,27 +30,27 @@ const EnvSchema = z.object({
   OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
 
-  // ── Razorpay ─────────────────────────────────────────────────
-  RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
-  RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
-  RAZORPAY_WEBHOOK_SECRET: z.string().min(1, 'RAZORPAY_WEBHOOK_SECRET is required'),
+  // ── Razorpay (Mock fallback active when offline or keys missing) ─────────
+  RAZORPAY_KEY_ID: z.string().default('mock_razorpay_key'),
+  RAZORPAY_KEY_SECRET: z.string().default('mock_razorpay_secret'),
+  RAZORPAY_WEBHOOK_SECRET: z.string().default('mock_razorpay_webhook_secret'),
 
   // ── Advance payment percentage (0–100) ───────────────────────
   ADVANCE_PAYMENT_PERCENT: z.coerce.number().int().min(0).max(100).default(20),
 
   // ── Google Maps ──────────────────────────────────────────────
-  GOOGLE_MAPS_API_KEY: z.string().min(1, 'GOOGLE_MAPS_API_KEY is required'),
+  GOOGLE_MAPS_API_KEY: z.string().default('mock_google_maps_key'),
 
   // ── MSG91 (WhatsApp + SMS) ────────────────────────────────────
-  MSG91_API_KEY: z.string().min(1, 'MSG91_API_KEY is required'),
+  MSG91_API_KEY: z.string().default('mock_msg91_key'),
   MSG91_SENDER_ID: z.string().default('TRIVNI'),
-  MSG91_WHATSAPP_NUMBER: z.string().min(10, 'MSG91_WHATSAPP_NUMBER is required'),
+  MSG91_WHATSAPP_NUMBER: z.string().default('918828647785'),
 
   // ── Expo Push ─────────────────────────────────────────────────
-  EXPO_ACCESS_TOKEN: z.string().min(1, 'EXPO_ACCESS_TOKEN is required'),
+  EXPO_ACCESS_TOKEN: z.string().default('mock_expo_token'),
 
   // ── Resend (Email) ───────────────────────────────────────────
-  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+  RESEND_API_KEY: z.string().default('mock_resend_key'),
   EMAIL_FROM: z.string().email().default('bookings@trivenipackers.com'),
 
   // ── Cloudinary (Invoice / Photos) ────────────────────────────

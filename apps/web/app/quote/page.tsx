@@ -722,18 +722,77 @@ export default function QuotePage() {
                   )}
                 </div>
 
+                {/* Payment Option Selection */}
+                <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span>💳 Payment Option</span>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: '#34D399', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 600 }}>Zero Advance</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.85rem' }}>
+                    {/* Cash on Delivery / Pay on Move Day Card */}
+                    <div
+                      style={{
+                        padding: '1rem 1.15rem',
+                        borderRadius: 14,
+                        border: '2px solid #F7A300',
+                        background: 'rgba(247,163,0,0.08)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 800, color: '#F7A300', fontSize: '0.95rem' }}>💵 Cash on Delivery</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10B981' }}>✓ Selected</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>
+                        ₹0 upfront. Pay 100% on shifting day via Cash or UPI to your driver captain.
+                      </p>
+                      <span style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 600 }}>
+                        🛡️ 100% Risk-Free Guarantee
+                      </span>
+                    </div>
+
+                    {/* Online Payment Card (Disabled/Coming Soon) */}
+                    <div
+                      style={{
+                        padding: '1rem 1.15rem',
+                        borderRadius: 14,
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.02)',
+                        opacity: 0.65,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#94A3B8', fontSize: '0.95rem' }}>💳 Online Payment</span>
+                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.08)', color: '#94A3B8' }}>Coming Soon</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                        Cards &amp; Netbanking gateway will be enabled soon. Currently accepting Cash on Delivery.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className={styles.advanceBox}>
                   <div className={styles.advanceInfo}>
-                    <span className={styles.advanceLabel}>Advance Required to Book</span>
-                    <span className={styles.advanceAmount}>₹{Math.round(quoteResult.quoteAmount * 0.2).toLocaleString('en-IN')}</span>
-                    <span className={styles.advanceNote}>20% advance · Pay balance 80% on delivery</span>
+                    <span className={styles.advanceLabel}>Advance Required Today</span>
+                    <span className={styles.advanceAmount} style={{ color: '#10B981' }}>₹0</span>
+                    <span className={styles.advanceNote}>
+                      Full amount of ₹{quoteResult.quoteAmount.toLocaleString('en-IN')} payable on shifting day via Cash or UPI
+                    </span>
                   </div>
                 </div>
 
                 <div className={styles.stepActions}>
                   <button type="button" className="btn btn-outline" onClick={() => setStep(3)}>← Edit Options</button>
                   <button type="button" className="btn btn-primary btn-lg" onClick={createBooking} disabled={bookingCreating}>
-                    {bookingCreating ? 'Creating Booking…' : 'Book Now & Pay Advance →'}
+                    {bookingCreating ? 'Confirming Move…' : 'Confirm Booking (Cash on Delivery) →'}
                   </button>
                 </div>
               </div>

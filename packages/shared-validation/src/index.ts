@@ -85,6 +85,7 @@ export const ItemizedQuoteSchema = z.object({
   scheduledSlot: z.string().min(1),
   items: z.array(ChecklistItemSchema).min(1, 'At least one item required'),
   addons: z.array(z.string()).default([]),
+  paymentMethod: z.enum(['cash_on_delivery', 'online']).default('cash_on_delivery').optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────
