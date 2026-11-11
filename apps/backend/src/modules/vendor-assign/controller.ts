@@ -56,5 +56,49 @@ export class VendorController {
       next(e);
     }
   }
+
+  static async getProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const vendorId = req.user!.id;
+      const profile = await VendorService.getVendorProfile(vendorId);
+      res.status(200).json(profile);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  static async getVehicles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const vendorId = req.user!.id;
+      const vehicles = await VendorService.getVendorVehicles(vendorId);
+      res.status(200).json(vehicles);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  static async saveOnboarding(req: Request, res: Response, next: NextFunction) {
+    try {
+      const vendorId = req.user!.id;
+      const { name, vehicleNumber, vehicleType, capacityCft, permitExpiry, fitnessCertExpiry } = req.body;
+
+      if (!vehicleNumber) {
+        return res.status(400).json({ error: { message: 'vehicleNumber is required' } });
+      }
+
+      const result = await VendorService.saveOnboarding(vendorId, {
+        name,
+        vehicleNumber,
+        vehicleType,
+        capacityCft: capacityCft ? Number(capacityCft) : undefined,
+        permitExpiry,
+        fitnessCertExpiry,
+      });
+
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 

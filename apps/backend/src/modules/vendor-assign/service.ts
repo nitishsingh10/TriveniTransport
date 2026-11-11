@@ -152,5 +152,78 @@ export class VendorService {
     await redis.set(`telemetry:${bookingId}`, JSON.stringify(payload), 'EX', 86400);
     return { success: true, telemetry: payload };
   }
+
+  static async getVendorProfile(vendorId: string) {
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: vendorId },
+      include: {
+        vehicles: { where: { active: true } },
+        _count: { select: { bookings: true } },
+      },
+    });
+    if (!vendor) throw { statusCode: 404, message: 'Vendor not found' };
+    return vendor;
+  }
+
+  static async getVendorVehicles(vendorId: string) {
+    return prisma.vehicle.findMany({
+      where: { vendorId, active: true },
+      orderBy: { registrationNumber: 'asc' },
+    });
+  }
+
+  static async saveOnboarding(
+    vendorId: string,
+    data: {
+      name?: string;
+      vehicleNumber: string;
+      vehicleType: string;
+      capacityCft?: number;
+      permitExpiry?: string;
+      fitnessCertExpiry?: string;
+    }
+  ) {
+    if (data.name) {
+      await prisma.vendor.update({
+        where: { id: vendorId },
+        data: { name: data.name },
+      });
+    }
+
+    const regNum = (data.vehicleNumber || 'MH12CD5678').replace(/\s+/g, '').toUpperCase();
+    const capacityCft = Number(data.capacityCft) || 500;
+    const now = new Date();
+    const defaultExpiry = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
+
+    const permitDate = data.permitExpiry ? new Date(data.permitExpiry) : defaultExpiry;
+    const fitnessDate = data.fitnessCertExpiry ? new Date(data.fitnessCertExpiry) : defaultExpiry;
+
+    const vehicle = await prisma.vehicle.upsert({
+      where: { registrationNumber: regNum },
+      create: {
+        vendorId,
+        type: data.vehicleType || 'Commercial Goods Carrier',
+        capacityCft,
+        registrationNumber: regNum,
+        permitExpiry: permitDate,
+        fitnessCertExpiry: fitnessDate,
+        active: true,
+      },
+      update: {
+        vendorId,
+        type: data.vehicleType || 'Commercial Goods Carrier',
+        capacityCft,
+        permitExpiry: permitDate,
+        fitnessCertExpiry: fitnessDate,
+        active: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Driver and vehicle onboarding saved successfully',
+      vehicle,
+    };
+  }
 }
 

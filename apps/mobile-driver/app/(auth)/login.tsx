@@ -19,6 +19,7 @@ import {
   ArrowRight,
   Wallet,
   Clock,
+  Truck,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { driverAuthApi } from '@/lib/api';
@@ -202,6 +203,30 @@ export default function DriverLoginScreen() {
                   <ArrowRight size={16} color={Colors.white} strokeWidth={2.4} />
                 </View>
               )}
+            </TouchableOpacity>
+
+            {/* Onboard New Vehicle / Register CTA */}
+            <View style={styles.onboardDividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR NEW DRIVER PARTNER</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.onboardBtn}
+              onPress={() => router.push('/(auth)/onboarding' as any)}
+              activeOpacity={0.88}
+            >
+              <View style={styles.onboardBtnContent}>
+                <View style={styles.onboardIconCircle}>
+                  <Truck size={18} color={Colors.navy} strokeWidth={2.2} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.onboardBtnTitle}>Onboard Commercial Vehicle</Text>
+                  <Text style={styles.onboardBtnSubtitle}>Upload RC, plate & driver licence</Text>
+                </View>
+                <ArrowRight size={16} color={Colors.navy} />
+              </View>
             </TouchableOpacity>
 
             <Text style={styles.disclaimer}>
@@ -481,6 +506,55 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.3,
+  },
+
+  // Onboard CTA
+  onboardDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginVertical: Spacing.xs,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.cardBorder,
+  },
+  dividerText: {
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+    color: Colors.textMuted,
+    letterSpacing: 0.8,
+  },
+  onboardBtn: {
+    backgroundColor: Colors.surfaceSubtle,
+    borderWidth: 1.5,
+    borderColor: Colors.navyBorder,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm + 2,
+    ...Shadow.sm,
+  },
+  onboardBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  onboardIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.navySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardBtnTitle: {
+    fontSize: FontSize.xs + 1,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.navyDark,
+  },
+  onboardBtnSubtitle: {
+    fontSize: 10,
+    color: Colors.textSecondary,
   },
 
   disclaimer: {

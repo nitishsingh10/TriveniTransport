@@ -194,6 +194,48 @@ export interface BackendJob {
   pricingSnapshot?: any;
 }
 
+export interface BackendVehicle {
+  id: string;
+  type: string;
+  registrationNumber: string;
+  capacityCft: number | string;
+  permitExpiry?: string;
+  fitnessCertExpiry?: string;
+  active: boolean;
+}
+
+export interface BackendVendorProfile {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  status: string;
+  vehicles: BackendVehicle[];
+  _count?: { bookings: number };
+}
+
+export const driverVendorApi = {
+  async getProfile(): Promise<BackendVendorProfile> {
+    return request<BackendVendorProfile>('/vendor/profile');
+  },
+  async getVehicles(): Promise<BackendVehicle[]> {
+    return request<BackendVehicle[]>('/vendor/vehicles');
+  },
+  async saveOnboarding(data: {
+    name?: string;
+    vehicleNumber: string;
+    vehicleType: string;
+    capacityCft?: number;
+    permitExpiry?: string;
+    fitnessCertExpiry?: string;
+  }) {
+    return request<{ success: boolean; message: string; vehicle: BackendVehicle }>('/vendor/onboarding', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
 export const driverJobsApi = {
   async getJobs(dateStr?: string): Promise<BackendJob[]> {
     const query = dateStr ? `?date=${encodeURIComponent(dateStr)}` : '';

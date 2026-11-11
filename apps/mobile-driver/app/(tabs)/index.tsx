@@ -27,6 +27,7 @@ import {
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useDriverStore, DriverJob } from '@/store/driverStore';
 import { useAuthStore } from '@/store/authStore';
+import { useOnboardingStore } from '@/store/onboardingStore';
 
 export default function DutiesScreen() {
   const isOnline = useAuthStore((s) => s.isOnline);
@@ -37,10 +38,13 @@ export default function DutiesScreen() {
   const fetchJobsFromBackend = useDriverStore((s) => s.fetchJobsFromBackend);
   const acceptJob = useDriverStore((s) => s.acceptJob);
   const declineJob = useDriverStore((s) => s.declineJob);
+  const vehicle = useOnboardingStore((s) => s.vehicle);
+  const loadSavedOnboarding = useOnboardingStore((s) => s.loadSavedOnboarding);
 
   // Fetch real jobs from backend on mount
   useEffect(() => {
     fetchJobsFromBackend();
+    loadSavedOnboarding();
   }, []);
 
   // Computed stats from real data
@@ -90,11 +94,32 @@ export default function DutiesScreen() {
             <View style={styles.truckIconBox}>
               <Truck size={18} color={Colors.navy} strokeWidth={2.4} />
             </View>
-            <View>
-              <Text style={styles.vehicleTitle}>{activeJob?.vehicleType || 'Tata 407 · 600 CFT'}</Text>
-              <Text style={styles.vehicleReg}>{activeJob?.vehicleReg || 'No vehicle assigned'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.vehicleTitle}>
+                {vehicle.type || activeJob?.vehicleType || 'Tata 407 · 600 CFT'}
+              </Text>
+              <View style={styles.shiftPlateRow}>
+                <View style={styles.miniIndianPlate}>
+                  <Text style={styles.miniIndText}>IND</Text>
+                  <Text style={styles.miniPlateNumber}>
+                    {vehicle.registrationNumber || activeJob?.vehicleReg || 'MH 12 CD 5678'}
+                  </Text>
+                </View>
+                <View style={styles.verifiedTag}>
+                  <ShieldCheck size={11} color={Colors.success} />
+                  <Text style={styles.verifiedTagText}>Onboarded</Text>
+                </View>
+              </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={styles.shiftOnboardBtn}
+            onPress={() => router.push('/(auth)/onboarding' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.shiftOnboardText}>Vehicle & Docs</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.shiftStatsRow}>
@@ -370,6 +395,64 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     color: Colors.navyDark,
+  },
+  shiftPlateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  miniIndianPlate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F7D000',
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#000000',
+    overflow: 'hidden',
+  },
+  miniIndText: {
+    backgroundColor: '#003399',
+    color: '#FFFFFF',
+    fontSize: 7,
+    fontWeight: 'bold',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  miniPlateNumber: {
+    color: '#000000',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  verifiedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: BorderRadius.full,
+  },
+  verifiedTagText: {
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+    color: Colors.success,
+  },
+  shiftOnboardBtn: {
+    backgroundColor: Colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: Colors.navyBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  shiftOnboardText: {
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+    color: Colors.navy,
   },
   vehicleReg: {
     fontSize: 11,
