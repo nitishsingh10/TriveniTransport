@@ -58,8 +58,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5ce50199-59ca-41b5-b231-2b48e26dc0a7"
+        "projectId": "aff6041b-94ab-490a-b2de-1357ac55770d"
       }
-    }
+    },
+    "owner": "nitish10"
   }
 }
