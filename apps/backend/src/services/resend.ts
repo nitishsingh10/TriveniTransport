@@ -8,6 +8,7 @@ export class EmailService {
       return null;
     }
     return new Resend(RESEND_API_KEY);
+
   }
 
   static async sendEmail(to: string, subject: string, html: string, attachments?: any[]) {
@@ -29,7 +30,7 @@ export class EmailService {
         html,
         attachments,
       });
-
+      console.log('Resend email response:', JSON.stringify(response));
       if (response.error) {
         console.warn(`Resend initial send failed (${response.error.message}). Retrying via onboarding@resend.dev...`);
         // If custom domain is not yet verified in Resend, fallback to verified sandbox sender

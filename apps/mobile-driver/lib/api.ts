@@ -9,16 +9,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import type { BookingStatus } from '@triveni/shared-types';
 
+// Auto-detect development machine LAN IP when running in Expo Go on a real physical device,
+// and ensure /api/v1 is always correctly appended without duplicate slashes.
 const getBaseUrl = (): string => {
-  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
-  if (hostUri) {
-    const host = hostUri.split(':')[0];
-    if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:3001/api/v1`;
+  let url = (process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
+
+  // If unset, or pointing to localhost/loopback when running on physical device, detect host LAN IP
+  if (!url || url.includes('localhost') || url.includes('127.0.0.1')) {
+    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:3001/api/v1`;
+      }
+    }
+    if (!url) {
+      return Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1';
     }
   }
-  return Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1';
+
+  // Ensure /api/v1 suffix is present
+  if (!url.endsWith('/api/v1')) {
+    url = `${url}/api/v1`;
+  }
+  return url;
 };
 
 const BASE_URL = getBaseUrl();

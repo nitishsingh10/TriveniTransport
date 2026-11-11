@@ -8,7 +8,7 @@ const RequestOtpSchema = z
     identifier: z.string().trim().optional(),
     phone: z.string().trim().optional(),
     email: z.string().trim().optional(),
-    role: z.enum(['customer', 'vendor', 'admin']),
+    role: z.enum(['customer', 'vendor', 'admin']).default('customer'),
     isSignup: z.boolean().optional(),
   })
   .refine((data) => !!(data.identifier || data.phone || data.email), {
@@ -20,7 +20,7 @@ const VerifyOtpSchema = z
     identifier: z.string().trim().optional(),
     phone: z.string().trim().optional(),
     email: z.string().trim().optional(),
-    role: z.enum(['customer', 'vendor', 'admin']),
+    role: z.enum(['customer', 'vendor', 'admin']).default('customer'),
     code: z
       .string()
       .trim()

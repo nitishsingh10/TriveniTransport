@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "triveni",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#0D1F37",
-      "resizeMode": "contain",
-      "image": "./assets/splash-icon.png"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.trivenitransports.customer",

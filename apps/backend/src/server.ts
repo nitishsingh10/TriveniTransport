@@ -106,6 +106,9 @@ async function bootstrap() {
   router.use('/maps', mapsRoutes);
 
   app.use('/api/v1', router);
+  // Also support root-level and /api paths for direct requests (e.g. /auth/otp/request)
+  app.use('/api', globalRateLimiter, router);
+  app.use(globalRateLimiter, router);
 
   // Error handling (must be last)
   app.use(errorHandler);

@@ -4,7 +4,15 @@
  * provides typed helpers for every backend module.
  */
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+const getBaseUrl = (): string => {
+  let url = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1').trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api/v1')) {
+    url = `${url}/api/v1`;
+  }
+  return url;
+};
+
+const BASE = getBaseUrl();
 
 // ── Token helpers (localStorage, client-side only) ──────────────────
 export const token = {
