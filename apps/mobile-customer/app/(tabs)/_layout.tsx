@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Package, Headphones, User, PhoneCall } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
@@ -67,6 +68,14 @@ function HeaderCallButton() {
 
 export default function TabLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 8);
+
+  // During cold launch hydration, keep screen empty (splash screen is visible)
+  if (!isHydrated) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -86,7 +95,7 @@ export default function TabLayout() {
         headerTitleAlign: 'left',
         headerTitle: () => <HeaderBrand />,
         headerRight: () => <HeaderCallButton />,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { height: 56 + bottomInset, paddingBottom: bottomInset }],
         tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.navy,
         tabBarInactiveTintColor: Colors.tabInactive,

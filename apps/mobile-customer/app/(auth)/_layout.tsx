@@ -3,9 +3,10 @@ import { useAuthStore } from '@/store/authStore';
 
 export default function AuthLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
 
-  // If already logged in, skip auth screens
-  if (isAuthenticated) {
+  // If already logged in and state has hydrated, skip auth screens
+  if (isHydrated && isAuthenticated) {
     return <Redirect href="/(tabs)" />;
   }
 

@@ -67,7 +67,7 @@ export default function OtpScreen() {
     setErrorMsg('');
     try {
       const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp);
-      setAuth(
+      await setAuth(
         {
           id: res.userId,
           role: 'customer',
@@ -75,7 +75,8 @@ export default function OtpScreen() {
           phone: res.user?.phone ? `+91${res.user.phone}` : undefined,
           email: res.user?.email ?? undefined,
         },
-        res.accessToken
+        res.accessToken,
+        res.refreshToken
       );
       setLoading(false);
       router.replace('/(tabs)');
@@ -83,7 +84,7 @@ export default function OtpScreen() {
       console.log('Backend verifyOtp error:', e.message);
       // Fallback for dev OTP
       if (__DEV__ && finalOtp === '123456') {
-        setAuth(
+        await setAuth(
           { id: 'cust_seed', role: 'customer', name: 'Customer', phone: `+91${resolvedIdentifier}` },
           'dev_customer_token'
         );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Linking } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Truck,
   Navigation,
@@ -64,6 +65,14 @@ function DriverHeader() {
 
 export default function TabLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 8);
+
+  // During cold launch hydration, keep screen empty (splash screen is visible)
+  if (!isHydrated) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -77,8 +86,8 @@ export default function TabLayout() {
           backgroundColor: Colors.tabBackground,
           borderTopColor: Colors.tabBorder,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 56 + bottomInset,
+          paddingBottom: bottomInset,
           paddingTop: 8,
           ...Shadow.sm,
         },

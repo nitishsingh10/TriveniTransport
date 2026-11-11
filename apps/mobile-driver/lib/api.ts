@@ -61,6 +61,27 @@ export const tokenStorage = {
     }
   },
 
+  async getUser<T = any>(): Promise<T | null> {
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async setUser(user: any): Promise<void> {
+    try {
+      if (user) {
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      } else {
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      }
+    } catch (e) {
+      console.warn('Error saving driver user data:', e);
+    }
+  },
+
   async setTokens(access: string, refresh?: string): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
@@ -110,7 +131,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
   try {
-    const res = await fetch(url, { ...options, headers });
+    let res = await fetch(url, { ...options, headers });
+
+    // Handle token expiration: attempt automatic refresh once
+    if (res.status === 401 && !path.includes('/auth/')) {
+      const refreshToken = await tokenStorage.getRefreshToken();
+      if (refreshToken) {
+        try {
+          const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            if (refreshData?.accessToken) {
+              await tokenStorage.setTokens(refreshData.accessToken, refreshData.refreshToken || refreshToken);
+              headers.Authorization = `Bearer ${refreshData.accessToken}`;
+              res = await fetch(url, { ...options, headers });
+            }
+          }
+        } catch {
+          // Token refresh failure falls through
+        }
+      }
+    }
 
     if (res.status === 204) return {} as T;
 
@@ -159,6 +204,9 @@ export const driverAuthApi = {
 
     if (data.accessToken) {
       await tokenStorage.setTokens(data.accessToken, data.refreshToken);
+      if (data.user) {
+        await tokenStorage.setUser(data.user);
+      }
     }
 
     return data;

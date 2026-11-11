@@ -73,20 +73,21 @@ export default function DriverOtpScreen() {
 
     try {
       const res = await driverAuthApi.verifyOtp(resolvedIdentifier || '9888888888', code);
-      setAuth(
+      await setAuth(
         {
           id: res.userId,
           role: 'vendor',
           name: res.user?.name || 'Driver Partner',
           phone: res.user?.phone || resolvedIdentifier,
         },
-        res.accessToken
+        res.accessToken,
+        res.refreshToken
       );
       router.replace('/(tabs)');
     } catch (err: any) {
       if (__DEV__ && code === '123456') {
         // Fallback for local offline dev
-        setAuth(
+        await setAuth(
           {
             id: 'vendor-triveni-partner-001',
             role: 'vendor',
