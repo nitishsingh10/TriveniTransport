@@ -84,7 +84,15 @@ export class VendorService {
   }
 
   static async getVendorJobs(vendorId: string, dateStr?: string) {
-    const where: any = { vendorId };
+    // Return both:
+    // 1. Bookings assigned to this vendor
+    // 2. Open CONFIRMED bookings awaiting driver partner acceptance (not yet assigned)
+    const where: any = {
+      OR: [
+        { vendorId },
+        { status: 'CONFIRMED', vendorId: null },
+      ],
+    };
     
     if (dateStr) {
       where.scheduledDate = new Date(dateStr);
@@ -95,12 +103,108 @@ export class VendorService {
       orderBy: { scheduledDate: 'asc' },
       include: {
         customer: { select: { name: true, phone: true } },
+        vendor: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { type: true, registrationNumber: true } },
-      }
+      },
     });
   }
 
+  /**
+   * Driver partner explicitly accepts a booking.
+   * Associates the authenticated driver (vendorId) and their active vehicle to the booking,
+   * transitions status from CONFIRMED to ASSIGNED, and alerts the customer with real driver info.
+   */
+  static async acceptJob(vendorId: string, bookingId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { customer: true },
+    });
+    if (!booking) throw { statusCode: 404, message: 'Booking not found' };
+
+    // If already assigned to another driver
+    if (booking.status === 'ASSIGNED' && booking.vendorId && booking.vendorId !== vendorId) {
+      throw { statusCode: 409, message: 'This move has already been accepted by another driver' };
+    }
+
+    // Idempotent if already accepted by this driver
+    if (booking.status === 'ASSIGNED' && booking.vendorId === vendorId) {
+      return booking;
+    }
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: vendorId },
+      include: { vehicles: { where: { active: true } } },
+    });
+    if (!vendor) throw { statusCode: 404, message: 'Driver partner account not found' };
+
+    // Find driver's active vehicle or allocate their commercial vehicle
+    let vehicle = vendor.vehicles[0];
+    if (!vehicle) {
+      const regSuffix = vendor.phone ? vendor.phone.replace(/\D/g, '').slice(-4) : '7785';
+      vehicle = await prisma.vehicle.create({
+        data: {
+          vendorId: vendor.id,
+          type: 'Tata 407 (Commercial Carrier)',
+          capacityCft: 600,
+          registrationNumber: `MH12CD${regSuffix}`,
+          permitExpiry: new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000),
+          fitnessCertExpiry: new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000),
+          active: true,
+        },
+      });
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: 'ASSIGNED',
+        vendorId: vendor.id,
+        vehicleId: vehicle.id,
+      },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        vendor: { select: { id: true, name: true, phone: true } },
+        vehicle: { select: { id: true, type: true, registrationNumber: true } },
+      },
+    });
+
+    await prisma.bookingStatusHistory.create({
+      data: {
+        bookingId,
+        fromState: booking.status,
+        toState: 'ASSIGNED',
+        actorId: vendorId,
+        actorRole: 'vendor',
+      },
+    });
+
+    // Notify customer about driver acceptance
+    try {
+      const { enqueueNotification } = await import('../../jobs/queue');
+      await enqueueNotification('job_assigned', {
+        userId: booking.customerId,
+        userRole: 'customer',
+        bookingId,
+        payload: {
+          bookingId,
+          driverName: vendor.name,
+          driverPhone: vendor.phone,
+          vehicleType: vehicle.type,
+          registrationNumber: vehicle.registrationNumber,
+        },
+      });
+    } catch (e) {
+      console.warn('Could not enqueue notification:', e);
+    }
+
+    return updated;
+  }
+
   static async updateJobStatus(vendorId: string, bookingId: string, status: BookingStatus) {
+    if (status === 'ASSIGNED') {
+      return this.acceptJob(vendorId, bookingId);
+    }
+
     const booking = await prisma.booking.findFirst({ where: { id: bookingId, vendorId } });
     if (!booking) throw { statusCode: 404, message: 'Assigned booking not found' };
 

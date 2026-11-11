@@ -149,20 +149,24 @@ export const useDriverStore = create<DriverState>((set, get) => ({
 
   setActiveJob: (job) => set({ activeJob: job }),
 
-  acceptJob: (jobId) =>
+  acceptJob: (jobId) => {
+    // Call backend accept endpoint to link driver and vehicle to booking
+    driverJobsApi.acceptJob(jobId).catch((err) => {
+      console.warn('Driver acceptJob error:', err);
+      driverJobsApi.updateJobStatus(jobId, 'ASSIGNED').catch(() => {});
+    });
+
     set((state) => {
       const job = state.pendingJobs.find((j) => j.id === jobId);
       if (!job) return state;
-      
-      // Also call backend to update status
-      driverJobsApi.updateJobStatus(jobId, 'ASSIGNED').catch(() => {});
-      
+
       const updatedJob: DriverJob = { ...job, status: 'ASSIGNED' };
       return {
         activeJob: state.activeJob || updatedJob,
         pendingJobs: state.pendingJobs.filter((j) => j.id !== jobId),
       };
-    }),
+    });
+  },
 
   declineJob: (jobId) =>
     set((state) => ({

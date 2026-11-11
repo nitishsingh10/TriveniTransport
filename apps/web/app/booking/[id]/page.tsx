@@ -10,9 +10,9 @@ import styles from './page.module.css';
 
 const STATUSES = ['REQUESTED', 'QUOTED', 'CONFIRMED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
 const STATUS_LABELS: Record<string, string> = {
-  REQUESTED: 'Requested', QUOTED: 'Quoted', CONFIRMED: 'Confirmed',
-  ASSIGNED: 'Assigned', EN_ROUTE: 'En Route', ARRIVED: 'Arrived',
-  IN_PROGRESS: 'In Progress', COMPLETED: 'Completed',
+  REQUESTED: 'Requested', QUOTED: 'Quoted', CONFIRMED: 'Assigning shortly',
+  ASSIGNED: 'Driver Assigned', EN_ROUTE: 'En Route', ARRIVED: 'Arrived',
+  IN_PROGRESS: 'In Transit', COMPLETED: 'Completed',
   CANCELLED: 'Cancelled', DISPUTED: 'Disputed', REVISION_PENDING: 'Revision Pending',
 };
 const STATUS_BADGE: Record<string, string> = {
@@ -38,17 +38,30 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       return;
     }
 
-    bookings
-      .get(id)
-      .then(setBooking)
-      .catch(err => {
-        if (err instanceof ApiError && err.status === 401) {
-          router.replace(`/login?next=/booking/${id}`);
-        } else {
-          setError(err instanceof ApiError ? err.message : 'Failed to load booking.');
-        }
-      })
-      .finally(() => setLoading(false));
+    const loadData = (silent = false) => {
+      bookings
+        .get(id)
+        .then(setBooking)
+        .catch(err => {
+          if (err instanceof ApiError && err.status === 401) {
+            router.replace(`/login?next=/booking/${id}`);
+          } else if (!silent) {
+            setError(err instanceof ApiError ? err.message : 'Failed to load booking.');
+          }
+        })
+        .finally(() => {
+          if (!silent) setLoading(false);
+        });
+    };
+
+    loadData(false);
+
+    // Auto-poll every 5 seconds until driver accepts
+    const timer = setInterval(() => {
+      loadData(true);
+    }, 5000);
+
+    return () => clearInterval(timer);
   }, [id, router]);
 
   const handleConfirmCod = async () => {
@@ -208,23 +221,37 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
               )}
 
               {/* Assigned Team */}
-              {booking.vendor && (
+              {booking.vendor ? (
                 <div className="card">
-                  <h3 className={styles.cardTitle}>🚚 Assigned Team</h3>
+                  <h3 className={styles.cardTitle}>🚚 Assigned Driver Partner</h3>
                   <div className={styles.teamGrid}>
                     <div>
-                      <span className={styles.teamLabel}>Driver / Contact</span>
+                      <span className={styles.teamLabel}>Captain Name</span>
                       <span className={styles.teamValue}>{booking.vendor.name}</span>
-                      <a href={`tel:${booking.vendor.phone}`} className={styles.teamSub}>📞 {booking.vendor.phone}</a>
+                      {booking.vendor.phone && (
+                        <a href={`tel:${booking.vendor.phone}`} className={styles.teamSub}>📞 {booking.vendor.phone}</a>
+                      )}
                     </div>
                     {booking.vehicle && (
                       <div>
-                        <span className={styles.teamLabel}>Vehicle</span>
+                        <span className={styles.teamLabel}>Vehicle Details</span>
                         <span className={styles.teamValue}>{booking.vehicle.type}</span>
                         <span className={styles.teamSub}>{booking.vehicle.registrationNumber}</span>
                       </div>
                     )}
                   </div>
+                </div>
+              ) : (
+                <div className="card" style={{ borderLeft: '4px solid #F7A300' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <h3 className={styles.cardTitle} style={{ margin: 0 }}>🚚 Driver & Vehicle</h3>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: '#FEF3C7', color: '#B45309' }}>
+                      Assigning shortly
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748B', lineHeight: 1.5 }}>
+                    Your booking is confirmed! We are assigning the nearest verified Triveni Captain and commercial vehicle. Driver contact details and vehicle registration will appear here automatically once accepted.
+                  </p>
                 </div>
               )}
             </div>

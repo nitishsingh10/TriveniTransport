@@ -39,10 +39,10 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; bg: string; icon: React.ComponentType<any> }
 > = {
   CONFIRMED: {
-    label: 'Confirmed',
-    color: Colors.success,
-    bg: Colors.successLight,
-    icon: CheckCircle2,
+    label: 'Assigning shortly',
+    color: '#D97706',
+    bg: '#FEF3C7',
+    icon: Clock,
   },
   ASSIGNED: {
     label: 'Driver Assigned',
@@ -189,8 +189,8 @@ export default function BookingsScreen() {
               year: 'numeric',
             }),
             amount: item.finalAmount || item.baseQuoteAmount || 12000,
-            vehicle: item.vehicle?.type || 'Tata 407 (14ft)',
-            itemsCount: 18,
+            vehicle: item.vehicle?.type || (item.status === 'CONFIRMED' || !item.vendor ? 'Assigning driver shortly' : 'Commercial Goods Carrier'),
+            itemsCount: item.items?.length || 12,
             status: item.status as BookingStatus,
           }))
         );
@@ -206,6 +206,10 @@ export default function BookingsScreen() {
 
   useEffect(() => {
     loadBookings();
+    const interval = setInterval(() => {
+      loadBookings();
+    }, 6000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredBookings = realBookings.filter((b) => {

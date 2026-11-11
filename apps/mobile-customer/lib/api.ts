@@ -361,6 +361,7 @@ export interface BookingItem {
   createdAt: string;
   vendor?: { id: string; name: string; phone: string } | null;
   vehicle?: { id: string; type: string; registrationNumber: string } | null;
+  items?: any[];
 }
 
 export const bookingApi = {

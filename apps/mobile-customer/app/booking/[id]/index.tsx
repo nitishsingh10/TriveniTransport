@@ -76,10 +76,12 @@ export default function BookingTrackScreen() {
 
   useEffect(() => {
     let isMounted = true;
-    const fetchDetails = async () => {
+    let pollInterval: any;
+
+    const fetchDetails = async (isPolling = false) => {
       if (!id) return;
       try {
-        setLoading(true);
+        if (!isPolling) setLoading(true);
         const data = await bookingApi.get(id);
         if (isMounted) setBooking(data);
 
@@ -90,15 +92,22 @@ export default function BookingTrackScreen() {
           // Non-critical telemetry fallback
         }
       } catch (err: any) {
-        if (isMounted) setError(err.message || 'Unable to load booking details');
+        if (isMounted && !isPolling) setError(err.message || 'Unable to load booking details');
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted && !isPolling) setLoading(false);
       }
     };
 
-    fetchDetails();
+    fetchDetails(false);
+
+    // Auto-poll every 5 seconds so customer sees live when a driver accepts the move
+    pollInterval = setInterval(() => {
+      fetchDetails(true);
+    }, 5000);
+
     return () => {
       isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [id]);
 
@@ -128,13 +137,20 @@ export default function BookingTrackScreen() {
     );
   }
 
-  const currentStep = STATUS_PROGRESS[booking.status] ?? 0;
+  const isDriverAssigned = Boolean(
+    booking.vendor?.name &&
+    booking.status !== 'REQUESTED' &&
+    booking.status !== 'QUOTED' &&
+    booking.status !== 'CONFIRMED'
+  );
+
+  const currentStep = !isDriverAssigned && booking.status === 'CONFIRMED' ? 1 : (STATUS_PROGRESS[booking.status] ?? 0);
   const pickupCity = booking.pickupAddress.split(',')[0] || 'Pickup';
   const dropCity = booking.dropAddress.split(',')[0] || 'Destination';
-  const driverName = booking.vendor?.name || 'Rajesh Kumar (Verified Captain)';
-  const driverPhone = booking.vendor?.phone || '8828647785';
-  const vehicleName = booking.vehicle?.type || 'Tata 407 (14ft)';
-  const vehicleReg = booking.vehicle?.registrationNumber || 'KA-01-TR-4921';
+  const driverName = booking.vendor?.name || '';
+  const driverPhone = booking.vendor?.phone || '';
+  const vehicleName = booking.vehicle?.type || '';
+  const vehicleReg = booking.vehicle?.registrationNumber || '';
 
   const pickupCoords = useMemo(() => {
     const lower = (booking.pickupAddress || '').toLowerCase();
@@ -301,8 +317,10 @@ export default function BookingTrackScreen() {
             <Text style={styles.bookingId}>#{booking.id}</Text>
           </View>
           <View style={styles.transitBadge}>
-            <View style={styles.pulseGreen} />
-            <Text style={styles.transitBadgeText}>{booking.status.replace('_', ' ')}</Text>
+            <View style={!isDriverAssigned ? styles.pulseMarigold : styles.pulseGreen} />
+            <Text style={styles.transitBadgeText}>
+              {!isDriverAssigned ? 'ASSIGNING SHORTLY' : booking.status.replace('_', ' ')}
+            </Text>
           </View>
         </View>
 
@@ -329,33 +347,70 @@ export default function BookingTrackScreen() {
         </View>
       </View>
 
-      {/* Driver Contact Card (Pure White Card) */}
-      <View style={styles.driverCard}>
-        <View style={styles.driverAvatar}>
-          <User size={22} color={Colors.navy} strokeWidth={2.4} />
-        </View>
-        <View style={styles.driverInfo}>
-          <View style={styles.driverNameRow}>
-            <Text style={styles.driverName}>{driverName}</Text>
-            <View style={styles.driverVerifyBadge}>
-              <ShieldCheck size={11} color={Colors.success} />
-              <Text style={styles.driverVerifyText}>Verified</Text>
+      {/* Driver Assignment Section: Assigning shortly vs Real Driver Contact */}
+      {!isDriverAssigned ? (
+        <View style={styles.assigningCard}>
+          <View style={styles.assigningHeader}>
+            <View style={styles.assigningAvatar}>
+              <Truck size={22} color={Colors.marigold} strokeWidth={2.4} />
+            </View>
+            <View style={styles.assigningInfo}>
+              <View style={styles.assigningBadgeRow}>
+                <View style={styles.pulseMarigold} />
+                <Text style={styles.assigningBadgeText}>Assigning shortly</Text>
+              </View>
+              <Text style={styles.assigningTitle}>Pairing Driver Captain</Text>
+              <Text style={styles.assigningSubtitle}>
+                Finding the nearest verified Triveni Captain and commercial vehicle for your move slot.
+              </Text>
             </View>
           </View>
-          <View style={styles.driverMetaRow}>
-            <Star size={12} color={Colors.marigold} fill={Colors.marigold} />
-            <Text style={styles.driverRating}>4.9 (Captain)</Text>
-            <Text style={styles.driverVehicle}>· {vehicleName} ({vehicleReg})</Text>
+
+          <View style={styles.assigningPillRow}>
+            <View style={styles.assigningPill}>
+              <ShieldCheck size={12} color={Colors.success} />
+              <Text style={styles.assigningPillText}>Verified Partner Fleet</Text>
+            </View>
+            <View style={styles.assigningPill}>
+              <Radio size={12} color={Colors.navy} />
+              <Text style={styles.assigningPillText}>Auto-Unlocks When Accepted</Text>
+            </View>
           </View>
+          <Text style={styles.assigningFootnote}>
+            Driver phone number and vehicle registration plate will unlock here automatically as soon as accepted.
+          </Text>
         </View>
-        <TouchableOpacity
-          style={styles.callBtn}
-          onPress={() => Linking.openURL(`tel:${driverPhone}`)}
-          activeOpacity={0.85}
-        >
-          <PhoneCall size={18} color={Colors.white} strokeWidth={2.4} />
-        </TouchableOpacity>
-      </View>
+      ) : (
+        <View style={styles.driverCard}>
+          <View style={styles.driverAvatar}>
+            <User size={22} color={Colors.navy} strokeWidth={2.4} />
+          </View>
+          <View style={styles.driverInfo}>
+            <View style={styles.driverNameRow}>
+              <Text style={styles.driverName}>{driverName}</Text>
+              <View style={styles.driverVerifyBadge}>
+                <ShieldCheck size={11} color={Colors.success} />
+                <Text style={styles.driverVerifyText}>Verified</Text>
+              </View>
+            </View>
+            <View style={styles.driverMetaRow}>
+              <Star size={12} color={Colors.marigold} fill={Colors.marigold} />
+              <Text style={styles.driverRating}>4.9 (Captain)</Text>
+              <Text style={styles.driverVehicle}>· {vehicleName} {vehicleReg ? `(${vehicleReg})` : ''}</Text>
+            </View>
+          </View>
+          {driverPhone ? (
+            <TouchableOpacity
+              style={styles.callBtn}
+              onPress={() => Linking.openURL(`tel:${driverPhone}`)}
+              activeOpacity={0.85}
+              accessibilityLabel={`Call driver ${driverName}`}
+            >
+              <PhoneCall size={18} color={Colors.white} strokeWidth={2.4} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
 
       {/* Milestone Timeline Card (Pure White Card) */}
       <View style={styles.timelineCard}>
@@ -577,6 +632,101 @@ const styles = StyleSheet.create({
     color: Colors.navy,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
+  },
+
+  pulseMarigold: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.marigold,
+  },
+
+  // Assigning Driver Card
+  assigningCard: {
+    marginHorizontal: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1.5,
+    borderColor: Colors.marigoldBorder,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    ...Shadow.sm,
+  },
+  assigningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  assigningAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.marigoldSubtle,
+    borderWidth: 1.5,
+    borderColor: Colors.marigoldBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assigningInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  assigningBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.marigoldSubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.marigoldBorder,
+    marginBottom: 2,
+  },
+  assigningBadgeText: {
+    fontSize: 9.5,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.marigoldDark,
+    letterSpacing: 0.3,
+  },
+  assigningTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.navyDark,
+  },
+  assigningSubtitle: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  assigningPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 2,
+  },
+  assigningPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.surfaceSubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  assigningPillText: {
+    fontSize: 10,
+    fontWeight: FontWeight.semibold,
+    color: Colors.navy,
+  },
+  assigningFootnote: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
 
   // Driver Card

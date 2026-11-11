@@ -290,6 +290,12 @@ export const driverJobsApi = {
     return request<BackendJob[]>(`/vendor/jobs${query}`);
   },
 
+  async acceptJob(bookingId: string): Promise<BackendJob> {
+    return request<BackendJob>(`/vendor/jobs/${bookingId}/accept`, {
+      method: 'POST',
+    });
+  },
+
   async updateJobStatus(bookingId: string, status: BookingStatus) {
     return request(`/vendor/jobs/${bookingId}/status`, {
       method: 'PATCH',

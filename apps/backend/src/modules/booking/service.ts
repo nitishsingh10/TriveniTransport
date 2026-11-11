@@ -104,12 +104,8 @@ export class BookingService {
         },
       });
 
-      // Automatically assign vendor and best-fit vehicle
-      try {
-        await VendorService.autoAssign(booking.id);
-      } catch (err) {
-        console.warn('Vendor auto-assign skipped (can be assigned manually):', err);
-      }
+      // Booking is now CONFIRMED and broadcast to available driver partners.
+      // Driver details will be linked once an active driver accepts the duty.
 
       // Send confirmation email
       const customer = await prisma.customer.findUnique({ where: { id: customerId } });
@@ -246,12 +242,8 @@ export class BookingService {
       });
     }
 
-    // Auto-assign vendor
-    try {
-      await VendorService.autoAssign(bookingId);
-    } catch (assignErr) {
-      console.warn('Vendor auto-assign deferred:', assignErr);
-    }
+    // Booking is confirmed and ready for driver partner acceptance
+    // Auto-assign is kept available via admin endpoint if manual override needed
 
     // Release Redis hold lock if present
     const dateStr = booking.scheduledDate.toISOString().split('T')[0];

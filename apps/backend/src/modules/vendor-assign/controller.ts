@@ -26,6 +26,17 @@ export class VendorController {
     }
   }
 
+  static async acceptJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const vendorId = req.user!.id;
+      const bookingId = req.params.id as string;
+      const result = await VendorService.acceptJob(vendorId, bookingId);
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+
   static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const vendorId = req.user!.id;
