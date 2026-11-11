@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Home, Building2, Briefcase, LandPlot, MapPin, Flag, Crosshair, Map } from 'lucide-react';
 import styles from './InstantEstimate.module.css';
 import WebMapModal from './WebMapModal';
+import { useAuth } from '../lib/useAuth';
 
 const CONFIG_TYPES = [
   { value: '1bhk', label: '1 BHK', Icon: Home },
@@ -13,6 +14,7 @@ const CONFIG_TYPES = [
 ];
 
 export default function InstantEstimate() {
+  const { isLoggedIn } = useAuth();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [config, setConfig] = useState('');
@@ -162,7 +164,15 @@ export default function InstantEstimate() {
     <>
       <div className={styles.widget}>
         <div className={styles.header}>
-          <div className={styles.title}>Instant Fare Calculator</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div className={styles.title}>Instant Fare Calculator</div>
+            {isLoggedIn && (
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#047857', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+                Signed In
+              </span>
+            )}
+          </div>
           <p className={styles.subtitle}>
             Get a quick price range for your move — no commitment
           </p>
@@ -346,7 +356,7 @@ export default function InstantEstimate() {
               Final price calculated after itemised inventory review
             </span>
             <a href="/quote" className={styles.resultCta}>
-              Get Detailed Quote →
+              {isLoggedIn ? 'Continue to Itemised Quote →' : 'Get Detailed Quote →'}
             </a>
           </div>
         )}

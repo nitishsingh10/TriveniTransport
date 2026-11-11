@@ -1,12 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowRight, PhoneCall } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowRight,
+  PhoneCall,
+  Package,
+  Truck,
+  ShieldCheck,
+  LogOut,
+  ChevronDown,
+  User as UserIcon,
+} from 'lucide-react';
+import { useAuth } from '../lib/useAuth';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
+  const router = useRouter();
+  const { isLoggedIn, role, user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Prevent background scroll when mobile menu is open
   useEffect(() => {
@@ -23,13 +49,42 @@ export default function Navbar() {
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false);
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+        setUserDropdownOpen(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const closeMenu = () => setMobileOpen(false);
+  const closeMenu = () => {
+    setMobileOpen(false);
+    setUserDropdownOpen(false);
+  };
+
+  const handleLogout = async () => {
+    closeMenu();
+    await logout();
+    router.push('/');
+  };
+
+  const userInitial = user?.name
+    ? user.name.trim().charAt(0).toUpperCase()
+    : role === 'vendor'
+    ? 'P'
+    : role === 'admin'
+    ? 'A'
+    : 'C';
+
+  const roleLabel =
+    role === 'vendor'
+      ? 'Driver Partner'
+      : role === 'admin'
+      ? 'Administrator'
+      : 'Customer';
+
+  const displayName = user?.name || (role === 'vendor' ? 'Partner' : role === 'admin' ? 'Admin' : 'Customer');
 
   return (
     <>
@@ -49,9 +104,55 @@ export default function Navbar() {
           </Link>
 
           <ul className={`${styles.navLinks} ${mobileOpen ? styles.open : ''}`}>
+            {/* Mobile User Profile Header (Visible only when drawer is open and user is logged in) */}
+            {isLoggedIn && (
+              <li className={styles.mobileOnlyLink}>
+                <div className={styles.mobileUserCard}>
+                  <div className={styles.avatarCircle}>
+                    {userInitial}
+                    <span className={styles.statusDot} />
+                  </div>
+                  <div className={styles.mobileUserInfo}>
+                    <span className={styles.mobileUserName}>{displayName}</span>
+                    <span className={styles.mobileUserSub}>{user?.phone || user?.email || roleLabel}</span>
+                    <span className={styles.mobileRoleBadge}>{roleLabel}</span>
+                  </div>
+                </div>
+              </li>
+            )}
+
             <li>
               <Link href="/" onClick={closeMenu}>Home</Link>
             </li>
+
+            {/* My Bookings in Nav: Shown directly when logged in as Customer */}
+            {isLoggedIn && role === 'customer' && (
+              <li>
+                <Link href="/bookings" onClick={closeMenu} style={{ color: 'var(--brand-900)', fontWeight: 700 }}>
+                  My Bookings
+                  <span className={styles.bookingsNavDot} />
+                </Link>
+              </li>
+            )}
+
+            {/* Fleet portal link when logged in as Vendor */}
+            {isLoggedIn && role === 'vendor' && (
+              <li>
+                <Link href="/admin/fleet" onClick={closeMenu} style={{ color: 'var(--brand-900)', fontWeight: 700 }}>
+                  Fleet Portal
+                </Link>
+              </li>
+            )}
+
+            {/* Admin Console link when logged in as Admin */}
+            {isLoggedIn && role === 'admin' && (
+              <li>
+                <Link href="/admin" onClick={closeMenu} style={{ color: 'var(--brand-900)', fontWeight: 700 }}>
+                  Admin Console
+                </Link>
+              </li>
+            )}
+
             <li>
               <Link href="/services" onClick={closeMenu}>Services</Link>
             </li>
@@ -64,14 +165,29 @@ export default function Navbar() {
             <li>
               <Link href="/quote" onClick={closeMenu}>Get Quote</Link>
             </li>
-            <li>
-              <Link href="/vendor/signup" onClick={closeMenu}>Work with Us</Link>
-            </li>
-            <li>
-              <Link href="/login" onClick={closeMenu} className={styles.mobileOnlyLink}>
-                Customer Login
-              </Link>
-            </li>
+
+            {/* Work with us is shown for public visitors only */}
+            {!isLoggedIn && (
+              <li>
+                <Link href="/vendor/signup" onClick={closeMenu}>Work with Us</Link>
+              </li>
+            )}
+
+            {/* Mobile-only Login / Logout items */}
+            {!isLoggedIn ? (
+              <li>
+                <Link href="/login" onClick={closeMenu} className={styles.mobileOnlyLink}>
+                  Customer Login
+                </Link>
+              </li>
+            ) : (
+              <li className={`${styles.mobileOnlyLink} ${styles.mobileLogoutRow}`}>
+                <button type="button" className={styles.mobileLogoutBtn} onClick={handleLogout}>
+                  <LogOut size={16} /> Sign Out
+                </button>
+              </li>
+            )}
+
             <li className={styles.mobileActions}>
               <Link href="/quote" className={`btn btn-accent ${styles.mobileCta}`} onClick={closeMenu}>
                 Get Instant Quote <ArrowRight size={16} />
@@ -84,9 +200,120 @@ export default function Navbar() {
           </ul>
 
           <div className={styles.actions}>
-            <Link href="/login" className={`btn btn-primary btn-sm ${styles.desktopLogin}`}>
-              Login
-            </Link>
+            {!isLoggedIn ? (
+              /* Non-Logged In State */
+              <Link href="/login" className={`btn btn-primary btn-sm ${styles.desktopLogin}`}>
+                Login
+              </Link>
+            ) : (
+              /* Logged In State */
+              <div className={styles.authActions}>
+                {role === 'customer' && (
+                  <Link href="/bookings" className={styles.bookingsLinkBtn}>
+                    <Package size={15} />
+                    <span>My Bookings</span>
+                  </Link>
+                )}
+
+                {role === 'vendor' && (
+                  <Link href="/admin/fleet" className={styles.bookingsLinkBtn}>
+                    <Truck size={15} />
+                    <span>Fleet Portal</span>
+                  </Link>
+                )}
+
+                {role === 'admin' && (
+                  <Link href="/admin" className={styles.bookingsLinkBtn}>
+                    <ShieldCheck size={15} />
+                    <span>Admin</span>
+                  </Link>
+                )}
+
+                {/* User Dropdown Pill */}
+                <div className={styles.userMenuWrapper} ref={dropdownRef}>
+                  <button
+                    type="button"
+                    className={styles.userPill}
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    aria-expanded={userDropdownOpen}
+                    title="Account details"
+                  >
+                    <div className={styles.avatarCircle}>
+                      {userInitial}
+                      <span className={styles.statusDot} />
+                    </div>
+                    <span className={styles.userPillName}>{displayName}</span>
+                    <ChevronDown
+                      size={14}
+                      className={`${styles.userPillChevron} ${userDropdownOpen ? styles.userPillChevronOpen : ''}`}
+                    />
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div className={styles.userDropdown}>
+                      <div className={styles.dropdownHeader}>
+                        <div className={styles.dropdownName}>{displayName}</div>
+                        {(user?.phone || user?.email) && (
+                          <div className={styles.dropdownContact}>
+                            {user.phone || user.email}
+                          </div>
+                        )}
+                        <span className={styles.dropdownBadge}>{roleLabel}</span>
+                      </div>
+
+                      {role === 'customer' && (
+                        <Link
+                          href="/bookings"
+                          className={styles.dropdownItem}
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <Package size={16} /> My Bookings
+                        </Link>
+                      )}
+
+                      {role === 'vendor' && (
+                        <Link
+                          href="/admin/fleet"
+                          className={styles.dropdownItem}
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <Truck size={16} /> Fleet Duty Dashboard
+                        </Link>
+                      )}
+
+                      {role === 'admin' && (
+                        <Link
+                          href="/admin"
+                          className={styles.dropdownItem}
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <ShieldCheck size={16} /> Dispatch Console
+                        </Link>
+                      )}
+
+                      <Link
+                        href="/quote"
+                        className={styles.dropdownItem}
+                        onClick={() => setUserDropdownOpen(false)}
+                      >
+                        <ArrowRight size={16} /> Plan New Move
+                      </Link>
+
+                      <div className={styles.dropdownDivider} />
+
+                      <button
+                        type="button"
+                        className={`${styles.dropdownItem} ${styles.dropdownLogout}`}
+                        onClick={handleLogout}
+                      >
+                        <LogOut size={16} /> Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               className={`${styles.burger} ${mobileOpen ? styles.burgerOpen : ''}`}
               onClick={() => setMobileOpen(!mobileOpen)}

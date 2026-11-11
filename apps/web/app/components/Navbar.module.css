@@ -398,3 +398,281 @@
   }
 }
 
+/* ── Authenticated User Navigation Styles ── */
+.authActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bookingsLinkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--brand-900);
+  color: #ffffff;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-out);
+  box-shadow: 0 2px 8px rgba(13, 31, 55, 0.15);
+}
+
+.bookingsLinkBtn:hover {
+  background: var(--brand-800);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 31, 55, 0.22);
+}
+
+.bookingsNavDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  margin-left: 4px;
+}
+
+.userMenuWrapper {
+  position: relative;
+}
+
+.userPill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.65rem 0.25rem 0.35rem;
+  background: rgba(13, 31, 55, 0.04);
+  border: 1px solid rgba(13, 31, 55, 0.12);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.userPill:hover {
+  background: rgba(13, 31, 55, 0.08);
+  border-color: rgba(13, 31, 55, 0.2);
+}
+
+.avatarCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-900), var(--brand-700));
+  color: #F7A300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.82rem;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.statusDot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  border: 2px solid #ffffff;
+}
+
+.userPillName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--brand-900);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userPillChevron {
+  color: var(--gray-500);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.userPillChevronOpen {
+  transform: rotate(180deg);
+}
+
+.userDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 230px;
+  background: #ffffff;
+  border: 1px solid rgba(13, 31, 55, 0.1);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgba(13, 31, 55, 0.14), 0 2px 6px rgba(13, 31, 55, 0.06);
+  padding: 0.5rem;
+  z-index: calc(var(--z-sticky) + 20);
+  animation: dropdownFade 0.18s var(--ease-out);
+}
+
+@keyframes dropdownFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdownHeader {
+  padding: 0.4rem 0.5rem 0.65rem;
+  border-bottom: 1px solid rgba(13, 31, 55, 0.08);
+  margin-bottom: 0.35rem;
+}
+
+.dropdownName {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--brand-900);
+  line-height: 1.2;
+}
+
+.dropdownContact {
+  font-size: 0.74rem;
+  color: var(--gray-500);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownBadge {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: rgba(247, 163, 0, 0.14);
+  color: #B45309;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.dropdownItem:hover {
+  background: rgba(13, 31, 55, 0.05);
+  color: var(--brand-900);
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: rgba(13, 31, 55, 0.08);
+  margin: 0.35rem 0;
+}
+
+.dropdownLogout {
+  color: #DC2626;
+}
+
+.dropdownLogout:hover {
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+
+/* ── Mobile Logged-in Card in Drawer ── */
+.mobileUserCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, rgba(13, 31, 55, 0.05), rgba(247, 163, 0, 0.08));
+  border: 1px solid rgba(13, 31, 55, 0.1);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-3);
+}
+
+.mobileUserInfo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobileUserName {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--brand-900);
+  line-height: 1.2;
+}
+
+.mobileUserSub {
+  font-size: 0.74rem;
+  color: var(--gray-500);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileRoleBadge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(247, 163, 0, 0.18);
+  color: #B45309;
+  width: fit-content;
+}
+
+.mobileLogoutRow {
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(13, 31, 55, 0.08);
+}
+
+.mobileLogoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #FECACA;
+  background: #FEF2F2;
+  color: #DC2626;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.mobileLogoutBtn:hover {
+  background: #FEE2E2;
+}
+
+@media (max-width: 820px) {
+  .bookingsLinkBtn {
+    display: none;
+  }
+}
+
+

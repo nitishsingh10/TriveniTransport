@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Link from 'next/link';
 import { bookings, token, Booking, ApiError } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 import styles from './page.module.css';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -24,6 +25,7 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
 
 export default function BookingsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [list, setList] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,6 +63,22 @@ export default function BookingsPage() {
               + New Booking
             </Link>
           </div>
+
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0.75rem 1.25rem', background: '#ffffff', borderRadius: 14, border: '1px solid rgba(13,31,55,0.08)', boxShadow: '0 2px 8px rgba(13,31,55,0.04)' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #0D1F37, #1E3A8A)', color: '#F7A300', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.95rem', flexShrink: 0 }}>
+                {user?.name ? user.name.trim().charAt(0).toUpperCase() : 'C'}
+              </div>
+              <div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-900)' }}>
+                  {user?.name || 'Customer Account'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
+                  {user?.phone || user?.email || 'Signed in'}
+                </div>
+              </div>
+            </div>
+          )}
 
           {loading && (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-400)' }}>

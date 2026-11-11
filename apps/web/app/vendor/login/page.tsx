@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
+import { useAuth } from '../../lib/useAuth';
 import styles from './page.module.css';
 
 type Method = 'phone' | 'email';
 
 export default function VendorLoginPage() {
   const router = useRouter();
+  const { isLoggedIn, role, user, logout } = useAuth();
   const [method, setMethod] = useState<Method>('phone');
   const [identifier, setIdentifier] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -72,6 +74,7 @@ export default function VendorLoginPage() {
       const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('vendor');
+      if (res.user) token.setUser(res.user);
       const next = new URLSearchParams(window.location.search).get('next') ?? '/admin/fleet';
       router.push(next);
     } catch (err) {
@@ -84,6 +87,54 @@ export default function VendorLoginPage() {
       setLoading(false);
     }
   };
+
+  if (isLoggedIn) {
+    return (
+      <main className={styles.main}>
+        <div className={styles.bgMesh}>
+          <div className={styles.blob1} />
+          <div className={styles.blob2} />
+          <div className={styles.blob3} />
+        </div>
+        <div className={styles.container}>
+          <div className={styles.glassCard} style={{ maxWidth: 520, margin: '0 auto', padding: '2.5rem' }}>
+            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #0D1F37, #1E3A8A)', color: '#F7A300', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 800 }}>
+                {user?.name ? user.name.trim().charAt(0).toUpperCase() : 'P'}
+              </div>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '3px 10px', borderRadius: 999, background: 'rgba(247,163,0,0.15)', color: '#B45309' }}>
+                  Signed In as {role === 'vendor' ? 'Fleet Partner' : role === 'admin' ? 'Admin' : 'Customer'}
+                </span>
+                <h1 className={styles.title} style={{ marginTop: '0.75rem', marginBottom: '0.25rem' }}>
+                  {user?.name || 'Partner Account'}
+                </h1>
+                <p className={styles.subtitle} style={{ marginBottom: 0 }}>
+                  {user?.phone || user?.email || 'Active session'}
+                </p>
+              </div>
+
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                <Link href={role === 'vendor' ? '/admin/fleet' : role === 'admin' ? '/admin' : '/bookings'} className={styles.submitBtn}>
+                  Continue to {role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                  }}
+                  className={styles.backBtn}
+                  style={{ padding: '0.75rem', cursor: 'pointer' }}
+                >
+                  Sign Out / Use a Different Partner Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.main}>

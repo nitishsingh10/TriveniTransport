@@ -53,6 +53,7 @@ export default function AdminLoginPage() {
       const res = await auth.verifyOtp(resolvedIdentifier, otp, 'admin');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('admin');
+      if (res.user) token.setUser(res.user);
       router.push('/admin');
     } catch (err: any) {
       setError(err instanceof ApiError ? err.message : 'Invalid security code. Please try again.');

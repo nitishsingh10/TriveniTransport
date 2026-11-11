@@ -8,6 +8,7 @@ import Footer from '../components/Footer';
 import WebMapModal from '../components/WebMapModal';
 import WebRouteCard from '../components/WebRouteCard';
 import { quotes, bookings, token, ApiError } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 import styles from './page.module.css';
 
 const ITEM_CATALOG = [
@@ -91,6 +92,7 @@ type PackingTier = 'lite' | 'standard' | 'premium';
 
 export default function QuotePage() {
   const router = useRouter();
+  const { isLoggedIn, user } = useAuth();
 
   // Form state
   const [step, setStep] = useState(1);
@@ -788,6 +790,17 @@ export default function QuotePage() {
                     </span>
                   </div>
                 </div>
+
+                {isLoggedIn ? (
+                  <div style={{ padding: '0.65rem 1rem', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 10, fontSize: '0.85rem', color: '#065F46', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', flexShrink: 0 }} />
+                    <span>Confirming booking with account: <strong>{user?.name || user?.phone || user?.email || 'Logged In Customer'}</strong></span>
+                  </div>
+                ) : (
+                  <div style={{ padding: '0.65rem 1rem', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, fontSize: '0.85rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                    <span>ℹ️ You will be directed to quick OTP login to confirm your move.</span>
+                  </div>
+                )}
 
                 <div className={styles.stepActions}>
                   <button type="button" className="btn btn-outline" onClick={() => setStep(3)}>← Edit Options</button>

@@ -21,17 +21,44 @@ export const token = {
   getRefresh: (): string | null =>
     typeof window !== 'undefined' ? localStorage.getItem('tt_refresh') : null,
   set: (access: string, refresh: string) => {
-    localStorage.setItem('tt_access', access);
-    localStorage.setItem('tt_refresh', refresh);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tt_access', access);
+      localStorage.setItem('tt_refresh', refresh);
+      window.dispatchEvent(new Event('tt_auth_change'));
+    }
   },
   clear: () => {
-    localStorage.removeItem('tt_access');
-    localStorage.removeItem('tt_refresh');
-    localStorage.removeItem('tt_role');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('tt_access');
+      localStorage.removeItem('tt_refresh');
+      localStorage.removeItem('tt_role');
+      localStorage.removeItem('tt_user');
+      window.dispatchEvent(new Event('tt_auth_change'));
+    }
   },
-  setRole: (role: string) => localStorage.setItem('tt_role', role),
+  setRole: (role: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tt_role', role);
+      window.dispatchEvent(new Event('tt_auth_change'));
+    }
+  },
   getRole: (): string | null =>
     typeof window !== 'undefined' ? localStorage.getItem('tt_role') : null,
+  setUser: (user: any) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tt_user', JSON.stringify(user));
+      window.dispatchEvent(new Event('tt_auth_change'));
+    }
+  },
+  getUser: (): any | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const u = localStorage.getItem('tt_user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  },
   isLoggedIn: (): boolean =>
     typeof window !== 'undefined' && !!localStorage.getItem('tt_access'),
 };

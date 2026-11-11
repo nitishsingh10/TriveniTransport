@@ -33,6 +33,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import InstantEstimate from './components/InstantEstimate';
 import AnimatedCounter from './components/AnimatedCounter';
+import { useAuth } from './lib/useAuth';
 import styles from './page.module.css';
 
 const scrollReveal: Variants = {
@@ -315,6 +316,7 @@ function PricingGuideSection() {
 }
 
 export default function Home() {
+  const { isLoggedIn, role, user } = useAuth();
   return (
     <>
       <Navbar />
@@ -347,6 +349,58 @@ export default function Home() {
               <motion.p initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }} className={styles.heroDesc}>
                 Triveni Transports is your trusted packers and movers in Mumbai and Thane. Move smarter and pay fairly with transparent, itemised pricing for every home or office shifting — no hidden charges, verified captains, ₹5L transit insurance, and a professional crew that treats your belongings like their own.
               </motion.p>
+
+              {/* Logged-In User Quick Action Banner */}
+              {isLoggedIn && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className={styles.loggedInHeroBanner}
+                >
+                  <div className={styles.loggedInHeroHeader}>
+                    <div className={styles.loggedInHeroAvatar}>
+                      {user?.name ? user.name.trim().charAt(0).toUpperCase() : 'C'}
+                      <span className={styles.loggedInOnlineDot} />
+                    </div>
+                    <div>
+                      <span className={styles.loggedInRoleBadge}>
+                        {role === 'vendor' ? 'Fleet Partner' : role === 'admin' ? 'Administrator' : 'Logged In Customer'}
+                      </span>
+                      <h2 className={styles.loggedInGreeting}>
+                        Welcome back, {user?.name || (role === 'vendor' ? 'Partner' : role === 'admin' ? 'Admin' : 'Valued Customer')}!
+                      </h2>
+                    </div>
+                  </div>
+                  <p className={styles.loggedInSubtext}>
+                    {role === 'vendor'
+                      ? 'Access your active vehicle assignments, dispatch status, and duty logs.'
+                      : role === 'admin'
+                      ? 'Manage platform fleet dispatch, relocations manifest, and live status.'
+                      : 'Track active relocations, view booked moves, or book another shifting with itemised pricing.'}
+                  </p>
+                  <div className={styles.loggedInActions}>
+                    {role === 'vendor' ? (
+                      <Link href="/admin/fleet" className="btn btn-primary btn-sm">
+                        <Truck size={15} /> Open Fleet Portal
+                      </Link>
+                    ) : role === 'admin' ? (
+                      <Link href="/admin" className="btn btn-primary btn-sm">
+                        <Shield size={15} /> Open Dispatch Console
+                      </Link>
+                    ) : (
+                      <>
+                        <Link href="/bookings" className={`btn btn-primary btn-sm ${styles.loggedInCta}`}>
+                          <Package size={15} /> My Bookings
+                        </Link>
+                        <Link href="/quote" className={`btn btn-outline btn-sm ${styles.loggedInSecondaryCta}`}>
+                          <ArrowRight size={15} /> Plan New Move
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
               <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.4, ease: [0.16, 1, 0.3, 1] }} className={styles.heroStats}>
                 <div className={styles.stat}><Shield size={26} strokeWidth={2} className={styles.statIcon} /><span className={styles.statLabel}>SAFE</span></div>
