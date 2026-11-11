@@ -74,7 +74,7 @@ export class AuthService {
         }
       } else if (role === 'admin') {
         let admin = await prisma.adminUser.findUnique({ where: { email } });
-        if (!admin && process.env.NODE_ENV !== 'production' && (email === 'admin@trivenitransports.com' || email.startsWith('admin@'))) {
+        if (!admin && process.env.NODE_ENV === 'development' && (email === 'admin@trivenitransports.com' || email.startsWith('admin@'))) {
           admin = await prisma.adminUser.create({
             data: { email, name: 'Triveni Admin' },
           });
@@ -105,9 +105,9 @@ export class AuthService {
         }
       } else if (role === 'admin') {
         let admin = await prisma.adminUser.findUnique({ where: { phone } });
-        if (!admin && process.env.NODE_ENV !== 'production') {
+        if (!admin && process.env.NODE_ENV === 'development') {
           const { ADMIN_PHONE } = getEnv();
-          if (phone === ADMIN_PHONE || phone === '9999999999') {
+          if (phone === ADMIN_PHONE) {
             admin = await prisma.adminUser.create({
               data: { phone, name: 'Triveni Admin' },
             });
@@ -198,7 +198,7 @@ export class AuthService {
       throw { statusCode: 400, code: 'MAX_ATTEMPTS', message: 'Too many failed attempts. Please request a new code.' };
     }
 
-    const isDevBypass = process.env.NODE_ENV !== 'production' && code === '123456';
+    const isDevBypass = process.env.NODE_ENV === 'development' && code === '123456';
     if (!isDevBypass) {
       const inputHash = crypto.createHash('sha256').update(code).digest('hex');
 
@@ -208,9 +208,13 @@ export class AuthService {
       const isMatch = storedHashBuf.length === inputHashBuf.length && crypto.timingSafeEqual(storedHashBuf, inputHashBuf);
 
       if (!isMatch) {
+        const nextAttempts = challenge.attempts + 1;
         await prisma.otpChallenge.update({
           where: { id: challenge.id },
-          data: { attempts: { increment: 1 } },
+          data: {
+            attempts: { increment: 1 },
+            ...(nextAttempts >= OTP_MAX_ATTEMPTS ? { expiresAt: new Date(0) } : {}),
+          },
         });
         throw { statusCode: 400, code: 'INVALID_OTP', message: 'Incorrect verification code. Please check and try again.' };
       }
@@ -294,15 +298,21 @@ export class AuthService {
         ? await prisma.adminUser.findUnique({ where: { email: target.value } })
         : await prisma.adminUser.findUnique({ where: { phone: target.value } });
 
-      if (!admin && process.env.NODE_ENV !== 'production') {
-        admin = await prisma.adminUser.create({
-          data: {
-            ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
-            name: name || 'Triveni Admin',
-          },
-        });
+      if (!admin && process.env.NODE_ENV === 'development') {
+        const { ADMIN_PHONE } = getEnv();
+        const isAuthorizedDevAdmin =
+          (target.type === 'phone' && target.value === ADMIN_PHONE) ||
+          (target.type === 'email' && (target.value === 'admin@trivenitransports.com' || target.value.startsWith('admin@')));
+        if (isAuthorizedDevAdmin) {
+          admin = await prisma.adminUser.create({
+            data: {
+              ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
+              name: name || 'Triveni Admin',
+            },
+          });
+        }
       }
-      if (!admin) throw { statusCode: 404, message: 'Admin account not found' };
+      if (!admin) throw { statusCode: 404, message: 'Admin account not found or unauthorized' };
       userId = admin.id;
       userName = admin.name;
     }
@@ -334,7 +344,9 @@ export class AuthService {
     }
 
     const userId = session.customerId || session.vendorId || session.adminUserId;
-    if (!userId) throw { statusCode: 401, message: 'Invalid session state' };
+    if (!userId || payload.sub !== userId || payload.role !== session.userRole) {
+      throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Invalid session state or token mismatch' };
+    }
 
     const accessToken = signAccessToken(userId, payload.role);
     return { accessToken };
@@ -343,12 +355,26 @@ export class AuthService {
   /**
    * Logs out user by revoking the session
    */
-  static async logout(token: string) {
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    await prisma.session.updateMany({
-      where: { refreshTokenHash: hashedToken, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+  static async logout(tokenOrUserId: { token?: string | null; userId?: string | null }) {
+    if (tokenOrUserId.token) {
+      const hashedToken = crypto.createHash('sha256').update(tokenOrUserId.token).digest('hex');
+      await prisma.session.updateMany({
+        where: { refreshTokenHash: hashedToken, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    } else if (tokenOrUserId.userId) {
+      await prisma.session.updateMany({
+        where: {
+          OR: [
+            { customerId: tokenOrUserId.userId },
+            { vendorId: tokenOrUserId.userId },
+            { adminUserId: tokenOrUserId.userId },
+          ],
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
+    }
   }
 
   // Helper

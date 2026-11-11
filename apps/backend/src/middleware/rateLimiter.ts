@@ -31,6 +31,20 @@ export const otpRateLimiter = rateLimit({
   },
 });
 
+// ── Verification rate limiter per IP (prevents brute force guessing) ────────
+export const verifyOtpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Allow up to 15 verification attempts per IP per 15 mins
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many verification attempts from this network. Please wait a few minutes.',
+    },
+  },
+});
+
 // ── Quotes rate limiter (prevents price scraping / compute exhaustion) ──────
 export const quoteRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -92,12 +92,13 @@ export class PaymentService {
     const { RAZORPAY_WEBHOOK_SECRET } = getEnv();
     const isProd = process.env.NODE_ENV === 'production';
 
-    // In production, require a valid webhook secret
-    if (isProd && (!RAZORPAY_WEBHOOK_SECRET || RAZORPAY_WEBHOOK_SECRET.startsWith('your_'))) {
-      throw { statusCode: 500, message: 'Razorpay webhook secret not configured' };
+    // In production, require a real, non-mock webhook secret
+    const isMockSecret = !RAZORPAY_WEBHOOK_SECRET || RAZORPAY_WEBHOOK_SECRET.startsWith('your_') || RAZORPAY_WEBHOOK_SECRET.startsWith('mock_');
+    if (isProd && isMockSecret) {
+      throw { statusCode: 500, message: 'Razorpay webhook secret not configured or using default mock key' };
     }
 
-    if (RAZORPAY_WEBHOOK_SECRET && !RAZORPAY_WEBHOOK_SECRET.startsWith('your_')) {
+    if (!isMockSecret) {
       if (!signature) {
         throw { statusCode: 400, message: 'Missing Razorpay signature header' };
       }
@@ -119,6 +120,8 @@ export class PaymentService {
       if (!isValid) {
         throw { statusCode: 400, message: 'Invalid webhook signature' };
       }
+    } else if (isProd) {
+      throw { statusCode: 400, message: 'Invalid webhook signature' };
     }
 
     const body = Buffer.isBuffer(rawPayload) ? (parsedBody || JSON.parse(rawPayload.toString('utf8'))) : (parsedBody || rawPayload);

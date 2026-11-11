@@ -12,7 +12,12 @@ const EnvSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000')
-    .transform((s) => s.split(',').map((o) => o.trim())),
+    .transform((s) =>
+      s
+        .split(',')
+        .map((o) => o.trim().replace(/\/+$/, ''))
+        .filter(Boolean)
+    ),
 
   // ── Database ─────────────────────────────────────────────────
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid PostgreSQL connection string'),

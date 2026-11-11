@@ -31,10 +31,14 @@ async function bootstrap() {
   const app = express();
   const httpServer = createServer(app);
 
+  // Trust first proxy (Render, Cloudflare, AWS ALB) for accurate client IP rate limiting
+  app.set('trust proxy', 1);
+
   const isAllowedOrigin = (origin: string | undefined): boolean => {
     // Allow requests with no origin (mobile apps, server-to-server, curl) or in development
     if (!origin || env.NODE_ENV === 'development') return true;
-    return env.CORS_ORIGINS.includes(origin);
+    const cleanOrigin = origin.trim().replace(/\/+$/, '');
+    return env.CORS_ORIGINS.includes(cleanOrigin);
   };
 
   // Socket.io with origin restriction
@@ -56,7 +60,7 @@ async function bootstrap() {
     cors({
       origin: (origin, callback) => {
         if (isAllowedOrigin(origin)) return callback(null, true);
-        return callback(new Error('Not allowed by CORS'));
+        return callback(null, false);
       },
       credentials: true,
     })
@@ -109,6 +113,16 @@ async function bootstrap() {
   // Also support root-level and /api paths for direct requests (e.g. /auth/otp/request)
   app.use('/api', globalRateLimiter, router);
   app.use(globalRateLimiter, router);
+
+  // 404 Catch-All for unknown API routes
+  app.use((req, res) => {
+    res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: `Endpoint ${req.method} ${req.originalUrl} not found`,
+      },
+    });
+  });
 
   // Error handling (must be last)
   app.use(errorHandler);

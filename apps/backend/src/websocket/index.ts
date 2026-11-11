@@ -36,8 +36,8 @@ export function setupWebsockets(io: Server) {
         return;
       }
 
-      // If customer or vendor, verify ownership/assignment to prevent IDOR / data snooping
-      if (user.role === 'customer' || user.role === 'vendor') {
+      // Verify ownership/assignment to prevent IDOR / unauthorized snooping
+      if (user.role !== 'admin') {
         try {
           const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
@@ -47,7 +47,8 @@ export function setupWebsockets(io: Server) {
           if (
             !booking ||
             (user.role === 'customer' && booking.customerId !== user.id) ||
-            (user.role === 'vendor' && booking.vendorId !== user.id)
+            (user.role === 'vendor' && booking.vendorId !== user.id) ||
+            (user.role !== 'customer' && user.role !== 'vendor')
           ) {
             socket.emit('error', { code: 'FORBIDDEN', message: 'Not authorized to subscribe to this booking' });
             return;

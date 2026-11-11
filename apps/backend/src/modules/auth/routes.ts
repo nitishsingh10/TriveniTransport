@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { AuthController } from './controller';
-import { otpRateLimiter } from '../../middleware/rateLimiter';
+import { otpRateLimiter, verifyOtpRateLimiter } from '../../middleware/rateLimiter';
 import { authGuard } from '../../middleware/authGuard';
 
 const router: Router = Router();
 
 // Rate limited OTP routes
 router.post('/otp/request', otpRateLimiter, AuthController.requestOtp);
-router.post('/otp/verify', otpRateLimiter, AuthController.verifyOtp);
+router.post('/otp/verify', verifyOtpRateLimiter, AuthController.verifyOtp);
 
 // Session management
 router.post('/refresh', AuthController.refresh);
