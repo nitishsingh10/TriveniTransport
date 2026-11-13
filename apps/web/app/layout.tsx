@@ -10,7 +10,7 @@ export const viewport: Viewport = {
   themeColor: '#0D1F37',
 };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://trivenitransports.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.trivenitransport.online';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

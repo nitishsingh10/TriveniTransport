@@ -94,6 +94,11 @@ async function bootstrap() {
     }
   });
 
+  // Robots.txt: instruct crawlers not to index API endpoints
+  app.get('/robots.txt', (_req, res) => {
+    res.type('text/plain').send('User-agent: *\nDisallow: /\n');
+  });
+
   // Global rate limiter on all API routes
   app.use('/api/v1', globalRateLimiter);
 
