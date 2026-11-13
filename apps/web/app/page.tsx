@@ -8,7 +8,7 @@ import {
   Package,
   Clock,
   ClipboardList,
-  CreditCard,
+  Banknote,
   Truck,
   CheckCircle2,
   MapPin,
@@ -130,7 +130,7 @@ function HowItWorks() {
 
   const steps = [
     { num: '01', Icon: ClipboardList, title: 'Get a Quote', desc: 'Select your items. See transparent, line-by-line pricing instantly.' },
-    { num: '02', Icon: CreditCard,    title: 'Book & Pay',  desc: 'Lock your date with a small advance. Full payment only after delivery.' },
+    { num: '02', Icon: Banknote,       title: 'Book & Pay',  desc: 'Book instantly with zero advance. Pay in full only after safe delivery via COD.' },
     { num: '03', Icon: Truck,         title: 'We Pack & Move', desc: 'Our trained team packs, loads, and transports with real-time tracking.' },
     { num: '04', Icon: CheckCircle2,  title: 'Delivered!',  desc: 'Receive at your new location. Download your invoice. Rate the move.' },
   ];

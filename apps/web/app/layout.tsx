@@ -153,7 +153,7 @@ const organizationSchema = {
   },
   priceRange: '₹₹',
   currenciesAccepted: 'INR',
-  paymentAccepted: 'Cash, Credit Card, Debit Card, UPI, Net Banking',
+  paymentAccepted: 'Cash on Delivery',
   areaServed: [
     { '@type': 'City', name: 'Mumbai' },
     { '@type': 'City', name: 'Thane' },

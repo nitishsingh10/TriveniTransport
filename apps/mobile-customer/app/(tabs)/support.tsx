@@ -32,7 +32,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What is the payment breakdown?',
-    a: 'A 20% advance booking deposit locks your truck and crew slot. The remaining balance is payable upon successful delivery and item handover via UPI, cards, or net banking.',
+    a: 'We offer 100% Cash on Delivery with zero advance required! Your truck and moving crew are booked immediately, and you pay the full amount directly to your moving captain in cash or via UPI scanner on the day of delivery after safe inspection.',
   },
   {
     q: 'Are household goods insured against transit damage?',

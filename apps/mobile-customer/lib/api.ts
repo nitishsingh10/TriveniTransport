@@ -423,6 +423,12 @@ export const bookingApi = {
     });
   },
 
+  async confirmCod(bookingId: string) {
+    return request<BookingItem>(`/bookings/${bookingId}/confirm-cod`, {
+      method: 'POST',
+    });
+  },
+
   async cancel(bookingId: string) {
     return request<BookingItem>(`/bookings/${bookingId}/cancel`, {
       method: 'POST',

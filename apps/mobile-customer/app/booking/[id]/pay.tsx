@@ -10,19 +10,22 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
+  Banknote,
   CreditCard,
   QrCode,
   Building,
   ArrowRight,
   ArrowLeft,
-  Lock,
+  ShieldCheck,
+  Check,
+  Info,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, type BookingItem } from '@/lib/api';
 
 export default function BookingPayScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [selectedMethod, setSelectedMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
+  const [selectedMethod, setSelectedMethod] = useState<'cod' | 'upi' | 'card' | 'netbanking'>('cod');
   const [processing, setProcessing] = useState(false);
   const [booking, setBooking] = useState<BookingItem | null>(null);
 
@@ -41,30 +44,49 @@ export default function BookingPayScreen() {
   }, [id]);
 
   const totalAmount = booking?.finalAmount || booking?.baseQuoteAmount || 12500;
-  const advanceAmount = Math.round(totalAmount * 0.2);
-  const balanceAmount = totalAmount - advanceAmount;
 
-  const handlePay = async () => {
+  const handleOnlineMethodClick = (methodName: string) => {
+    Alert.alert(
+      'Online Payment Temporarily Disabled',
+      `${methodName} is temporarily paused. Please confirm your relocation using Cash on Delivery. Zero advance is required, and you can pay directly to your assigned captain on the day of delivery via Cash or UPI scanner.`,
+      [{ text: 'Got It, Use COD' }]
+    );
+  };
+
+  const handleConfirmCod = async () => {
     setProcessing(true);
     try {
       if (id) {
-        await bookingApi.confirm(id).catch(() => {});
+        if (bookingApi.confirmCod) {
+          await bookingApi.confirmCod(id).catch(() => bookingApi.confirm(id));
+        } else {
+          await bookingApi.confirm(id);
+        }
       }
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 600));
       setProcessing(false);
       Alert.alert(
-        'Payment Successful',
-        `Your advance deposit of ₹${advanceAmount.toLocaleString('en-IN')} has been received. Your relocation vehicle and crew are locked.`,
+        '✓ Booking Confirmed (Cash on Delivery)',
+        `Your relocation is successfully booked! Zero advance payment required.\n\nTotal of ₹${totalAmount.toLocaleString('en-IN')} will be collected by your moving captain upon safe delivery at your new address.`,
         [
           {
-            text: 'View Move Status',
+            text: 'View Move Details',
             onPress: () => router.replace(`/booking/${id}`),
           },
         ]
       );
     } catch {
       setProcessing(false);
-      Alert.alert('Payment Status', 'Your payment is being verified by Triveni Transports.');
+      Alert.alert(
+        'Booking Recorded',
+        'Your booking with Cash on Delivery is confirmed. You can track your move status directly from the bookings tab.',
+        [
+          {
+            text: 'Go to Bookings',
+            onPress: () => router.replace(`/booking/${id}`),
+          },
+        ]
+      );
     }
   };
 
@@ -83,12 +105,23 @@ export default function BookingPayScreen() {
         <Text style={styles.backText}>Cancel & Go Back</Text>
       </TouchableOpacity>
 
-      {/* Amount Hero (Pure White Card) */}
+      {/* Amount Hero (Zero Advance, Pay on Delivery) */}
       <View style={styles.amountCard}>
-        <Text style={styles.amountLabel}>BOOKING ADVANCE DEPOSIT (20%)</Text>
-        <Text style={styles.amountValue}>₹{advanceAmount.toLocaleString('en-IN')}</Text>
+        <View style={styles.badgeZeroAdvance}>
+          <Text style={styles.badgeZeroAdvanceText}>ZERO ADVANCE REQUIRED</Text>
+        </View>
+        <Text style={styles.amountLabel}>ESTIMATED MOVE TOTAL</Text>
+        <Text style={styles.amountValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
         <Text style={styles.amountSub}>
-          Booking #{id} · Balance ₹{balanceAmount.toLocaleString('en-IN')} payable upon safe delivery
+          Booking #{id?.slice(0, 8).toUpperCase() || 'NEW'} · 100% payable only upon safe delivery
+        </Text>
+      </View>
+
+      {/* Notice Banner */}
+      <View style={styles.noticeBanner}>
+        <Info size={16} color={Colors.marigoldDark} />
+        <Text style={styles.noticeText}>
+          Online payment gateway is temporarily disabled. All bookings are confirmed with <Text style={{ fontWeight: 'bold' }}>Cash on Delivery</Text> at zero advance fee.
         </Text>
       </View>
 
@@ -96,97 +129,110 @@ export default function BookingPayScreen() {
       <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
       <View style={styles.methodsList}>
-        {/* UPI Option */}
+        {/* Cash on Delivery (ACTIVE & DEFAULT) */}
         <TouchableOpacity
           style={[
             styles.methodCard,
-            selectedMethod === 'upi' && styles.methodCardActive,
+            styles.methodCardCodActive,
           ]}
-          onPress={() => setSelectedMethod('upi')}
-          activeOpacity={0.8}
+          onPress={() => setSelectedMethod('cod')}
+          activeOpacity={0.85}
         >
-          <View style={styles.methodIconWrapper}>
-            <QrCode size={20} color={Colors.navy} />
+          <View style={styles.codIconWrapper}>
+            <Banknote size={22} color={Colors.white} />
           </View>
           <View style={styles.methodTextGroup}>
-            <Text style={styles.methodTitle}>UPI Instant Payment</Text>
-            <Text style={styles.methodDesc}>Google Pay, PhonePe, Paytm, BHIM</Text>
+            <View style={styles.methodTitleRow}>
+              <Text style={styles.methodTitle}>Cash on Delivery (Pay on Move Day)</Text>
+              <View style={styles.activePill}>
+                <Text style={styles.activePillText}>ACTIVE</Text>
+              </View>
+            </View>
+            <Text style={styles.methodDesc}>
+              Pay ₹{totalAmount.toLocaleString('en-IN')} in cash or UPI scanner directly to your driver captain after delivery.
+            </Text>
           </View>
-          <View
-            style={[
-              styles.radioCircle,
-              selectedMethod === 'upi' && styles.radioCircleActive,
-            ]}
-          >
-            {selectedMethod === 'upi' && <View style={styles.radioDot} />}
+          <View style={[styles.radioCircle, styles.radioCircleCodActive]}>
+            <Check size={14} color={Colors.white} strokeWidth={3} />
           </View>
         </TouchableOpacity>
 
-        {/* Card Option */}
+        {/* UPI Option (DISABLED) */}
         <TouchableOpacity
-          style={[
-            styles.methodCard,
-            selectedMethod === 'card' && styles.methodCardActive,
-          ]}
-          onPress={() => setSelectedMethod('card')}
-          activeOpacity={0.8}
+          style={[styles.methodCard, styles.methodCardDisabled]}
+          onPress={() => handleOnlineMethodClick('UPI Instant Payment')}
+          activeOpacity={0.7}
         >
-          <View style={styles.methodIconWrapper}>
-            <CreditCard size={20} color={Colors.navy} />
+          <View style={styles.disabledIconWrapper}>
+            <QrCode size={20} color={Colors.textMuted} />
           </View>
           <View style={styles.methodTextGroup}>
-            <Text style={styles.methodTitle}>Credit / Debit Card</Text>
-            <Text style={styles.methodDesc}>Visa, MasterCard, RuPay</Text>
+            <View style={styles.methodTitleRow}>
+              <Text style={styles.disabledMethodTitle}>UPI Instant Payment</Text>
+              <View style={styles.disabledPill}>
+                <Text style={styles.disabledPillText}>UNAVAILABLE</Text>
+              </View>
+            </View>
+            <Text style={styles.disabledMethodDesc}>Google Pay, PhonePe, Paytm, BHIM</Text>
           </View>
-          <View
-            style={[
-              styles.radioCircle,
-              selectedMethod === 'card' && styles.radioCircleActive,
-            ]}
-          >
-            {selectedMethod === 'card' && <View style={styles.radioDot} />}
-          </View>
+          <View style={styles.radioCircleDisabled} />
         </TouchableOpacity>
 
-        {/* NetBanking Option */}
+        {/* Card Option (DISABLED) */}
         <TouchableOpacity
-          style={[
-            styles.methodCard,
-            selectedMethod === 'netbanking' && styles.methodCardActive,
-          ]}
-          onPress={() => setSelectedMethod('netbanking')}
-          activeOpacity={0.8}
+          style={[styles.methodCard, styles.methodCardDisabled]}
+          onPress={() => handleOnlineMethodClick('Credit / Debit Card')}
+          activeOpacity={0.7}
         >
-          <View style={styles.methodIconWrapper}>
-            <Building size={20} color={Colors.navy} />
+          <View style={styles.disabledIconWrapper}>
+            <CreditCard size={20} color={Colors.textMuted} />
           </View>
           <View style={styles.methodTextGroup}>
-            <Text style={styles.methodTitle}>Net Banking</Text>
-            <Text style={styles.methodDesc}>All Major Indian Banks</Text>
+            <View style={styles.methodTitleRow}>
+              <Text style={styles.disabledMethodTitle}>Credit / Debit Card</Text>
+              <View style={styles.disabledPill}>
+                <Text style={styles.disabledPillText}>UNAVAILABLE</Text>
+              </View>
+            </View>
+            <Text style={styles.disabledMethodDesc}>Visa, MasterCard, RuPay</Text>
           </View>
-          <View
-            style={[
-              styles.radioCircle,
-              selectedMethod === 'netbanking' && styles.radioCircleActive,
-            ]}
-          >
-            {selectedMethod === 'netbanking' && <View style={styles.radioDot} />}
+          <View style={styles.radioCircleDisabled} />
+        </TouchableOpacity>
+
+        {/* NetBanking Option (DISABLED) */}
+        <TouchableOpacity
+          style={[styles.methodCard, styles.methodCardDisabled]}
+          onPress={() => handleOnlineMethodClick('Net Banking')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.disabledIconWrapper}>
+            <Building size={20} color={Colors.textMuted} />
           </View>
+          <View style={styles.methodTextGroup}>
+            <View style={styles.methodTitleRow}>
+              <Text style={styles.disabledMethodTitle}>Net Banking</Text>
+              <View style={styles.disabledPill}>
+                <Text style={styles.disabledPillText}>UNAVAILABLE</Text>
+              </View>
+            </View>
+            <Text style={styles.disabledMethodDesc}>All Major Indian Banks</Text>
+          </View>
+          <View style={styles.radioCircleDisabled} />
         </TouchableOpacity>
       </View>
 
       {/* Security Guarantee */}
       <View style={styles.securityBox}>
-        <Lock size={15} color={Colors.success} />
+        <ShieldCheck size={16} color={Colors.success} />
         <Text style={styles.securityText}>
-          PCI-DSS Level 1 Encrypted · Official Triveni Transports Escrow Gateway
+          Triveni Transports Price Assurance · ₹0 Advance · Pay only after item inspection
         </Text>
       </View>
 
-      {/* Pay CTA: Deep Navy Button */}
+      {/* Confirm CTA: Deep Navy Button */}
       <TouchableOpacity
         style={[styles.payCta, processing && styles.payCtaDisabled]}
-        onPress={handlePay}
+        onPress={handleConfirmCod}
         disabled={processing}
         activeOpacity={0.88}
       >
@@ -194,7 +240,7 @@ export default function BookingPayScreen() {
           <ActivityIndicator color={Colors.white} />
         ) : (
           <View style={styles.payCtaContent}>
-            <Text style={styles.payCtaText}>Pay ₹2,500 Securely</Text>
+            <Text style={styles.payCtaText}>Confirm Move (Cash on Delivery)</Text>
             <ArrowRight size={17} color={Colors.white} strokeWidth={2.4} />
           </View>
         )}
@@ -229,6 +275,19 @@ const styles = StyleSheet.create({
     gap: 4,
     ...Shadow.sm,
   },
+  badgeZeroAdvance: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 4,
+  },
+  badgeZeroAdvanceText: {
+    color: '#15803D',
+    fontSize: 10,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: 0.8,
+  },
   amountLabel: {
     color: Colors.textMuted,
     fontSize: 10,
@@ -249,6 +308,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  noticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF3C7',
+    padding: Spacing.sm + 2,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  noticeText: {
+    flex: 1,
+    color: '#92400E',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
   sectionTitle: {
     color: Colors.navyDark,
     fontSize: FontSize.xs,
@@ -257,7 +333,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
 
-  methodsList: { gap: Spacing.xs },
+  methodsList: { gap: Spacing.xs + 2 },
   methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,45 +345,96 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.sm,
   },
-  methodCardActive: {
-    borderColor: Colors.navy,
-    backgroundColor: Colors.surfaceSubtle,
+  methodCardCodActive: {
+    borderColor: '#10B981',
+    borderWidth: 2,
+    backgroundColor: '#F0FDF4',
   },
-  methodIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.navySubtle,
+  methodCardDisabled: {
+    opacity: 0.55,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  codIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   methodTextGroup: { flex: 1, gap: 2 },
+  methodTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
   methodTitle: {
-    color: Colors.navy,
+    color: Colors.navyDark,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
+  disabledMethodTitle: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+  },
   methodDesc: {
-    color: Colors.textSecondary,
+    color: '#166534',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  disabledMethodDesc: {
+    color: Colors.textMuted,
     fontSize: 11,
   },
+  activePill: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  activePillText: {
+    color: '#15803D',
+    fontSize: 9,
+    fontWeight: FontWeight.extrabold,
+  },
+  disabledPill: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  disabledPillText: {
+    color: '#64748B',
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+  },
   radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.cardBorder,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioCircleActive: {
-    borderColor: Colors.navy,
+  radioCircleCodActive: {
+    backgroundColor: '#10B981',
   },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.navy,
+  radioCircleDisabled: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
 
   securityBox: {

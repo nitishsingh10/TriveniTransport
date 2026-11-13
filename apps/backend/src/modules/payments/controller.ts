@@ -6,16 +6,13 @@ import { PaymentType } from '@triveni/shared-types';
 
 export class PaymentController {
   static async createOrder(req: Request, res: Response, next: NextFunction) {
-    try {
-      const customerId = req.user!.id;
-      const data = CreatePaymentOrderSchema.parse(req.body);
-      
-      const order = await PaymentService.createOrder(data.bookingId, data.type as PaymentType, customerId);
-      res.status(201).json(order);
-    } catch (e: any) {
-      if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid input', details: e.errors });
-      next(e);
-    }
+    // Online payments are temporarily disabled — COD only
+    return res.status(503).json({
+      error: {
+        code: 'PAYMENT_UNAVAILABLE',
+        message: 'Online payments are temporarily unavailable. Please use Cash on Delivery.',
+      },
+    });
   }
 
   static async webhook(req: Request, res: Response, next: NextFunction) {

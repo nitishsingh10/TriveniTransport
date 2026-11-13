@@ -19,7 +19,7 @@ import {
   PhoneCall,
   Check,
   FileCheck,
-  CreditCard,
+  Banknote,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi } from '@/lib/api';
@@ -109,6 +109,7 @@ export default function SummaryScreen() {
         scheduledDate,
         scheduledSlot: '09:00 AM – 12:00 PM',
         items: itemsPayload,
+        paymentMethod: 'cash_on_delivery',
       });
 
       if (res?.booking?.id) {
@@ -237,12 +238,12 @@ export default function SummaryScreen() {
         style={styles.depositCard}
       >
         <View style={styles.depositHeader}>
-          <CreditCard size={18} color={Colors.marigold} />
-          <Text style={styles.depositTitle}>Confirm with 20% Booking Deposit</Text>
+          <Banknote size={18} color={Colors.marigold} />
+          <Text style={styles.depositTitle}>Confirm with Cash on Delivery</Text>
         </View>
-        <Text style={styles.depositAmount}>₹{advanceAmount.toLocaleString('en-IN')}</Text>
+        <Text style={styles.depositAmount}>₹{totalAmount.toLocaleString('en-IN')}</Text>
         <Text style={styles.depositSub}>
-          Remaining balance (₹{(totalAmount - advanceAmount).toLocaleString('en-IN')}) payable on delivery
+          ₹0 Advance Required · Full amount payable directly upon safe delivery
         </Text>
 
         <TouchableOpacity
@@ -255,7 +256,7 @@ export default function SummaryScreen() {
             <ActivityIndicator color={Colors.navy} />
           ) : (
             <>
-              <Text style={styles.bookCtaText}>Confirm & Book Relocation</Text>
+              <Text style={styles.bookCtaText}>Confirm & Book Move (COD)</Text>
               <ArrowRight size={17} color={Colors.navy} strokeWidth={2.4} />
             </>
           )}
