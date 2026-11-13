@@ -401,6 +401,7 @@ export const bookingApi = {
       packingTier: 'lite' | 'standard' | 'premium';
     }>;
     addons?: string[];
+    paymentMethod?: string;
   }) {
     return request<{ booking: BookingItem; quote: any }>('/bookings', {
       method: 'POST',
@@ -432,6 +433,40 @@ export const bookingApi = {
   async cancel(bookingId: string) {
     return request<BookingItem>(`/bookings/${bookingId}/cancel`, {
       method: 'POST',
+    });
+  },
+};
+
+export const customerApi = {
+  async getProfile() {
+    return request<{
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      whatsappOptIn?: boolean;
+      createdAt: string;
+      bookingsCount?: number;
+    }>('/customers/me');
+  },
+
+  async updateProfile(data: { name?: string; phone?: string }) {
+    return request<{
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      createdAt: string;
+    }>('/customers/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updatePreferences(data: { whatsappOptIn?: boolean; pushToken?: string | null }) {
+    return request('/customers/me/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     });
   },
 };

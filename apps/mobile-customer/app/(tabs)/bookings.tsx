@@ -142,7 +142,7 @@ function BookingCard({
         </View>
         <View style={styles.metaBadge}>
           <Package size={12} color={Colors.textSecondary} />
-          <Text style={styles.metaText}>{itemsCount} items</Text>
+          <Text style={styles.metaText}>{itemsCount > 0 ? `${itemsCount} items` : 'Household Goods'}</Text>
         </View>
       </View>
 
@@ -188,9 +188,9 @@ export default function BookingsScreen() {
               month: 'short',
               year: 'numeric',
             }),
-            amount: item.finalAmount || item.baseQuoteAmount || 12000,
+            amount: item.finalAmount || item.baseQuoteAmount || 0,
             vehicle: item.vehicle?.type || (item.status === 'CONFIRMED' || !item.vendor ? 'Assigning driver shortly' : 'Commercial Goods Carrier'),
-            itemsCount: item.items?.length || 12,
+            itemsCount: item.items?.length || 0,
             status: item.status as BookingStatus,
           }))
         );

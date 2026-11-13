@@ -67,29 +67,49 @@ export default function OtpScreen() {
     setErrorMsg('');
     try {
       const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp);
+      const userPhone = res.user?.phone ? (res.user.phone.startsWith('+91') ? res.user.phone : `+91${res.user.phone}`) : undefined;
+      const userName = res.user?.name || (isEmail ? '' : 'Customer');
+      
       await setAuth(
         {
           id: res.userId,
           role: 'customer',
-          name: res.user?.name || 'Customer',
-          phone: res.user?.phone ? `+91${res.user.phone}` : undefined,
-          email: res.user?.email ?? undefined,
+          name: userName,
+          phone: userPhone,
+          email: res.user?.email ?? (isEmail ? resolvedIdentifier : undefined),
         },
         res.accessToken,
         res.refreshToken
       );
       setLoading(false);
-      router.replace('/(tabs)');
+
+      const isProfileIncomplete = isEmail && (!userPhone || !userName || userName === 'Customer' || userName === 'Valued Customer');
+      if (isProfileIncomplete) {
+        router.replace('/complete-profile' as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e: any) {
       console.log('Backend verifyOtp error:', e.message);
       // Fallback for dev OTP
       if (__DEV__ && finalOtp === '123456') {
+        const devPhone = isEmail ? undefined : `+91${resolvedIdentifier}`;
         await setAuth(
-          { id: 'cust_seed', role: 'customer', name: 'Customer', phone: `+91${resolvedIdentifier}` },
+          {
+            id: 'cust_seed',
+            role: 'customer',
+            name: isEmail ? '' : 'Customer',
+            phone: devPhone,
+            email: isEmail ? resolvedIdentifier : undefined,
+          },
           'dev_customer_token'
         );
         setLoading(false);
-        router.replace('/(tabs)');
+        if (isEmail) {
+          router.replace('/complete-profile' as any);
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         setErrorMsg(e.message || 'Invalid verification code. Please check and try again.');
         setLoading(false);

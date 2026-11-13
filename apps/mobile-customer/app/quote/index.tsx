@@ -300,7 +300,7 @@ export default function QuoteIndexScreen() {
           <View style={styles.mapPinBannerTextCol}>
             <Text style={styles.mapPinBannerTitle}>Select on Map</Text>
             <Text style={styles.mapPinBannerSub}>
-              Pin exact pickup &amp; drop entrance on map
+              Pin exact pickup & drop entrance on map
             </Text>
           </View>
           <View style={styles.bannerArrowCircle}>

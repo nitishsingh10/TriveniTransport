@@ -69,6 +69,7 @@ function HeaderCallButton() {
 export default function TabLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const user = useAuthStore((s) => s.user);
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 8);
 
@@ -79,6 +80,11 @@ export default function TabLayout() {
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
+  }
+
+  // If user signed up with email but has not completed their profile with name & phone
+  if (user?.email && (!user.phone || !user.name || user.name === 'Customer' || user.name === 'Valued Customer')) {
+    return <Redirect href={'/complete-profile' as any} />;
   }
 
   return (

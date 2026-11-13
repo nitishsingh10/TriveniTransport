@@ -63,17 +63,16 @@ export default function BookingInvoiceScreen() {
     );
   }
 
-  const totalAmount = booking?.finalAmount || booking?.baseQuoteAmount || 12500;
-  const advancePaid = Math.round(totalAmount * 0.2);
-  const balanceDue = totalAmount - advancePaid;
+  const totalAmount = booking?.finalAmount || booking?.baseQuoteAmount || 0;
+  const isCompleted = booking?.status === 'COMPLETED';
   const scheduledDateStr = booking?.scheduledDate
     ? new Date(booking.scheduledDate).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
       })
-    : 'Recent Date';
-  const invoiceNum = booking ? `INV-${booking.id.slice(0, 8).toUpperCase()}` : 'INV-2024-8842';
+    : 'Scheduled Date';
+  const invoiceNum = booking ? `INV-${booking.id.slice(0, 8).toUpperCase()}` : 'INV-PROVISIONAL';
 
   return (
     <ScrollView
@@ -98,11 +97,13 @@ export default function BookingInvoiceScreen() {
           <View>
             <Text style={styles.brandTitle}>TRIVENI TRANSPORTS</Text>
             <Text style={styles.brandSub}>LOGISTICS & RELOCATION SERVICES</Text>
-            <Text style={styles.gstText}>GSTIN: 29AABCT1234F1Z5</Text>
+            <Text style={styles.gstText}>MUMBAI & THANE HEADQUARTERS</Text>
           </View>
-          <View style={styles.paidBadge}>
-            <CheckCircle2 size={12} color={Colors.success} />
-            <Text style={styles.paidText}>ADVANCE PAID</Text>
+          <View style={isCompleted ? styles.paidBadge : styles.codBadge}>
+            <CheckCircle2 size={12} color={isCompleted ? Colors.success : Colors.navy} />
+            <Text style={isCompleted ? styles.paidText : styles.codBadgeText}>
+              {isCompleted ? 'PAID IN FULL' : 'CASH ON DELIVERY'}
+            </Text>
           </View>
         </View>
 
@@ -124,7 +125,7 @@ export default function BookingInvoiceScreen() {
           </View>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>PAYMENT MODE</Text>
-            <Text style={styles.metaVal}>UPI / Net Banking</Text>
+            <Text style={styles.metaVal}>Cash on Delivery (COD)</Text>
           </View>
         </View>
 
@@ -152,12 +153,12 @@ export default function BookingInvoiceScreen() {
             <Text style={styles.lineDesc}>
               Dedicated Transport ({booking?.vehicle?.type || booking?.configurationType || 'Standard Truck'})
             </Text>
-            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.4).toLocaleString('en-IN')}.00</Text>
+            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.45).toLocaleString('en-IN')}.00</Text>
           </View>
 
           <View style={styles.lineRow}>
             <Text style={styles.lineDesc}>Household Goods Handling & Floor Service</Text>
-            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.4).toLocaleString('en-IN')}.00</Text>
+            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.35).toLocaleString('en-IN')}.00</Text>
           </View>
 
           <View style={styles.lineRow}>
@@ -176,16 +177,18 @@ export default function BookingInvoiceScreen() {
         {/* Totals */}
         <View style={styles.summaryTotals}>
           <View style={styles.totalLine}>
-            <Text style={styles.totalLabel}>Gross Total (Incl. GST)</Text>
+            <Text style={styles.totalLabel}>Gross Total (All Inclusive)</Text>
             <Text style={styles.totalAmount}>₹{totalAmount.toLocaleString('en-IN')}.00</Text>
           </View>
           <View style={styles.totalLine}>
-            <Text style={styles.totalLabel}>Advance Received (20%)</Text>
-            <Text style={styles.paidAmount}>-₹{advancePaid.toLocaleString('en-IN')}.00</Text>
+            <Text style={styles.totalLabel}>Advance Required</Text>
+            <Text style={styles.paidAmount}>₹0.00 (Zero Advance)</Text>
           </View>
           <View style={[styles.totalLine, styles.dueLine]}>
-            <Text style={styles.dueLabel}>Balance Payable on Delivery</Text>
-            <Text style={styles.dueAmount}>₹10,000.00</Text>
+            <Text style={styles.dueLabel}>
+              {isCompleted ? 'Amount Paid on Delivery' : 'Payable on Safe Delivery (COD)'}
+            </Text>
+            <Text style={styles.dueAmount}>₹{totalAmount.toLocaleString('en-IN')}.00</Text>
           </View>
         </View>
 
@@ -282,6 +285,22 @@ const styles = StyleSheet.create({
   },
   paidText: {
     color: Colors.success,
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+  },
+  codBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(247, 163, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 163, 0, 0.4)',
+  },
+  codBadgeText: {
+    color: Colors.navy,
     fontSize: 9,
     fontWeight: FontWeight.bold,
   },

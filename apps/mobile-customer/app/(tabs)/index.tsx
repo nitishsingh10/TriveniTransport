@@ -272,7 +272,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.cityPill}>
           <MapPin size={11} color={Colors.marigoldDark} />
-          <Text style={styles.cityPillText}>Mumbai &amp; Thane</Text>
+          <Text style={styles.cityPillText}>Mumbai & Thane</Text>
         </View>
       </View>
 
@@ -281,8 +281,25 @@ export default function HomeScreen() {
         <View style={styles.activeMoveCard}>
           <View style={styles.activeMoveHeader}>
             <View style={styles.liveBadgeRow}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>LIVE IN TRANSIT</Text>
+              <View
+                style={[
+                  styles.liveDot,
+                  !['IN_PROGRESS', 'EN_ROUTE', 'ARRIVED'].includes(activeBooking.status) && {
+                    backgroundColor: Colors.marigold,
+                  },
+                ]}
+              />
+              <Text style={styles.liveBadgeText}>
+                {['IN_PROGRESS', 'EN_ROUTE'].includes(activeBooking.status)
+                  ? 'LIVE IN TRANSIT'
+                  : activeBooking.status === 'ARRIVED'
+                  ? 'DRIVER AT PICKUP'
+                  : activeBooking.status === 'ASSIGNED'
+                  ? 'DRIVER ASSIGNED'
+                  : activeBooking.status === 'CONFIRMED'
+                  ? 'MOVE CONFIRMED'
+                  : 'REQUEST RECEIVED'}
+              </Text>
             </View>
             <Text style={styles.activeBookingId}>#{activeBooking.id.slice(-6).toUpperCase()}</Text>
           </View>

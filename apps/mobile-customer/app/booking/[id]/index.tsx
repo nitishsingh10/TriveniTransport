@@ -312,19 +312,25 @@ export default function BookingTrackScreen() {
 
         {/* Floating Live GPS badge */}
         <View style={styles.gpsLiveBadge}>
-          <Radio size={12} color={Colors.success} />
+          <Radio size={12} color={['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status) ? Colors.success : Colors.marigoldDark} />
           <Text style={styles.gpsLiveText}>
-            GPS ACTIVE · {telemetry?.latitude ? `${telemetry.latitude.toFixed(3)}, ${telemetry.longitude.toFixed(3)}` : '12 SATELLITES'}
+            {['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status)
+              ? telemetry?.latitude
+                ? `GPS LIVE · ${telemetry.latitude.toFixed(3)}, ${telemetry.longitude.toFixed(3)}`
+                : 'GPS CONNECTING...'
+              : 'ROUTE PREVIEW'}
           </Text>
         </View>
 
-        {/* Floating Transit Speed Pill */}
-        <View style={styles.speedFloatingPill}>
-          <Truck size={12} color={Colors.marigoldDark} />
-          <Text style={styles.speedFloatingText}>
-            {telemetry?.speedKmh ? `${telemetry.speedKmh} km/h` : '36 km/h'}
-          </Text>
-        </View>
+        {/* Floating Transit Speed Pill (Only shown when active in transit) */}
+        {['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status) && (
+          <View style={styles.speedFloatingPill}>
+            <Truck size={12} color={Colors.marigoldDark} />
+            <Text style={styles.speedFloatingText}>
+              {telemetry?.speedKmh ? `${telemetry.speedKmh} km/h` : 'In Transit'}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Booking Overview Card (Pure White Card) */}

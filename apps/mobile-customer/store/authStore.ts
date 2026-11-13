@@ -9,12 +9,13 @@ interface AuthState {
   isAuthenticated: boolean;
   isHydrated: boolean;
   setAuth: (user: AuthUser, accessToken: string, refreshToken?: string) => Promise<void>;
+  updateUser: (partialUser: Partial<AuthUser>) => Promise<void>;
   clearAuth: () => Promise<void>;
   hydrateAuth: () => Promise<boolean>;
   setHydrated: (hydrated?: boolean) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
@@ -28,6 +29,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.warn('Error persisting customer session:', e);
     }
     set({ user, accessToken, isAuthenticated: true, isHydrated: true });
+  },
+
+  updateUser: async (partialUser) => {
+    try {
+      const current = get().user;
+      if (!current) return;
+      const merged = { ...current, ...partialUser };
+      await tokenStorage.setUser(merged);
+      set({ user: merged });
+    } catch (e) {
+      console.warn('Error updating user session:', e);
+    }
   },
 
   clearAuth: async () => {
