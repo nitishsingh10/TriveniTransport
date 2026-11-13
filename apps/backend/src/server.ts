@@ -28,6 +28,16 @@ import { prisma } from './config/prisma';
 
 async function bootstrap() {
   const env = getEnv();
+
+  // Eagerly connect Redis and Prisma on startup so first requests are instant
+  getRedis();
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connected');
+  } catch (err: any) {
+    console.error('⚠️ Database connection warning on boot:', err.message);
+  }
+
   const app = express();
   const httpServer = createServer(app);
 
