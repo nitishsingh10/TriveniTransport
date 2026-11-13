@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   LogOut,
   ChevronDown,
+  MapPin,
   User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
@@ -21,13 +22,18 @@ export default function Navbar() {
   const { isLoggedIn, role, user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [locDropdownOpen, setLocDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const locDropdownRef = useRef<HTMLLIElement>(null);
 
-  // Close dropdown on click outside
+  // Close dropdowns on click outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setUserDropdownOpen(false);
+      }
+      if (locDropdownRef.current && !locDropdownRef.current.contains(e.target as Node)) {
+        setLocDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -61,6 +67,7 @@ export default function Navbar() {
   const closeMenu = () => {
     setMobileOpen(false);
     setUserDropdownOpen(false);
+    setLocDropdownOpen(false);
   };
 
   const handleLogout = async () => {
@@ -156,12 +163,52 @@ export default function Navbar() {
             <li>
               <Link href="/services" onClick={closeMenu}>Services</Link>
             </li>
-            <li>
-              <Link href="/packers-and-movers-mumbai" onClick={closeMenu}>Mumbai</Link>
+
+            {/* Locations dropdown — desktop hover / mobile toggle */}
+            <li
+              className={styles.locDropdownWrapper}
+              ref={locDropdownRef}
+              onMouseEnter={() => setLocDropdownOpen(true)}
+              onMouseLeave={() => setLocDropdownOpen(false)}
+            >
+              <button
+                type="button"
+                className={styles.locTrigger}
+                onClick={() => setLocDropdownOpen(!locDropdownOpen)}
+                aria-expanded={locDropdownOpen}
+              >
+                <MapPin size={14} />
+                <span>Locations</span>
+                <ChevronDown size={13} className={`${styles.locChevron} ${locDropdownOpen ? styles.locChevronOpen : ''}`} />
+              </button>
+              {locDropdownOpen && (
+                <div className={styles.locDropdown}>
+                  <Link
+                    href="/packers-and-movers-thane"
+                    className={styles.locItem}
+                    onClick={closeMenu}
+                  >
+                    <MapPin size={14} />
+                    <div>
+                      <div className={styles.locItemTitle}>Thane</div>
+                      <div className={styles.locItemSub}>Ghodbunder Rd, GB Road, Majiwada</div>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/packers-and-movers-mumbai"
+                    className={styles.locItem}
+                    onClick={closeMenu}
+                  >
+                    <MapPin size={14} />
+                    <div>
+                      <div className={styles.locItemTitle}>Mumbai</div>
+                      <div className={styles.locItemSub}>Andheri, Bandra, Powai, South Mumbai</div>
+                    </div>
+                  </Link>
+                </div>
+              )}
             </li>
-            <li>
-              <Link href="/packers-and-movers-thane" onClick={closeMenu}>Thane</Link>
-            </li>
+
             <li>
               <Link href="/quote" onClick={closeMenu}>Get Quote</Link>
             </li>

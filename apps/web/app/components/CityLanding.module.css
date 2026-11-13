@@ -252,3 +252,31 @@
   line-height: 1.65;
 }
 
+
+/* ── Breadcrumb ───────────────────────────────────────────────── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 10px var(--space-4) 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a {
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.breadcrumb span {
+  color: var(--accent);
+  font-weight: 600;
+}

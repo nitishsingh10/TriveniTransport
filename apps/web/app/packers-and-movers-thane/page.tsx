@@ -100,6 +100,15 @@ const thaneSchema = {
 };
 
 export default function ThaneLandingPage() {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.trivenitransport.online' },
+      { '@type': 'ListItem', position: 2, name: 'Packers & Movers Thane', item: 'https://www.trivenitransport.online/packers-and-movers-thane' },
+    ],
+  };
+
   return (
     <>
       <Navbar />
@@ -107,7 +116,17 @@ export default function ThaneLandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(thaneSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <main className={styles.page}>
+        {/* Breadcrumb */}
+        <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+          <Link href="/">Home</Link>
+          <span aria-hidden="true">›</span>
+          <span>Packers &amp; Movers Thane</span>
+        </nav>
         {/* Hero */}
         <section className={styles.hero}>
           <div className={styles.heroGlow} aria-hidden="true" />
