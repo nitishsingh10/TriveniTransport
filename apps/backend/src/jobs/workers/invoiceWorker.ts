@@ -22,9 +22,11 @@ const getS3Client = () => {
 
 const s3 = getS3Client();
 
-export const invoiceWorker = new Worker('invoice-generation', async job => {
-  const { bookingId } = job.data;
-  console.log(`[Job] Generating invoice for booking ${bookingId}`);
+export const invoiceWorker = new Worker(
+  'invoice-generation',
+  async (job) => {
+    const { bookingId } = job.data;
+    console.log(`[Job] Generating invoice for booking ${bookingId}`);
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },

@@ -180,13 +180,14 @@ export default function BookingTrackScreen() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; }
       html, body, #map {
         width: 100%;
         height: 100%;
+        min-height: 100%;
         margin: 0;
         padding: 0;
         background: #091524;
@@ -200,58 +201,72 @@ export default function BookingTrackScreen() {
   <body>
     <div id="map"></div>
     <script>
-      var pickup = [${pickupCoords.lat}, ${pickupCoords.lng}];
-      var drop = [${dropCoords.lat}, ${dropCoords.lng}];
-      var truck = [${truckCoords.lat}, ${truckCoords.lng}];
+      function init() {
+        if (typeof L === 'undefined') return;
+        var pickup = [${pickupCoords.lat}, ${pickupCoords.lng}];
+        var drop = [${dropCoords.lat}, ${dropCoords.lng}];
+        var truck = [${truckCoords.lat}, ${truckCoords.lng}];
 
-      var map = L.map('map', {
-        zoomControl: false,
-        attributionControl: false,
-        dragging: true,
-        touchZoom: true
-      }).setView(truck, 12);
+        var map = L.map('map', {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: true,
+          touchZoom: true
+        }).setView(truck, 12);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd'
-      }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd'
+        }).addTo(map);
 
-      // Route dashed line
-      var polyline = L.polyline([pickup, truck, drop], {
-        color: '#F7A300',
-        weight: 3.5,
-        opacity: 0.9,
-        dashArray: '6, 8'
-      }).addTo(map);
+        setTimeout(function() { map.invalidateSize(); }, 250);
+        setTimeout(function() { map.invalidateSize(); }, 700);
 
-      // Pickup pin (Gold)
-      L.circleMarker(pickup, {
-        radius: 6,
-        fillColor: '#F7A300',
-        color: '#FFFFFF',
-        weight: 2,
-        fillOpacity: 1
-      }).addTo(map);
+        // Route dashed line
+        var polyline = L.polyline([pickup, truck, drop], {
+          color: '#F7A300',
+          weight: 3.5,
+          opacity: 0.9,
+          dashArray: '6, 8'
+        }).addTo(map);
 
-      // Drop pin (Cyan)
-      L.circleMarker(drop, {
-        radius: 6,
-        fillColor: '#0D1F37',
-        color: '#38BDF8',
-        weight: 2.5,
-        fillOpacity: 1
-      }).addTo(map);
+        // Pickup pin (Gold)
+        L.circleMarker(pickup, {
+          radius: 6,
+          fillColor: '#F7A300',
+          color: '#FFFFFF',
+          weight: 2,
+          fillOpacity: 1
+        }).addTo(map);
 
-      // Moving Truck Marker
-      var truckIcon = L.divIcon({
-        className: 'custom-truck',
-        html: '<div style="width:28px;height:28px;border-radius:14px;background:#F7A300;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px #F7A300;border:2px solid #FFFFFF;"><span style="font-size:13px;line-height:28px;text-align:center;">🚚</span></div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
-      L.marker(truck, { icon: truckIcon }).addTo(map);
+        // Drop pin (Cyan)
+        L.circleMarker(drop, {
+          radius: 6,
+          fillColor: '#0D1F37',
+          color: '#38BDF8',
+          weight: 2.5,
+          fillOpacity: 1
+        }).addTo(map);
 
-      map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+        // Moving Truck Marker
+        var truckIcon = L.divIcon({
+          className: 'custom-truck',
+          html: '<div style="width:28px;height:28px;border-radius:14px;background:#F7A300;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px #F7A300;border:2px solid #FFFFFF;"><span style="font-size:13px;line-height:28px;text-align:center;">🚚</span></div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+        L.marker(truck, { icon: truckIcon }).addTo(map);
+
+        try {
+          map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+        } catch(e) {}
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
     </script>
   </body>
 </html>`;
@@ -278,7 +293,7 @@ export default function BookingTrackScreen() {
           />
         ) : (
           <WebView
-            source={{ html: liveMapHtml }}
+            source={{ html: liveMapHtml, baseUrl: 'https://cdnjs.cloudflare.com' }}
             style={{
               width: '100%',
               height: 200,
@@ -287,6 +302,9 @@ export default function BookingTrackScreen() {
             javaScriptEnabled={true}
             domStorageEnabled={true}
             originWhitelist={['*']}
+            mixedContentMode="always"
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
             scrollEnabled={false}
             bounces={false}
           />

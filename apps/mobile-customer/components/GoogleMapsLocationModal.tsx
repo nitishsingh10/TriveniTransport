@@ -322,13 +322,14 @@ export function GoogleMapsLocationModal({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       html, body, #map {
         width: 100%;
         height: 100%;
+        min-height: 100%;
         margin: 0;
         padding: 0;
         background: #091524;
@@ -359,48 +360,72 @@ export function GoogleMapsLocationModal({
         } catch (e) {}
       }
 
-      var map = L.map('map', {
-        zoomControl: false,
-        attributionControl: false,
-        inertia: true,
-        inertiaDeceleration: 3000
-      }).setView([${startLat}, ${startLng}], 15);
-      window.map = map;
-
-      // CartoDB Dark Matter luxury midnight tiles (already dark styled, no invert distortion)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd'
-      }).addTo(map);
-
-      map.whenReady(function() {
-        postToApp({ type: 'MAP_READY' });
-      });
-
-      map.on('movestart', function() {
-        postToApp({ type: 'MAP_DRAGGING' });
-      });
-
-      map.on('moveend', function() {
-        var c = map.getCenter();
-        postToApp({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng });
-      });
-
-      map.on('click', function(e) {
-        map.flyTo(e.latlng, map.getZoom(), { duration: 0.6 });
-      });
-
-      window.flyToSpot = function(lat, lng) {
-        if (window.map) {
-          window.map.flyTo([lat, lng], 16, { duration: 1.0 });
-        }
+      window.onerror = function(msg, url, line) {
+        postToApp({ type: 'MAP_ERROR', error: msg + ' at ' + line });
       };
 
-      window.addEventListener('message', function(ev) {
-        if (ev.data && ev.data.type === 'FLY_TO') {
-          window.flyToSpot(ev.data.lat, ev.data.lng);
+      function initMap() {
+        if (typeof L === 'undefined') {
+          postToApp({ type: 'MAP_ERROR', error: 'Leaflet failed to load from CDN' });
+          return;
         }
-      });
+
+        var map = L.map('map', {
+          zoomControl: false,
+          attributionControl: false,
+          inertia: true,
+          inertiaDeceleration: 3000
+        }).setView([${startLat}, ${startLng}], 15);
+        window.map = map;
+
+        // CartoDB Dark Matter luxury midnight tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd'
+        }).addTo(map);
+
+        setTimeout(function() {
+          if (window.map) window.map.invalidateSize();
+        }, 250);
+        setTimeout(function() {
+          if (window.map) window.map.invalidateSize();
+        }, 700);
+
+        map.whenReady(function() {
+          postToApp({ type: 'MAP_READY' });
+        });
+
+        map.on('movestart', function() {
+          postToApp({ type: 'MAP_DRAGGING' });
+        });
+
+        map.on('moveend', function() {
+          var c = map.getCenter();
+          postToApp({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng });
+        });
+
+        map.on('click', function(e) {
+          map.flyTo(e.latlng, map.getZoom(), { duration: 0.6 });
+        });
+
+        window.flyToSpot = function(lat, lng) {
+          if (window.map) {
+            window.map.flyTo([lat, lng], 16, { duration: 1.0 });
+          }
+        };
+
+        window.addEventListener('message', function(ev) {
+          if (ev.data && ev.data.type === 'FLY_TO') {
+            window.flyToSpot(ev.data.lat, ev.data.lng);
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMap);
+      } else {
+        initMap();
+      }
     </script>
   </body>
 </html>`;
@@ -431,12 +456,15 @@ export function GoogleMapsLocationModal({
           ) : (
             <WebView
               ref={webViewRef}
-              source={{ html: mapHtml }}
+              source={{ html: mapHtml, baseUrl: 'https://cdnjs.cloudflare.com' }}
               onMessage={handleNativeMessage}
-              style={styles.mapViewport}
+              style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#091524' }}
               javaScriptEnabled={true}
               domStorageEnabled={true}
               originWhitelist={['*']}
+              mixedContentMode="always"
+              allowFileAccess={true}
+              allowUniversalAccessFromFileURLs={true}
               scrollEnabled={false}
               bounces={false}
               overScrollMode="never"

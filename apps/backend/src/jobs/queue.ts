@@ -7,6 +7,10 @@ const { REDIS_URL } = getEnv();
 // Re-use connection for queues to prevent connection leaks
 export const redisConnection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 
+redisConnection.on('error', (err) => {
+  console.error('❌ BullMQ Redis connection error:', err.message);
+});
+
 // Define Queues
 export const notificationsQueue = new Queue('notifications', { connection: redisConnection });
 export const invoiceQueue = new Queue('invoice-generation', { connection: redisConnection });

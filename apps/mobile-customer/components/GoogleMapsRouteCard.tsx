@@ -51,13 +51,14 @@ export function GoogleMapsRouteCard({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; }
       html, body, #map {
         width: 100%;
         height: 100%;
+        min-height: 100%;
         margin: 0;
         padding: 0;
         background: #091524;
@@ -71,53 +72,67 @@ export function GoogleMapsRouteCard({
   <body>
     <div id="map"></div>
     <script>
-      var pickup = [${pCoords.lat}, ${pCoords.lng}];
-      var drop = [${dCoords.lat}, ${dCoords.lng}];
+      function init() {
+        if (typeof L === 'undefined') return;
+        var pickup = [${pCoords.lat}, ${pCoords.lng}];
+        var drop = [${dCoords.lat}, ${dCoords.lng}];
 
-      var map = L.map('map', {
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false
-      }).setView(pickup, 12);
+        var map = L.map('map', {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          touchZoom: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false
+        }).setView(pickup, 12);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd'
-      }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19,
+          subdomains: 'abcd'
+        }).addTo(map);
 
-      // Dash line connecting pickup and drop
-      var polyline = L.polyline([pickup, drop], {
-        color: '#F7A300',
-        weight: 4,
-        opacity: 0.95,
-        lineCap: 'round',
-        dashArray: '6, 8'
-      }).addTo(map);
+        setTimeout(function() { map.invalidateSize(); }, 250);
+        setTimeout(function() { map.invalidateSize(); }, 700);
 
-      // Pickup Pin Marker (Marigold)
-      L.circleMarker(pickup, {
-        radius: 6.5,
-        fillColor: '#F7A300',
-        color: '#FFFFFF',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 1
-      }).addTo(map);
+        // Dash line connecting pickup and drop
+        var polyline = L.polyline([pickup, drop], {
+          color: '#F7A300',
+          weight: 4,
+          opacity: 0.95,
+          lineCap: 'round',
+          dashArray: '6, 8'
+        }).addTo(map);
 
-      // Drop Pin Marker (Deep Navy with Cyan ring)
-      L.circleMarker(drop, {
-        radius: 6.5,
-        fillColor: '#0D1F37',
-        color: '#38BDF8',
-        weight: 2.5,
-        opacity: 1,
-        fillOpacity: 1
-      }).addTo(map);
+        // Pickup Pin Marker (Marigold)
+        L.circleMarker(pickup, {
+          radius: 6.5,
+          fillColor: '#F7A300',
+          color: '#FFFFFF',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1
+        }).addTo(map);
 
-      map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+        // Drop Pin Marker (Deep Navy with Cyan ring)
+        L.circleMarker(drop, {
+          radius: 6.5,
+          fillColor: '#0D1F37',
+          color: '#38BDF8',
+          weight: 2.5,
+          opacity: 1,
+          fillOpacity: 1
+        }).addTo(map);
+
+        try {
+          map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
+        } catch(e) {}
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
     </script>
   </body>
 </html>`;
@@ -158,7 +173,7 @@ export function GoogleMapsRouteCard({
           />
         ) : (
           <WebView
-            source={{ html: routeMapHtml }}
+            source={{ html: routeMapHtml, baseUrl: 'https://cdnjs.cloudflare.com' }}
             style={{
               width: '100%',
               height: 160,
@@ -169,6 +184,9 @@ export function GoogleMapsRouteCard({
             javaScriptEnabled={true}
             domStorageEnabled={true}
             originWhitelist={['*']}
+            mixedContentMode="always"
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
             bounces={false}
           />
         )}
