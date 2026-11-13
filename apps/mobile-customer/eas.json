@@ -13,7 +13,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://trivenitransport-nymj.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://api.trivenitransport.online"
       }
     },
     "production": {
@@ -21,7 +21,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://trivenitransport-nymj.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://api.trivenitransport.online"
       }
     }
   },
