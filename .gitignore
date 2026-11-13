@@ -51,3 +51,7 @@ ios/
 
 # Prisma
 prisma/*.db
+
+# Local status / scratch notes (not for git)
+PROJECT_STATUS.txt
+project_status.txt
