@@ -25,7 +25,10 @@ const VerifyOtpSchema = z
       .string()
       .trim()
       .regex(/^\d{6}$/, 'Verification code must be exactly 6 numeric digits.'),
-    name: z.string().trim().min(2).max(150).optional(),
+    name: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(2).max(150).optional()
+    ),
     isSignup: z.boolean().optional(),
   })
   .refine((data) => !!(data.identifier || data.phone || data.email), {

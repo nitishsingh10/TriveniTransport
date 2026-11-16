@@ -246,7 +246,7 @@ export const driverAuthApi = {
         code,
         role: 'vendor',
         isSignup,
-        name,
+        ...(name?.trim() ? { name: name.trim() } : {}),
       }),
     });
 
