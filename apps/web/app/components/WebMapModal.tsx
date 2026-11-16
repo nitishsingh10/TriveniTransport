@@ -275,17 +275,19 @@ export default function WebMapModal({
 
   const isPickup = activeType === 'pickup';
 
-  // Memoize map HTML so dragging the pin NEVER reloads the iframe
+  // Memoize map HTML so dragging the pin NEVER reloads the iframe (Uses Leaflet + CartoDB midnight tiles: 0ms latency, zero API key required)
   const mapHtml = useMemo(() => {
     if (!isOpen) return '';
-    const startLat = initialMapCoords.current.lat;
-    const startLng = initialMapCoords.current.lng;
+    const startLat = initialMapCoords.current.lat || 18.5679;
+    const startLng = initialMapCoords.current.lng || 73.9143;
     return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
         <style>
           * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
           html, body, #map {
@@ -296,55 +298,74 @@ export default function WebMapModal({
             overflow: hidden;
             background: #0d1f37;
           }
+          .leaflet-control-attribution, .leaflet-control-zoom {
+            display: none !important;
+          }
         </style>
       </head>
       <body>
         <div id="map"></div>
         <script>
-          window.gm_authFailure = function() {
-            console.warn('Google Maps authentication pending — check Google Cloud billing and API activation.');
-            window.parent.postMessage({ type: 'MAP_AUTH_NOTICE' }, '*');
-          };
+          function postToParent(data) {
+            try {
+              if (window.parent && window.parent.postMessage) {
+                window.parent.postMessage(data, '*');
+              }
+            } catch (e) {}
+          }
 
-          window.initMap = function() {
-            var darkStyles = ${JSON.stringify(DARK_MAP_STYLES)};
+          function initMap() {
+            if (typeof L === 'undefined') return;
 
-            var map = new google.maps.Map(document.getElementById('map'), {
-              center: { lat: ${startLat}, lng: ${startLng} },
-              zoom: 15,
-              styles: darkStyles,
-              disableDefaultUI: true,
-              gestureHandling: 'greedy',
-              backgroundColor: '#0d1f37',
-              clickableIcons: false
+            var map = L.map('map', {
+              zoomControl: false,
+              attributionControl: false,
+              inertia: true,
+              inertiaDeceleration: 3000
+            }).setView([${startLat}, ${startLng}], 15);
+            window.map = map;
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+              maxZoom: 19,
+              subdomains: 'abcd'
+            }).addTo(map);
+
+            setTimeout(function() {
+              if (window.map) window.map.invalidateSize();
+            }, 250);
+
+            map.on('movestart', function() {
+              postToParent({ type: 'MAP_DRAGGING' });
             });
 
-            map.addListener('dragstart', function() {
-              window.parent.postMessage({ type: 'MAP_DRAGGING' }, '*');
-            });
-
-            map.addListener('idle', function() {
+            map.on('moveend', function() {
               var c = map.getCenter();
-              window.parent.postMessage({ type: 'PIN_COORDS', lat: c.lat(), lng: c.lng() }, '*');
+              postToParent({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng });
+            });
+
+            map.on('click', function(e) {
+              map.flyTo(e.latlng, map.getZoom(), { duration: 0.6 });
             });
 
             window.addEventListener('message', function(ev) {
               if (ev.data && ev.data.type === 'FLY_TO') {
-                map.panTo({ lat: ev.data.lat, lng: ev.data.lng });
-                map.setZoom(16);
+                if (window.map) {
+                  window.map.flyTo([ev.data.lat, ev.data.lng], 16, { duration: 0.8 });
+                }
               }
             });
-          };
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initMap);
+          } else {
+            initMap();
+          }
         </script>
-        <script
-          src="https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&callback=initMap&v=weekly"
-          async
-          defer
-        ></script>
       </body>
     </html>
   `;
-  }, [isOpen, GMAPS_KEY]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -82,10 +82,13 @@ export class AuthService {
         if (!admin) {
           throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this email address.' };
         }
-      } else if (role === 'customer' && isSignup) {
+      } else if (role === 'customer') {
         const customer = await prisma.customer.findUnique({ where: { email } });
-        if (customer) {
+        if (isSignup && customer) {
           throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'An account with this email already exists. Please sign in.' };
+        }
+        if (!isSignup && !customer) {
+          throw { statusCode: 404, code: 'USER_NOT_FOUND', message: 'No customer account found with this email. Please sign up first.' };
         }
       }
     } else {
@@ -116,10 +119,13 @@ export class AuthService {
         if (!admin) {
           throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this phone number.' };
         }
-      } else if (role === 'customer' && isSignup) {
+      } else if (role === 'customer') {
         const customer = await prisma.customer.findUnique({ where: { phone } });
-        if (customer) {
+        if (isSignup && customer) {
           throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'An account with this phone number already exists. Please sign in.' };
+        }
+        if (!isSignup && !customer) {
+          throw { statusCode: 404, code: 'USER_NOT_FOUND', message: 'No customer account found with this phone number. Please sign up first.' };
         }
       }
     }
@@ -231,26 +237,42 @@ export class AuthService {
     let userName: string;
 
     if (role === 'customer') {
-      if (target.type === 'email') {
-        const customer = await prisma.customer.upsert({
-          where: { email: target.value },
-          create: {
-            email: target.value,
-            name: name || 'Valued Customer',
-          },
-          update: name ? { name } : {},
-        });
-        userId = customer.id;
-        userName = customer.name;
+      if (isSignup) {
+        if (target.type === 'email') {
+          const customer = await prisma.customer.upsert({
+            where: { email: target.value },
+            create: {
+              email: target.value,
+              name: name || 'Valued Customer',
+            },
+            update: name ? { name } : {},
+          });
+          userId = customer.id;
+          userName = customer.name;
+        } else {
+          const customer = await prisma.customer.upsert({
+            where: { phone: target.value },
+            create: {
+              phone: target.value,
+              name: name || 'Valued Customer',
+            },
+            update: name ? { name } : {},
+          });
+          userId = customer.id;
+          userName = customer.name;
+        }
       } else {
-        const customer = await prisma.customer.upsert({
-          where: { phone: target.value },
-          create: {
-            phone: target.value,
-            name: name || 'Valued Customer',
-          },
-          update: name ? { name } : {},
-        });
+        const customer = target.type === 'email'
+          ? await prisma.customer.findUnique({ where: { email: target.value } })
+          : await prisma.customer.findUnique({ where: { phone: target.value } });
+
+        if (!customer) {
+          throw {
+            statusCode: 404,
+            code: 'USER_NOT_FOUND',
+            message: 'No customer account found with this ' + (target.type === 'email' ? 'email' : 'phone number') + '. Please sign up first.',
+          };
+        }
         userId = customer.id;
         userName = customer.name;
       }

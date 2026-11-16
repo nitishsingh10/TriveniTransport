@@ -290,7 +290,7 @@ export const mapsApi = {
 
 // ── Auth Service ───────────────────────────────────────────────────
 export const authApi = {
-  async requestOtp(identifier: string) {
+  async requestOtp(identifier: string, isSignup = false) {
     const isEmail = identifier.includes('@');
     return request<{ message: string; channel?: string }>('/auth/otp/request', {
       method: 'POST',
@@ -298,11 +298,12 @@ export const authApi = {
         identifier,
         ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
         role: 'customer',
+        isSignup,
       }),
     });
   },
 
-  async verifyOtp(identifier: string, code: string) {
+  async verifyOtp(identifier: string, code: string, isSignup = false, name?: string) {
     const isEmail = identifier.includes('@');
     const data = await request<{
       accessToken: string;
@@ -316,6 +317,8 @@ export const authApi = {
         ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
         code,
         role: 'customer',
+        isSignup,
+        name,
       }),
     });
 

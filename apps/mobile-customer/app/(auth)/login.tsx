@@ -19,54 +19,103 @@ import {
   Package,
   CheckCircle2,
   ArrowRight,
+  User,
+  UserPlus,
+  LogIn,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { authApi } from '@/lib/api';
 
+type AuthMode = 'login' | 'signup';
 type Method = 'phone' | 'email';
 
 export default function LoginScreen() {
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [method, setMethod] = useState<Method>('phone');
+  const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showSwitchPrompt, setShowSwitchPrompt] = useState<'to_signup' | 'to_login' | null>(null);
 
   const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
   const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
-  const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
+  const isIdentifierValid = method === 'phone' ? isPhoneValid : isEmailValid;
+  const isNameValid = authMode === 'login' || name.trim().length >= 2;
+  const canSubmit = isIdentifierValid && isNameValid;
   const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+
+  const switchAuthMode = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setErrorMsg('');
+    setShowSwitchPrompt(null);
+  };
 
   const switchMethod = (m: Method) => {
     setMethod(m);
     setIdentifier('');
     setErrorMsg('');
+    setShowSwitchPrompt(null);
   };
 
   const handleSendOtp = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      if (authMode === 'signup' && name.trim().length < 2) {
+        setErrorMsg('Please enter your full name (minimum 2 characters).');
+        return;
+      }
+      if (!isIdentifierValid) {
+        setErrorMsg(method === 'phone' ? 'Please enter a valid 10-digit mobile number.' : 'Please enter a valid email address.');
+        return;
+      }
+      return;
+    }
 
     setLoading(true);
     setErrorMsg('');
+    setShowSwitchPrompt(null);
+
+    const isSignup = authMode === 'signup';
+
     try {
-      await authApi.requestOtp(resolvedIdentifier);
-      router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
+      await authApi.requestOtp(resolvedIdentifier, isSignup);
+      router.push({
+        pathname: '/(auth)/otp',
+        params: {
+          identifier: resolvedIdentifier,
+          isSignup: isSignup ? 'true' : 'false',
+          name: isSignup ? name.trim() : '',
+        },
+      });
     } catch (e: any) {
-      console.log('Backend requestOtp failed or fallback:', e.message);
+      const msg = e.message || '';
+      console.log('Backend requestOtp failed:', msg);
+
       if (e.status === 429) {
-        setErrorMsg('Too many OTP requests. Please wait a few minutes.');
+        setErrorMsg('Too many requests. Please wait a few minutes and try again.');
         return;
       }
-      // Allow moving to OTP screen in dev mode so dev code 123456 can be used
-      router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
+
+      if (e.code === 'USER_NOT_FOUND' || msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('sign up first')) {
+        setErrorMsg(msg || 'No account found with this ' + (method === 'phone' ? 'phone number' : 'email') + '. Please sign up first.');
+        setShowSwitchPrompt('to_signup');
+        return;
+      }
+
+      if (e.code === 'ALREADY_EXISTS' || msg.toLowerCase().includes('already exists')) {
+        setErrorMsg(msg || 'An account already exists for this ' + (method === 'phone' ? 'phone number' : 'email') + '. Please sign in.');
+        setShowSwitchPrompt('to_login');
+        return;
+      }
+
+      setErrorMsg(msg || 'Unable to send verification code. Please check your connection.');
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
     <View style={styles.screen}>
-      {/* Decorative ambient background elements matching website .bgMesh */}
       <View style={styles.bgBlobNavy} />
       <View style={styles.bgBlobMarigold} />
 
@@ -99,20 +148,93 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Form Card (Matching website .glassCard) */}
+          {/* Form Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Welcome back</Text>
+            {/* Mode Switcher Tabs: Sign In vs Create Account */}
+            <View style={styles.modeTabsRow}>
+              <TouchableOpacity
+                style={[styles.modeTabBtn, authMode === 'login' && styles.modeTabBtnActive]}
+                onPress={() => switchAuthMode('login')}
+                activeOpacity={0.8}
+              >
+                <LogIn size={14} color={authMode === 'login' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.modeTabBtnText, authMode === 'login' && styles.modeTabBtnTextActive]}>
+                  Sign In
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeTabBtn, authMode === 'signup' && styles.modeTabBtnActive]}
+                onPress={() => switchAuthMode('signup')}
+                activeOpacity={0.8}
+              >
+                <UserPlus size={14} color={authMode === 'signup' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.modeTabBtnText, authMode === 'signup' && styles.modeTabBtnTextActive]}>
+                  Create Account
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.cardTitle}>
+              {authMode === 'login' ? 'Welcome Back' : 'Create an Account'}
+            </Text>
             <Text style={styles.cardSubtitle}>
-              Sign in with your mobile number or email to track moves and manage bookings.
+              {authMode === 'login'
+                ? 'Sign in with your registered mobile number or email to manage bookings and track moves.'
+                : 'Sign up with your mobile number or email to plan moves and access transparent relocation pricing.'}
             </Text>
 
+            {/* Error Message Box */}
             {!!errorMsg && (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{errorMsg}</Text>
+                {showSwitchPrompt === 'to_signup' && (
+                  <TouchableOpacity
+                    style={styles.switchPromptBtn}
+                    onPress={() => switchAuthMode('signup')}
+                    activeOpacity={0.8}
+                  >
+                    <UserPlus size={13} color={Colors.navy} />
+                    <Text style={styles.switchPromptBtnText}>Create Account Now</Text>
+                  </TouchableOpacity>
+                )}
+                {showSwitchPrompt === 'to_login' && (
+                  <TouchableOpacity
+                    style={styles.switchPromptBtn}
+                    onPress={() => switchAuthMode('login')}
+                    activeOpacity={0.8}
+                  >
+                    <LogIn size={13} color={Colors.navy} />
+                    <Text style={styles.switchPromptBtnText}>Sign In to Existing Account</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
-            {/* Method Toggle */}
+            {/* In Signup Mode: Name Input */}
+            {authMode === 'signup' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.countryCodeBox}>
+                    <User size={16} color={Colors.navy} />
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Rahul Sharma"
+                    placeholderTextColor={Colors.inputPlaceholder}
+                    value={name}
+                    onChangeText={(t) => {
+                      setName(t);
+                      setErrorMsg('');
+                    }}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Method Toggle: Mobile vs Email */}
             <View style={styles.methodToggle}>
               <TouchableOpacity
                 style={[styles.methodTab, method === 'phone' && styles.methodTabActive]}
@@ -121,7 +243,7 @@ export default function LoginScreen() {
               >
                 <Phone size={13} color={method === 'phone' ? Colors.navy : Colors.textMuted} />
                 <Text style={[styles.methodTabText, method === 'phone' && styles.methodTabTextActive]}>
-                  Mobile
+                  Mobile Number
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -131,27 +253,30 @@ export default function LoginScreen() {
               >
                 <Mail size={13} color={method === 'email' ? Colors.navy : Colors.textMuted} />
                 <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
-                  Email
+                  Email Address
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Input */}
+            {/* Input: Phone or Email */}
             {method === 'phone' ? (
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
+                <Text style={styles.inputLabel}>Mobile Number</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.countryCodeBox}>
                     <Text style={styles.countryCode}>+91</Text>
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="99999 99999"
+                    placeholder="98765 43210"
                     placeholderTextColor={Colors.inputPlaceholder}
                     keyboardType="phone-pad"
                     maxLength={10}
                     value={identifier}
-                    onChangeText={setIdentifier}
+                    onChangeText={(t) => {
+                      setIdentifier(t.replace(/\D/g, '').slice(0, 10));
+                      setErrorMsg('');
+                    }}
                     returnKeyType="done"
                     onSubmitEditing={handleSendOtp}
                   />
@@ -170,7 +295,10 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     value={identifier}
-                    onChangeText={setIdentifier}
+                    onChangeText={(t) => {
+                      setIdentifier(t);
+                      setErrorMsg('');
+                    }}
                     returnKeyType="done"
                     onSubmitEditing={handleSendOtp}
                   />
@@ -179,7 +307,7 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* Submit Button (Matching website .submitBtn: Deep Navy with white text) */}
+            {/* Submit Button */}
             <TouchableOpacity
               style={[
                 styles.submitBtn,
@@ -193,10 +321,31 @@ export default function LoginScreen() {
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <View style={styles.btnContent}>
-                  <Text style={styles.submitBtnText}>Send OTP</Text>
+                  <Text style={styles.submitBtnText}>
+                    {authMode === 'login' ? 'Send OTP & Sign In' : 'Send Verification OTP'}
+                  </Text>
                   <ArrowRight size={16} color={Colors.white} strokeWidth={2.4} />
                 </View>
               )}
+            </TouchableOpacity>
+
+            {/* Alternate Mode Link */}
+            <TouchableOpacity
+              style={styles.modeSwitchLink}
+              onPress={() => switchAuthMode(authMode === 'login' ? 'signup' : 'login')}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.modeSwitchText}>
+                {authMode === 'login' ? (
+                  <>
+                    New to Triveni Transports? <Text style={styles.modeSwitchHighlight}>Create an Account</Text>
+                  </>
+                ) : (
+                  <>
+                    Already have an account? <Text style={styles.modeSwitchHighlight}>Sign In</Text>
+                  </>
+                )}
+              </Text>
             </TouchableOpacity>
 
             <Text style={styles.disclaimer}>
@@ -235,7 +384,6 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
 
-  // Background Ambient Blobs
   bgBlobNavy: {
     position: 'absolute',
     top: -60,
@@ -256,33 +404,31 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xl,
+    paddingTop: 54,
+    paddingBottom: Spacing.xxl,
     gap: Spacing.lg,
   },
 
-  // Brand
   brand: {
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
   },
   logoCard: {
-    width: 72,
-    height: 72,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: Colors.surface,
+    width: 68,
+    height: 68,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    justifyContent: 'center',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
-    padding: Spacing.xs,
+    justifyContent: 'center',
+    padding: 6,
     ...Shadow.sm,
   },
   logoImage: {
-    width: 54,
-    height: 54,
+    width: '100%',
+    height: '100%',
   },
   brandTitleBlock: {
     alignItems: 'center',
@@ -322,7 +468,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Card
   card: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
@@ -332,6 +477,39 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.md,
   },
+
+  modeTabsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 4,
+  },
+  modeTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  modeTabBtnActive: {
+    backgroundColor: '#FFFFFF',
+    ...Shadow.sm,
+  },
+  modeTabBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textMuted,
+  },
+  modeTabBtnTextActive: {
+    color: Colors.navy,
+    fontWeight: FontWeight.bold,
+  },
+
   cardTitle: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
@@ -345,12 +523,11 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
 
-  // Method Toggle
   methodToggle: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 3,
     gap: 4,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -361,27 +538,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 7,
   },
   methodTabActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 163, 0, 0.3)',
+    ...Shadow.sm,
   },
   methodTabText: {
-    fontSize: FontSize.xs,
+    fontSize: FontSize.xxs,
     fontWeight: FontWeight.semibold,
     color: Colors.textMuted,
   },
   methodTabTextActive: {
     color: Colors.navy,
+    fontWeight: FontWeight.bold,
   },
 
-  // Input
   inputGroup: {
     gap: 6,
     marginTop: 2,
@@ -436,7 +611,6 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
 
-  // Submit Button
   submitBtn: {
     backgroundColor: Colors.navy,
     borderRadius: BorderRadius.lg,
@@ -461,6 +635,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
+  modeSwitchLink: {
+    alignItems: 'center',
+    paddingVertical: 4,
+    marginTop: 2,
+  },
+  modeSwitchText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+  },
+  modeSwitchHighlight: {
+    color: Colors.navy,
+    fontWeight: FontWeight.bold,
+    textDecorationLine: 'underline',
+  },
+
   disclaimer: {
     fontSize: 11,
     color: Colors.textMuted,
@@ -473,7 +662,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
 
-  // Trust Badges
   trustRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -504,10 +692,29 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    gap: 8,
   },
   errorText: {
     color: '#DC2626',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
+    lineHeight: 18,
+  },
+  switchPromptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.marigold,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.md,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  switchPromptBtnText: {
+    color: Colors.navyDark,
+    fontSize: FontSize.xxs,
+    fontWeight: FontWeight.bold,
   },
 });

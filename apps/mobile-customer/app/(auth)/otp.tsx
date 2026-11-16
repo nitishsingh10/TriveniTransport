@@ -23,10 +23,16 @@ import { authApi } from '@/lib/api';
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
-  const { identifier, phone: legacyPhone } = useLocalSearchParams<{ identifier: string; phone: string }>();
+  const { identifier, phone: legacyPhone, isSignup, name } = useLocalSearchParams<{
+    identifier: string;
+    phone?: string;
+    isSignup?: string;
+    name?: string;
+  }>();
   // Support legacy `phone` param for backward compatibility
   const resolvedIdentifier = identifier || legacyPhone || '';
   const isEmail = resolvedIdentifier.includes('@');
+  const isSignupBool = isSignup === 'true';
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
@@ -66,9 +72,9 @@ export default function OtpScreen() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp);
+      const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp, isSignupBool, name);
       const userPhone = res.user?.phone ? (res.user.phone.startsWith('+91') ? res.user.phone : `+91${res.user.phone}`) : undefined;
-      const userName = res.user?.name || (isEmail ? '' : 'Customer');
+      const userName = res.user?.name || name || (isEmail ? '' : 'Customer');
       
       await setAuth(
         {
@@ -91,29 +97,8 @@ export default function OtpScreen() {
       }
     } catch (e: any) {
       console.log('Backend verifyOtp error:', e.message);
-      // Fallback for dev OTP
-      if (__DEV__ && finalOtp === '123456') {
-        const devPhone = isEmail ? undefined : `+91${resolvedIdentifier}`;
-        await setAuth(
-          {
-            id: 'cust_seed',
-            role: 'customer',
-            name: isEmail ? '' : 'Customer',
-            phone: devPhone,
-            email: isEmail ? resolvedIdentifier : undefined,
-          },
-          'dev_customer_token'
-        );
-        setLoading(false);
-        if (isEmail) {
-          router.replace('/complete-profile' as any);
-        } else {
-          router.replace('/(tabs)');
-        }
-      } else {
-        setErrorMsg(e.message || 'Invalid verification code. Please check and try again.');
-        setLoading(false);
-      }
+      setErrorMsg(e.message || 'Invalid verification code. Please check and try again.');
+      setLoading(false);
     }
   };
 
@@ -123,8 +108,10 @@ export default function OtpScreen() {
     setResendTimer(30);
     setErrorMsg('');
     try {
-      await authApi.requestOtp(resolvedIdentifier || '9820098200');
-    } catch {}
+      await authApi.requestOtp(resolvedIdentifier || '9820098200', isSignupBool);
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Could not resend code. Please try again.');
+    }
     inputRefs.current[0]?.focus();
   };
 
