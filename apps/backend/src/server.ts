@@ -120,6 +120,7 @@ async function bootstrap() {
   router.use('/bookings', bookingRoutes);
   router.use('/vendor', vendorRoutes);
   router.use('/customer', customerRoutes);
+  router.use('/customers', customerRoutes);
   router.use('/revisions', revisionRoutes);
   router.use('/admin', adminRoutes);
   router.use('/payments', paymentRoutes);

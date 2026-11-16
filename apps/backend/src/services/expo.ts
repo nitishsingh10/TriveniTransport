@@ -9,8 +9,8 @@ export class PushNotificationService {
    */
   static async sendPush(token: string, title: string, body: string, data: any = {}) {
     if (!Expo.isExpoPushToken(token)) {
-      console.error(`Push token ${token} is not a valid Expo push token`);
-      return;
+      console.warn('Skipping push notification because the Expo push token is invalid.');
+      return [];
     }
 
     const messages = [{
@@ -30,8 +30,8 @@ export class PushNotificationService {
       try {
         const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
         tickets.push(...ticketChunk);
-      } catch (error) {
-        console.error('Error sending push chunk:', error);
+      } catch {
+        console.error('Expo push delivery failed.');
       }
     }
     

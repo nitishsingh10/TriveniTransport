@@ -1,13 +1,19 @@
 import axios from 'axios';
 import { getEnv } from '../config/env';
 
+function isPlaceholderCredential(value?: string): boolean {
+  return !value || value.startsWith('your_') || value.startsWith('mock_');
+}
+
 export async function sendSmsOtp(phone: string, otp: string): Promise<void> {
   const { MSG91_API_KEY, MSG91_SENDER_ID } = getEnv();
-  
-  const isMockMode = !MSG91_API_KEY || MSG91_API_KEY.startsWith('your_') || MSG91_API_KEY.startsWith('mock_');
-  if (isMockMode) {
-    console.log(`[MOCK MSG91] Generated OTP ${otp} for ${phone}`);
-    return;
+
+  if (isPlaceholderCredential(MSG91_API_KEY)) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[MOCK MSG91] Generated OTP ${otp} for ${phone}`);
+      return;
+    }
+    throw new Error('SMS verification is unavailable. Please try again later.');
   }
 
   const cleanPhone = phone.replace(/\D/g, '');
@@ -28,23 +34,25 @@ export async function sendSmsOtp(phone: string, otp: string): Promise<void> {
       }
     );
     if (res.data?.type === 'error') {
-      console.warn(`[MSG91 Gateway Warning] ${res.data.message}. Pre-production OTP: ${otp}`);
-    } else {
-      console.log(`✅ MSG91 OTP sent to ${mobile}`);
+      throw new Error('SMS provider rejected the verification request.');
     }
-  } catch (error: any) {
-    console.error('❌ MSG91 OTP Error:', error.response?.data || error.message);
-    // Log error but do not crash the request so pre-production test flows can proceed
+  } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    console.error('MSG91 OTP delivery failed.', status ? `HTTP ${status}` : '');
+    throw new Error('Failed to send verification SMS. Please try again later.');
   }
 }
 
 export async function sendSmsMessage(phone: string, message: string): Promise<void> {
   const { MSG91_API_KEY, MSG91_SENDER_ID } = getEnv();
-  const isMockMode = !MSG91_API_KEY || MSG91_API_KEY.startsWith('your_') || MSG91_API_KEY.startsWith('mock_');
+  const isMockMode = isPlaceholderCredential(MSG91_API_KEY);
 
   if (isMockMode) {
-    console.log(`[MOCK MSG91 SMS] To: ${phone} | Text: ${message}`);
-    return;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MOCK MSG91 SMS] Message skipped in development.');
+      return;
+    }
+    throw new Error('SMS delivery is unavailable. Please try again later.');
   }
 
   try {
@@ -62,19 +70,23 @@ export async function sendSmsMessage(phone: string, message: string): Promise<vo
         },
       }
     );
-    console.log(`✅ MSG91 SMS sent to ${phone}`);
-  } catch (error: any) {
-    console.error('❌ MSG91 SMS Send Error:', error.response?.data || error.message);
+  } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    console.error('MSG91 SMS delivery failed.', status ? `HTTP ${status}` : '');
+    throw new Error('Failed to send SMS. Please try again later.');
   }
 }
 
 export async function sendWhatsAppMessage(phone: string, message: string): Promise<void> {
   const { MSG91_API_KEY, MSG91_WHATSAPP_NUMBER } = getEnv();
-  const isMockMode = !MSG91_API_KEY || MSG91_API_KEY.startsWith('your_') || MSG91_API_KEY.startsWith('mock_');
+  const isMockMode = isPlaceholderCredential(MSG91_API_KEY);
 
   if (isMockMode) {
-    console.log(`[MOCK MSG91 WhatsApp] To: ${phone} | Text: ${message}`);
-    return;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MOCK MSG91 WhatsApp] Message skipped in development.');
+      return;
+    }
+    throw new Error('WhatsApp delivery is unavailable. Please try again later.');
   }
 
   try {
@@ -96,8 +108,9 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
         },
       }
     );
-    console.log(`✅ MSG91 WhatsApp sent to ${phone}`);
-  } catch (error: any) {
-    console.error('❌ MSG91 WhatsApp Send Error:', error.response?.data || error.message);
+  } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    console.error('MSG91 WhatsApp delivery failed.', status ? `HTTP ${status}` : '');
+    throw new Error('Failed to send WhatsApp message. Please try again later.');
   }
 }

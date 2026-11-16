@@ -8,7 +8,7 @@ import { prisma } from '../../config/prisma';
 
 export const notificationWorker = new Worker('notifications', async job => {
   const { type, userId, userRole, payload, bookingId } = job.data;
-  console.log(`[Job] Processing notification ${type} for ${userRole} ${userId}`);
+  console.log(`[Job] Processing ${type} notification for ${userRole}`);
 
   // Fetch user preferences
   let user: any;
@@ -38,9 +38,9 @@ export const notificationWorker = new Worker('notifications', async job => {
       // @ts-ignore
       const body = tpl.body({ ...payload, name: user.name });
       
-      await PushNotificationService.sendPush(pushToken, title, body, payload);
-      sentPush = true;
-      console.log(`[Job] Push sent to ${pushToken}`);
+      const tickets = await PushNotificationService.sendPush(pushToken, title, body, payload);
+      sentPush = tickets.some(ticket => ticket.status === 'ok');
+      if (sentPush) console.log('[Job] Push notification accepted by Expo.');
     }
 
     // 2. WHATSAPP (Primary SMS alternative)

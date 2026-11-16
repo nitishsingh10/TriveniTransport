@@ -4,7 +4,7 @@ import { getEnv } from '../config/env';
 export class EmailService {
   private static getResendClient(): Resend | null {
     const { RESEND_API_KEY } = getEnv();
-    if (!RESEND_API_KEY || RESEND_API_KEY.startsWith('your_')) {
+    if (!RESEND_API_KEY || RESEND_API_KEY.startsWith('your_') || RESEND_API_KEY.startsWith('mock_')) {
       return null;
     }
     return new Resend(RESEND_API_KEY);
@@ -16,56 +16,42 @@ export class EmailService {
     const { EMAIL_FROM } = getEnv();
 
     if (!resend) {
-      console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject}`);
-      return { id: 'mock-email-id' };
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[MOCK EMAIL] Message skipped in development.');
+        return { id: 'mock-email-id' };
+      }
+      throw new Error('Email delivery is unavailable. Please try again later.');
     }
 
     const defaultFrom = EMAIL_FROM || 'bookings@trivenipackers.com';
 
     try {
-      const response = await resend.emails.send({
-        from: defaultFrom,
+      const response = await resend.emails.send({ from: defaultFrom, to, subject, html, attachments });
+      if (!response.error) return response;
+    } catch {
+      // Try the fallback sender once when the configured sender is unavailable.
+    }
+
+    console.warn('Resend primary email delivery failed; trying the fallback sender.');
+    try {
+      const fallbackResponse = await resend.emails.send({
+        from: 'Triveni Transports <onboarding@resend.dev>',
         to,
         subject,
         html,
         attachments,
       });
-      console.log('Resend email response:', JSON.stringify(response));
-      if (response.error) {
-        console.warn(`Resend initial send failed (${response.error.message}). Retrying via onboarding@resend.dev...`);
-        // If custom domain is not yet verified in Resend, fallback to verified sandbox sender
-        const fallbackResponse = await resend.emails.send({
-          from: 'Triveni Transports <onboarding@resend.dev>',
-          to,
-          subject,
-          html,
-          attachments,
-        });
-        return fallbackResponse;
-      }
-
-      return response;
-    } catch (error: any) {
-      console.warn('Resend send exception, attempting fallback sender:', error?.message);
-      try {
-        const fallbackResponse = await resend.emails.send({
-          from: 'Triveni Transports <onboarding@resend.dev>',
-          to,
-          subject,
-          html,
-          attachments,
-        });
-        return fallbackResponse;
-      } catch (innerError) {
-        console.error('Resend Email Error (both custom and fallback failed):', innerError);
-        // Do not crash the entire auth flow if email provider fails in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[DEV FALLBACK] Continuing despite Resend error. Destination: ${to}`);
-          return { id: 'dev-fallback' };
-        }
-        throw new Error('Failed to send verification email');
-      }
+      if (!fallbackResponse.error) return fallbackResponse;
+    } catch {
+      // The delivery failure is handled below without logging message contents or recipient data.
     }
+
+    console.error('Resend email delivery failed after the fallback attempt.');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DEV FALLBACK] Continuing despite email delivery failure.');
+      return { id: 'dev-fallback' };
+    }
+    throw new Error('Failed to send verification email');
   }
 
   /**
