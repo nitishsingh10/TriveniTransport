@@ -510,7 +510,7 @@ export const customerApi = {
       whatsappOptIn?: boolean;
       createdAt: string;
       bookingsCount?: number;
-    }>('/customers/me');
+    }>('/customer/me');
   },
 
   async updateProfile(data: { name?: string; phone?: string }) {
@@ -520,14 +520,14 @@ export const customerApi = {
       phone?: string | null;
       email?: string | null;
       createdAt: string;
-    }>('/customers/me', {
+    }>('/customer/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   },
 
   async updatePreferences(data: { whatsappOptIn?: boolean; pushToken?: string | null }) {
-    return request('/customers/me/preferences', {
+    return request('/customer/me/preferences', {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
