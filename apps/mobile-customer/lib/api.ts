@@ -368,7 +368,7 @@ export const authApi = {
         code,
         role: 'customer',
         isSignup,
-        name,
+        ...(name?.trim() ? { name: name.trim() } : {}),
       }),
     });
 
