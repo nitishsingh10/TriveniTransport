@@ -8,13 +8,13 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-// Auto-detect development machine LAN IP when running in Expo Go on a real physical device,
-// and ensure /api/v1 is always correctly appended without duplicate slashes.
+// Auto-detect development machine LAN IP when running in Expo Go on a local machine,
+// or fallback cleanly to the official production API server for standalone APK and device builds.
 const getBaseUrl = (): string => {
   let url = (process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
 
-  // If unset, or pointing to localhost/loopback when running on physical device, detect host LAN IP
-  if (!url || url.includes('localhost') || url.includes('127.0.0.1')) {
+  // If unset, detect whether we are running inside Expo Go with a live development host
+  if (!url) {
     const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
     if (hostUri) {
       const host = hostUri.split(':')[0];
@@ -22,8 +22,18 @@ const getBaseUrl = (): string => {
         return `http://${host}:3001/api/v1`;
       }
     }
-    if (!url) {
-      return Platform.OS === 'android' ? 'http://10.0.2.2:3001/api/v1' : 'http://localhost:3001/api/v1';
+    // Standalone APK or production release fallback
+    return 'https://api.trivenitransport.online/api/v1';
+  }
+
+  // If explicitly pointing to loopback on a physical device
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:3001/api/v1`;
+      }
     }
   }
 

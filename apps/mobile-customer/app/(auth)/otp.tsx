@@ -15,6 +15,8 @@ import {
   ArrowRight,
   ShieldCheck,
   RotateCcw,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
@@ -29,14 +31,17 @@ export default function OtpScreen() {
     isSignup?: string;
     name?: string;
   }>();
+
   // Support legacy `phone` param for backward compatibility
   const resolvedIdentifier = identifier || legacyPhone || '';
   const isEmail = resolvedIdentifier.includes('@');
   const isSignupBool = isSignup === 'true';
+
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
   const [errorMsg, setErrorMsg] = useState('');
+  const [userNotFound, setUserNotFound] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const setAuth = useAuthStore((s) => s.setAuth);
 
@@ -47,13 +52,34 @@ export default function OtpScreen() {
   }, [resendTimer]);
 
   const handleChange = (val: string, index: number) => {
-    if (!/^\d*$/.test(val)) return;
+    setErrorMsg('');
+    setUserNotFound(false);
+    const clean = val.replace(/\D/g, '');
+
+    // Handle full paste or autofill of OTP
+    if (clean.length > 1) {
+      const pasted = clean.slice(0, OTP_LENGTH).split('');
+      const newOtp = [...otp];
+      pasted.forEach((ch, idx) => {
+        if (idx < OTP_LENGTH) newOtp[idx] = ch;
+      });
+      setOtp(newOtp);
+      const focusIdx = Math.min(pasted.length, OTP_LENGTH - 1);
+      inputRefs.current[focusIdx]?.focus();
+      if (pasted.length === OTP_LENGTH) {
+        handleVerify(pasted.join(''));
+      }
+      return;
+    }
+
     const newOtp = [...otp];
-    newOtp[index] = val.slice(-1);
+    newOtp[index] = clean.slice(-1);
     setOtp(newOtp);
-    if (val && index < OTP_LENGTH - 1) {
+
+    if (clean && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
+
     if (newOtp.every((d) => d !== '') && newOtp.join('').length === OTP_LENGTH) {
       handleVerify(newOtp.join(''));
     }
@@ -65,17 +91,26 @@ export default function OtpScreen() {
     }
   };
 
-  const handleVerify = async (code?: string) => {
-    const finalOtp = code ?? otp.join('');
-    if (finalOtp.length !== OTP_LENGTH) return;
+  const handleVerify = async (codeOverride?: string) => {
+    const finalOtp = codeOverride ?? otp.join('');
+    if (finalOtp.length !== OTP_LENGTH) {
+      setErrorMsg('Please enter all 6 digits of the OTP code.');
+      const firstEmptyIndex = otp.findIndex((d) => !d);
+      if (firstEmptyIndex !== -1) {
+        inputRefs.current[firstEmptyIndex]?.focus();
+      }
+      return;
+    }
 
     setLoading(true);
     setErrorMsg('');
+    setUserNotFound(false);
+
     try {
       const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp, isSignupBool, name);
       const userPhone = res.user?.phone ? (res.user.phone.startsWith('+91') ? res.user.phone : `+91${res.user.phone}`) : undefined;
       const userName = res.user?.name || name || (isEmail ? '' : 'Customer');
-      
+
       await setAuth(
         {
           id: res.userId,
@@ -96,8 +131,15 @@ export default function OtpScreen() {
         router.replace('/(tabs)');
       }
     } catch (e: any) {
-      console.log('Backend verifyOtp error:', e.message);
-      setErrorMsg(e.message || 'Invalid verification code. Please check and try again.');
+      const msg = e.message || 'Invalid verification code. Please check and try again.';
+      console.log('Backend verifyOtp error:', msg);
+
+      if (e.code === 'USER_NOT_FOUND' || msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('sign up first')) {
+        setUserNotFound(true);
+        setErrorMsg('No account found for this mobile/email. Please sign up first.');
+      } else {
+        setErrorMsg(msg);
+      }
       setLoading(false);
     }
   };
@@ -107,6 +149,7 @@ export default function OtpScreen() {
     setOtp(Array(OTP_LENGTH).fill(''));
     setResendTimer(30);
     setErrorMsg('');
+    setUserNotFound(false);
     try {
       await authApi.requestOtp(resolvedIdentifier || '9820098200', isSignupBool);
     } catch (e: any) {
@@ -115,6 +158,11 @@ export default function OtpScreen() {
     inputRefs.current[0]?.focus();
   };
 
+  const handleDevFill = () => {
+    const devCode = ['1', '2', '3', '4', '5', '6'];
+    setOtp(devCode);
+    handleVerify('123456');
+  };
 
   return (
     <View style={styles.screen}>
@@ -133,7 +181,7 @@ export default function OtpScreen() {
             activeOpacity={0.8}
           >
             <ArrowLeft size={16} color={Colors.navy} />
-            <Text style={styles.backText}>Back to Login</Text>
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
 
           <View style={styles.card}>
@@ -151,14 +199,35 @@ export default function OtpScreen() {
               </Text>
             </View>
 
-            {/* Dev hint banner - only in development */}
-            {__DEV__ && (
-              <View style={styles.devHint}>
-                <Text style={styles.devHintText}>
-                  Dev mode: use OTP <Text style={{ fontWeight: 'bold' }}>123456</Text>
-                </Text>
+            {/* Error Banner */}
+            {errorMsg ? (
+              <View style={styles.errorBanner}>
+                <AlertCircle size={16} color="#DC2626" strokeWidth={2.2} />
+                <View style={styles.errorTextCol}>
+                  <Text style={styles.errorText}>{errorMsg}</Text>
+                  {userNotFound && (
+                    <TouchableOpacity
+                      style={styles.switchAuthBtn}
+                      onPress={() => router.replace('/(auth)/login' as any)}
+                    >
+                      <Text style={styles.switchAuthText}>Go to Create Account →</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            )}
+            ) : null}
+
+            {/* Dev hint & 1-tap fill banner */}
+            <TouchableOpacity
+              style={styles.devHint}
+              onPress={handleDevFill}
+              activeOpacity={0.8}
+            >
+              <Sparkles size={13} color="#B45309" />
+              <Text style={styles.devHintText}>
+                Dev test mode: tap to auto-fill <Text style={{ fontWeight: 'bold' }}>123456</Text>
+              </Text>
+            </TouchableOpacity>
 
             {/* OTP Boxes */}
             <View style={styles.otpRow}>
@@ -173,10 +242,9 @@ export default function OtpScreen() {
                   onChangeText={(val) => handleChange(val, i)}
                   onKeyPress={(e) => handleKeyPress(e, i)}
                   keyboardType="number-pad"
-                  maxLength={1}
+                  maxLength={6}
                   textAlign="center"
                   selectionColor={Colors.navy}
-                  caretHidden
                 />
               ))}
             </View>
@@ -205,10 +273,10 @@ export default function OtpScreen() {
             <TouchableOpacity
               style={[
                 styles.ctaButton,
-                (loading || otp.join('').length !== OTP_LENGTH) && styles.ctaDisabled,
+                loading && styles.ctaDisabled,
               ]}
               onPress={() => handleVerify()}
-              disabled={loading || otp.join('').length !== OTP_LENGTH}
+              disabled={loading}
               activeOpacity={0.88}
             >
               {loading ? (
@@ -313,11 +381,46 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
 
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.xs,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+  },
+  errorTextCol: {
+    flex: 1,
+    gap: 4,
+  },
+  errorText: {
+    color: '#B91C1C',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    lineHeight: 18,
+  },
+  switchAuthBtn: {
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  switchAuthText: {
+    color: '#991B1B',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    textDecorationLine: 'underline',
+  },
+
   devHint: {
-    backgroundColor: 'rgba(247, 163, 0, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(247, 163, 0, 0.12)',
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: Colors.marigoldBorder,
     alignSelf: 'center',
@@ -325,7 +428,7 @@ const styles = StyleSheet.create({
   devHintText: {
     color: '#B45309',
     fontSize: FontSize.xxs,
-    fontWeight: FontWeight.medium,
+    fontWeight: FontWeight.semibold,
   },
 
   otpRow: {

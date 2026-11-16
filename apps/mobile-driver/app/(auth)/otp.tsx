@@ -66,7 +66,14 @@ export default function DriverOtpScreen() {
 
   const handleVerify = async () => {
     const code = otp.join('');
-    if (code.length !== 6) return;
+    if (code.length !== 6) {
+      setError('Please enter the full 6-digit verification code.');
+      const firstEmptyIndex = otp.findIndex((d) => !d);
+      if (firstEmptyIndex !== -1) {
+        inputs.current[firstEmptyIndex]?.focus();
+      }
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -189,11 +196,11 @@ export default function DriverOtpScreen() {
             <TouchableOpacity
               style={[
                 styles.submitBtn,
-                (loading || otp.join('').length !== 6) && styles.submitBtnDisabled,
+                loading && styles.submitBtnDisabled,
               ]}
               onPress={handleVerify}
               activeOpacity={0.88}
-              disabled={loading || otp.join('').length !== 6}
+              disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
