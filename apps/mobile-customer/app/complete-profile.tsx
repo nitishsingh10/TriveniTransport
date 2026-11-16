@@ -68,6 +68,11 @@ export default function CompleteProfileScreen() {
         phone: `+91${res.phone}`,
       });
 
+      if (Platform.OS === 'web') {
+        router.replace('/(tabs)');
+        return;
+      }
+
       Alert.alert(
         'Profile Completed',
         'Your profile has been saved successfully. Welcome to Triveni Transports!',
