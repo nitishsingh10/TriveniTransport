@@ -14,6 +14,9 @@ export interface AuthTargetInput {
 }
 
 export function normalizePhoneNumber(raw: string): string {
+  if (!/^\+?[\d().\-\s]+$/.test(raw)) {
+    throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Please provide a valid 10-digit mobile phone number.' };
+  }
   const digits = raw.replace(/\D/g, '');
   if (digits.length === 12 && digits.startsWith('91')) {
     return digits.slice(2);
@@ -25,36 +28,82 @@ export function normalizePhoneNumber(raw: string): string {
 }
 
 export function resolveAuthTarget(input: AuthTargetInput | string): { type: 'email' | 'phone'; value: string } {
-  let raw = '';
-  if (typeof input === 'string') {
-    raw = input.trim();
-  } else {
-    raw = (input.email || input.phone || input.identifier || '').trim();
-  }
+  const candidates = typeof input === 'string'
+    ? [input]
+    : [input.email, input.phone, input.identifier].filter((value): value is string => Boolean(value?.trim()));
 
-  if (!raw) {
+  if (candidates.length === 0) {
     throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Email address or mobile phone number is required.' };
   }
 
-  if (raw.includes('@')) {
-    const email = raw.toLowerCase().trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Please provide a valid email address.' };
+  const normalized = candidates.map((candidate) => {
+    const raw = candidate.trim();
+    if (raw.includes('@')) {
+      const email = raw.toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (email.length > 254 || !emailRegex.test(email)) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Please provide a valid email address.' };
+      }
+      return { type: 'email' as const, value: email };
     }
-    return { type: 'email', value: email };
-  } else {
-    const cleaned = normalizePhoneNumber(raw);
-    if (cleaned.length < 10) {
+
+    const phone = normalizePhoneNumber(raw);
+    if (!/^[6-9]\d{9}$/.test(phone)) {
       throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Please provide a valid 10-digit mobile phone number.' };
     }
-    return { type: 'phone', value: cleaned };
+    return { type: 'phone' as const, value: phone };
+  });
+
+  const target = normalized[0];
+  if (normalized.some((candidate) => candidate.type !== target.type || candidate.value !== target.value)) {
+    throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Provide one matching email address or mobile phone number.' };
   }
+  return target;
+}
+
+function phoneVariants(phone: string) {
+  return [{ phone }, { phone: `+91${phone}` }, { phone: `91${phone}` }, { phone: `0${phone}` }];
+}
+
+function userNotFound(targetType: 'email' | 'phone', role: 'customer' | 'vendor') {
+  const kind = targetType === 'email' ? 'email' : 'phone number';
+  const account = role === 'vendor' ? 'partner account' : 'customer account';
+  return {
+    statusCode: 404,
+    code: 'USER_NOT_FOUND',
+    message: `No ${account} found with this ${kind}. Please sign up first.`,
+  };
+}
+
+function accountExists(role: 'customer' | 'vendor', targetType: 'email' | 'phone') {
+  const account = role === 'vendor' ? 'partner account' : 'account';
+  const kind = targetType === 'email' ? 'email' : 'phone number';
+  return {
+    statusCode: 400,
+    code: 'ALREADY_EXISTS',
+    message: `An ${account} with this ${kind} already exists. Please sign in.`,
+  };
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2002');
+}
+
+function hashOtp(code: string): string {
+  const { JWT_REFRESH_SECRET } = getEnv();
+  return crypto.createHmac('sha256', JWT_REFRESH_SECRET).update(code).digest('hex');
+}
+
+function refreshTokenLifetimeMs(raw: string): number {
+  const match = /^(\d+)([smhd])$/.exec(raw);
+  if (!match) throw new Error('JWT_REFRESH_EXPIRES_IN must be a duration such as 30d or 12h.');
+  const unitMs: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  return Number(match[1]) * unitMs[match[2]];
 }
 
 export class AuthService {
   /**
-   * Generates a 6-digit OTP, stores it in OtpChallenge, and dispatches via Resend (email) or MSG91 (SMS)
+   * Generates a single-use OTP challenge bound to its account role and login/signup intent.
    */
   static async requestOtp(
     targetInput: AuthTargetInput | string,
@@ -63,136 +112,92 @@ export class AuthService {
   ): Promise<{ message: string; channel: 'email' | 'sms'; destination: string }> {
     const { OTP_EXPIRY_MINUTES } = getEnv();
     const target = resolveAuthTarget(targetInput);
+    const signup = Boolean(isSignup);
 
-    // Rate limit per target (phone or email) to prevent abuse
+    if (role === 'admin' && signup) {
+      throw { statusCode: 403, code: 'FORBIDDEN', message: 'Admin accounts cannot be created through signup.' };
+    }
+
     await checkIdentifierOtpLimit(target.value);
 
-    // Role-specific authorization and existence checks
     if (target.type === 'email') {
       const email = target.value;
       if (role === 'vendor') {
         const vendor = await prisma.vendor.findUnique({ where: { email } });
-        if (isSignup && vendor) {
-          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'A partner account with this email already exists. Please sign in.' };
-        }
-        if (!isSignup) {
-          if (!vendor) {
-            throw { statusCode: 404, code: 'NOT_FOUND', message: 'No partner account found for this email. Please register first.' };
-          }
-          if (vendor.status !== 'active') {
-            throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
-          }
+        if (signup && vendor) throw accountExists('vendor', 'email');
+        if (!signup && !vendor) throw userNotFound('email', 'vendor');
+        if (!signup && vendor?.status !== 'active') {
+          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
         }
       } else if (role === 'admin') {
         let admin = await prisma.adminUser.findUnique({ where: { email } });
         if (!admin && process.env.NODE_ENV === 'development' && (email === 'admin@trivenitransports.com' || email.startsWith('admin@'))) {
-          admin = await prisma.adminUser.create({
-            data: { email, name: 'Triveni Admin' },
-          });
+          admin = await prisma.adminUser.create({ data: { email, name: 'Triveni Admin' } });
         }
-        if (!admin) {
-          throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this email address.' };
-        }
-      } else if (role === 'customer') {
+        if (!admin) throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this email address.' };
+      } else {
         const customer = await prisma.customer.findUnique({ where: { email } });
-        if (isSignup && customer) {
-          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'An account with this email already exists. Please sign in.' };
-        }
-        if (!isSignup && !customer) {
-          throw { statusCode: 404, code: 'USER_NOT_FOUND', message: 'No customer account found with this email. Please sign up first.' };
-        }
+        if (signup && customer) throw accountExists('customer', 'email');
+        if (!signup && !customer) throw userNotFound('email', 'customer');
       }
     } else {
       const phone = target.value;
       if (role === 'vendor') {
-        const vendor = await prisma.vendor.findUnique({ where: { phone } });
-        if (isSignup && vendor) {
-          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'A partner account with this phone number already exists. Please sign in.' };
-        }
-        if (!isSignup) {
-          if (!vendor) {
-            throw { statusCode: 404, code: 'NOT_FOUND', message: 'No partner account found for this phone number. Please register first.' };
-          }
-          if (vendor.status !== 'active') {
-            throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
-          }
+        const vendor = await prisma.vendor.findFirst({ where: { OR: phoneVariants(phone) } });
+        if (signup && vendor) throw accountExists('vendor', 'phone');
+        if (!signup && !vendor) throw userNotFound('phone', 'vendor');
+        if (!signup && vendor?.status !== 'active') {
+          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
         }
       } else if (role === 'admin') {
-        let admin = await prisma.adminUser.findUnique({ where: { phone } });
+        let admin = await prisma.adminUser.findFirst({ where: { OR: phoneVariants(phone) } });
         if (!admin && process.env.NODE_ENV === 'development') {
           const { ADMIN_PHONE } = getEnv();
-          if (phone === ADMIN_PHONE) {
-            admin = await prisma.adminUser.create({
-              data: { phone, name: 'Triveni Admin' },
-            });
+          if (phone === normalizePhoneNumber(ADMIN_PHONE)) {
+            admin = await prisma.adminUser.create({ data: { phone, name: 'Triveni Admin' } });
           }
         }
-        if (!admin) {
-          throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this phone number.' };
-        }
-      } else if (role === 'customer') {
-        const phone = target.value;
-        const customer = await prisma.customer.findFirst({
-          where: {
-            OR: [
-              { phone },
-              { phone: `+91${phone}` },
-              { phone: `91${phone}` },
-            ],
-          },
-        });
-        if (isSignup && customer) {
-          throw { statusCode: 400, code: 'ALREADY_EXISTS', message: 'An account with this phone number already exists. Please sign in.' };
-        }
-        if (!isSignup && !customer) {
-          throw { statusCode: 404, code: 'USER_NOT_FOUND', message: 'No customer account found with this phone number. Please sign up first.' };
-        }
+        if (!admin) throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found for this phone number.' };
+      } else {
+        const customer = await prisma.customer.findFirst({ where: { OR: phoneVariants(phone) } });
+        if (signup && customer) throw accountExists('customer', 'phone');
+        if (!signup && !customer) throw userNotFound('phone', 'customer');
       }
     }
 
-    // Cryptographically secure 6-digit OTP code (100000 - 999999)
     const code = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-    const otpHash = crypto.createHash('sha256').update(code).digest('hex');
-
-    // Create a new OTP challenge in database
-    await prisma.otpChallenge.create({
+    const otpHash = hashOtp(code);
+    const challenge = await prisma.otpChallenge.create({
       data: {
         phone: target.type === 'phone' ? target.value : null,
         email: target.type === 'email' ? target.value : null,
         otpHash,
+        role,
         expiresAt,
         attempts: 0,
-        purpose: isSignup ? 'signup' : 'login',
+        purpose: signup ? 'signup' : 'login',
       },
     });
 
-    // Send OTP via chosen channel
-    if (target.type === 'email') {
-      await EmailService.sendOtpEmail(target.value, code, role, isSignup);
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV OTP EMAIL] Sent to ${target.value}: ${code}`);
+    try {
+      if (target.type === 'email') {
+        await EmailService.sendOtpEmail(target.value, code, role, signup);
+        if (process.env.NODE_ENV === 'development') console.log(`[DEV OTP EMAIL] Sent to ${target.value}: ${code}`);
+        return { message: 'Verification code sent to your email address.', channel: 'email', destination: target.value };
       }
-      return {
-        message: 'Verification code sent to your email address.',
-        channel: 'email',
-        destination: target.value,
-      };
-    } else {
+
       await sendSmsOtp(target.value, code);
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV OTP SMS] Sent to ${target.value}: ${code}`);
-      }
-      return {
-        message: 'Verification code sent via SMS to your mobile number.',
-        channel: 'sms',
-        destination: target.value,
-      };
+      if (process.env.NODE_ENV === 'development') console.log(`[DEV OTP SMS] Sent to ${target.value}: ${code}`);
+      return { message: 'Verification code sent via SMS to your mobile number.', channel: 'sms', destination: target.value };
+    } catch (error) {
+      await prisma.otpChallenge.updateMany({ where: { id: challenge.id, verifiedAt: null }, data: { expiresAt: new Date(0) } });
+      throw error;
     }
   }
 
   /**
-   * Verifies the OTP, creates user if customer/signup, issues JWTs and Session
+   * Verifies and consumes a matching OTP before creating a user or issuing tokens.
    */
   static async verifyOtp(
     targetInput: AuthTargetInput | string,
@@ -203,205 +208,128 @@ export class AuthService {
   ) {
     const { OTP_MAX_ATTEMPTS } = getEnv();
     const target = resolveAuthTarget(targetInput);
-
-    const isTestOtp = code === '123456';
+    const signup = Boolean(isSignup);
+    if (role === 'admin' && signup) {
+      throw { statusCode: 403, code: 'FORBIDDEN', message: 'Admin accounts cannot be created through signup.' };
+    }
 
     const challenge = await prisma.otpChallenge.findFirst({
       where: {
-        ...(target.type === 'email'
-          ? { email: target.value }
-          : {
-              OR: [
-                { phone: target.value },
-                { phone: `+91${target.value}` },
-                { phone: `91${target.value}` },
-              ],
-            }),
+        ...(target.type === 'email' ? { email: target.value } : { OR: phoneVariants(target.value) }),
+        role,
+        purpose: signup ? 'signup' : 'login',
         verifiedAt: null,
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!challenge && !isTestOtp) {
-      throw { statusCode: 400, code: 'INVALID_OTP', message: 'Verification code not requested or already used.' };
+    if (!challenge) {
+      throw { statusCode: 400, code: 'INVALID_OTP', message: 'Verification code not requested for this sign-in or signup. Please request a new code.' };
+    }
+    if (challenge.expiresAt <= new Date()) {
+      throw { statusCode: 400, code: 'EXPIRED_OTP', message: 'Verification code has expired. Please request a new one.' };
+    }
+    if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
+      throw { statusCode: 400, code: 'MAX_ATTEMPTS', message: 'Too many failed attempts. Please request a new code.' };
     }
 
-    if (challenge && !isTestOtp) {
-      if (challenge.expiresAt < new Date()) {
-        throw { statusCode: 400, code: 'EXPIRED_OTP', message: 'Verification code has expired. Please request a new one.' };
-      }
-
-      if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
+    const inputHash = Buffer.from(hashOtp(code), 'hex');
+    const storedHash = Buffer.from(challenge.otpHash, 'hex');
+    const isMatch = storedHash.length === inputHash.length && crypto.timingSafeEqual(storedHash, inputHash);
+    if (!isMatch) {
+      const update = await prisma.otpChallenge.updateMany({
+        where: { id: challenge.id, verifiedAt: null, attempts: { lt: OTP_MAX_ATTEMPTS } },
+        data: { attempts: { increment: 1 } },
+      });
+      if (update.count === 0) {
         throw { statusCode: 400, code: 'MAX_ATTEMPTS', message: 'Too many failed attempts. Please request a new code.' };
       }
-
-      const inputHash = crypto.createHash('sha256').update(code).digest('hex');
-
-      // Timing-safe comparison to prevent timing attacks
-      const storedHashBuf = Buffer.from(challenge.otpHash, 'hex');
-      const inputHashBuf = Buffer.from(inputHash, 'hex');
-      const isMatch = storedHashBuf.length === inputHashBuf.length && crypto.timingSafeEqual(storedHashBuf, inputHashBuf);
-
-      if (!isMatch) {
-        const nextAttempts = challenge.attempts + 1;
-        await prisma.otpChallenge.update({
-          where: { id: challenge.id },
-          data: {
-            attempts: { increment: 1 },
-            ...(nextAttempts >= OTP_MAX_ATTEMPTS ? { expiresAt: new Date(0) } : {}),
-          },
-        });
-        throw { statusCode: 400, code: 'INVALID_OTP', message: 'Incorrect verification code. Please check and try again.' };
-      }
+      throw { statusCode: 400, code: 'INVALID_OTP', message: 'Incorrect verification code. Please check and try again.' };
     }
 
-    // OTP is valid. Mark verified if challenge exists
-    if (challenge) {
-      await prisma.otpChallenge.update({
-        where: { id: challenge.id },
-        data: { verifiedAt: new Date() },
-      });
+    const consumed = await prisma.otpChallenge.updateMany({
+      where: {
+        id: challenge.id,
+        verifiedAt: null,
+        attempts: { lt: OTP_MAX_ATTEMPTS },
+        expiresAt: { gt: new Date() },
+      },
+      data: { verifiedAt: new Date() },
+    });
+    if (consumed.count !== 1) {
+      throw { statusCode: 400, code: 'INVALID_OTP', message: 'Verification code has already been used. Please request a new one.' };
     }
 
-    // Fetch or create user
     let userId: string;
     let userName: string;
+    const displayName = name?.trim() || undefined;
 
     if (role === 'customer') {
-      if (isSignup) {
-        if (target.type === 'email') {
-          const customer = await prisma.customer.upsert({
-            where: { email: target.value },
-            create: {
-              email: target.value,
-              name: name || 'Valued Customer',
+      const existing = target.type === 'email'
+        ? await prisma.customer.findUnique({ where: { email: target.value } })
+        : await prisma.customer.findFirst({ where: { OR: phoneVariants(target.value) } });
+
+      if (signup) {
+        if (existing) throw accountExists('customer', target.type);
+        try {
+          const customer = await prisma.customer.create({
+            data: {
+              ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
+              name: displayName || 'Valued Customer',
             },
-            update: name ? { name } : {},
           });
           userId = customer.id;
           userName = customer.name;
-        } else {
-          const phone = target.value;
-          const existing = await prisma.customer.findFirst({
-            where: {
-              OR: [
-                { phone },
-                { phone: `+91${phone}` },
-                { phone: `91${phone}` },
-              ],
-            },
-          });
-
-          if (existing) {
-            const customer = await prisma.customer.update({
-              where: { id: existing.id },
-              data: {
-                phone,
-                ...(name ? { name } : {}),
-              },
-            });
-            userId = customer.id;
-            userName = customer.name;
-          } else {
-            const customer = await prisma.customer.create({
-              data: {
-                phone,
-                name: name || 'Valued Customer',
-              },
-            });
-            userId = customer.id;
-            userName = customer.name;
-          }
+        } catch (error) {
+          if (isUniqueConstraintError(error)) throw accountExists('customer', target.type);
+          throw error;
         }
       } else {
-        const customer = target.type === 'email'
-          ? await prisma.customer.findUnique({ where: { email: target.value } })
-          : await prisma.customer.findFirst({
-              where: {
-                OR: [
-                  { phone: target.value },
-                  { phone: `+91${target.value}` },
-                  { phone: `91${target.value}` },
-                ],
-              },
-            });
-
-        if (!customer) {
-          throw {
-            statusCode: 404,
-            code: 'USER_NOT_FOUND',
-            message: 'No customer account found with this ' + (target.type === 'email' ? 'email' : 'phone number') + '. Please sign up first.',
-          };
-        }
-        userId = customer.id;
-        userName = customer.name;
+        if (!existing) throw userNotFound(target.type, 'customer');
+        userId = existing.id;
+        userName = existing.name;
       }
     } else if (role === 'vendor') {
-      if (isSignup) {
-        if (target.type === 'email') {
-          const vendor = await prisma.vendor.upsert({
-            where: { email: target.value },
-            create: {
-              email: target.value,
-              name: name || 'Driver Partner',
-              status: 'active',
-              serviceAreas: [],
-            },
-            update: name ? { name } : {},
-          });
-          userId = vendor.id;
-          userName = vendor.name;
-        } else {
-          const vendor = await prisma.vendor.upsert({
-            where: { phone: target.value },
-            create: {
-              phone: target.value,
-              name: name || 'Driver Partner',
-              status: 'active',
-              serviceAreas: [],
-            },
-            update: name ? { name } : {},
-          });
-          userId = vendor.id;
-          userName = vendor.name;
-        }
-      } else {
-        const vendor = target.type === 'email'
-          ? await prisma.vendor.findUnique({ where: { email: target.value } })
-          : await prisma.vendor.findUnique({ where: { phone: target.value } });
+      const existing = target.type === 'email'
+        ? await prisma.vendor.findUnique({ where: { email: target.value } })
+        : await prisma.vendor.findFirst({ where: { OR: phoneVariants(target.value) } });
 
-        if (!vendor) throw { statusCode: 404, message: 'Partner account not found' };
-        if (vendor.status !== 'active') throw { statusCode: 403, message: 'Partner account is inactive' };
-        userId = vendor.id;
-        userName = vendor.name;
-      }
-    } else {
-      let admin = target.type === 'email'
-        ? await prisma.adminUser.findUnique({ where: { email: target.value } })
-        : await prisma.adminUser.findUnique({ where: { phone: target.value } });
-
-      if (!admin && process.env.NODE_ENV === 'development') {
-        const { ADMIN_PHONE } = getEnv();
-        const isAuthorizedDevAdmin =
-          (target.type === 'phone' && target.value === ADMIN_PHONE) ||
-          (target.type === 'email' && (target.value === 'admin@trivenitransports.com' || target.value.startsWith('admin@')));
-        if (isAuthorizedDevAdmin) {
-          admin = await prisma.adminUser.create({
+      if (signup) {
+        if (existing) throw accountExists('vendor', target.type);
+        try {
+          const vendor = await prisma.vendor.create({
             data: {
               ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
-              name: name || 'Triveni Admin',
+              name: displayName || 'Driver Partner',
+              status: 'active',
+              serviceAreas: [],
             },
           });
+          userId = vendor.id;
+          userName = vendor.name;
+        } catch (error) {
+          if (isUniqueConstraintError(error)) throw accountExists('vendor', target.type);
+          throw error;
         }
+      } else {
+        if (!existing) throw userNotFound(target.type, 'vendor');
+        if (existing.status !== 'active') {
+          throw { statusCode: 403, code: 'INACTIVE', message: 'Partner account is inactive.' };
+        }
+        userId = existing.id;
+        userName = existing.name;
       }
-      if (!admin) throw { statusCode: 404, message: 'Admin account not found or unauthorized' };
+    } else {
+      const admin = target.type === 'email'
+        ? await prisma.adminUser.findUnique({ where: { email: target.value } })
+        : await prisma.adminUser.findFirst({ where: { OR: phoneVariants(target.value) } });
+      if (!admin) throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found or unauthorized.' };
       userId = admin.id;
       userName = admin.name;
     }
 
     return this.issueTokens(userId, role, userName, target.value);
   }
-
   /**
    * Refreshes access token using a valid, non-revoked refresh token
    */
@@ -421,7 +349,7 @@ export class AuthService {
       },
     });
 
-    if (!session || session.expiresAt < new Date()) {
+    if (!session || session.expiresAt <= new Date()) {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Session expired or revoked' };
     }
 
@@ -430,8 +358,30 @@ export class AuthService {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Invalid session state or token mismatch' };
     }
 
+    if (payload.role === 'customer' && !(await prisma.customer.findUnique({ where: { id: userId }, select: { id: true } }))) {
+      throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Account is no longer available.' };
+    }
+    if (payload.role === 'vendor') {
+      const vendor = await prisma.vendor.findUnique({ where: { id: userId }, select: { status: true } });
+      if (!vendor || vendor.status !== 'active') {
+        throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Partner account is no longer active.' };
+      }
+    }
+    if (payload.role === 'admin' && !(await prisma.adminUser.findUnique({ where: { id: userId }, select: { id: true } }))) {
+      throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Admin account is no longer available.' };
+    }
+
     const accessToken = signAccessToken(userId, payload.role);
-    return { accessToken };
+    const refreshToken = signRefreshToken(userId, payload.role);
+    const nextHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const rotated = await prisma.session.updateMany({
+      where: { id: session.id, refreshTokenHash: hashedToken, revokedAt: null, expiresAt: { gt: new Date() } },
+      data: { refreshTokenHash: nextHash },
+    });
+    if (rotated.count !== 1) {
+      throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Refresh token has already been used.' };
+    }
+    return { accessToken, refreshToken };
   }
 
   /**
@@ -467,8 +417,7 @@ export class AuthService {
     const hashedRefresh = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const { JWT_REFRESH_EXPIRES_IN } = getEnv();
 
-    const days = parseInt(JWT_REFRESH_EXPIRES_IN.replace('d', '')) || 30;
-    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + refreshTokenLifetimeMs(JWT_REFRESH_EXPIRES_IN));
 
     await prisma.session.create({
       data: {

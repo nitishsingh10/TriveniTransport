@@ -28,8 +28,8 @@ const EnvSchema = z.object({
   // ── JWT ──────────────────────────────────────────────────────
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+  JWT_ACCESS_EXPIRES_IN: z.string().regex(/^[1-9]\d*[smhd]$/, 'Use a positive JWT duration such as 15m or 30d').default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().regex(/^[1-9]\d*[smhd]$/, 'Use a positive JWT duration such as 15m or 30d').default('30d'),
 
   // ── OTP ──────────────────────────────────────────────────────
   OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),

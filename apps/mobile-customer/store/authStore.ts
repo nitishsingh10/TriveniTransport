@@ -1,7 +1,7 @@
-// Auth store — persists tokens and user info via AsyncStorage
+// Auth store — keeps credentials in SecureStore and the non-secret profile in AsyncStorage.
 import { create } from 'zustand';
 import type { AuthUser } from '@triveni/shared-types';
-import { tokenStorage } from '@/lib/api';
+import { setSessionExpiredHandler, tokenStorage } from '@/lib/api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -26,7 +26,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await tokenStorage.setTokens(accessToken, refreshToken);
       await tokenStorage.setUser(user);
     } catch (e) {
+      await tokenStorage.clear().catch(() => {});
       console.warn('Error persisting customer session:', e);
+      throw e;
     }
     set({ user, accessToken, isAuthenticated: true, isHydrated: true });
   },
@@ -60,13 +62,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       ]);
 
       if (token) {
-        const user: AuthUser = savedUser || {
-          id: 'customer',
-          role: 'customer',
-          name: 'Customer',
-        };
+        if (!savedUser || savedUser.role !== 'customer' || !savedUser.id) {
+          await tokenStorage.clear();
+          set({ user: null, accessToken: null, isAuthenticated: false, isHydrated: true });
+          return false;
+        }
         set({
-          user,
+          user: savedUser,
           accessToken: token,
           isAuthenticated: true,
           isHydrated: true,
@@ -85,3 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setHydrated: (hydrated = true) => set({ isHydrated: hydrated }),
 }));
+
+setSessionExpiredHandler(() => {
+  void useAuthStore.getState().clearAuth();
+});

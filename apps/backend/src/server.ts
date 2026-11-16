@@ -18,6 +18,7 @@ import adminRoutes from './modules/admin/routes';
 import paymentRoutes from './modules/payments/routes';
 import customerRoutes from './modules/customer/routes';
 import mapsRoutes from './modules/geocoding/routes';
+import catalogRoutes from './modules/catalog/routes';
 
 // Import background workers so they initialize
 import './jobs/workers/invoiceWorker';
@@ -123,6 +124,7 @@ async function bootstrap() {
   router.use('/admin', adminRoutes);
   router.use('/payments', paymentRoutes);
   router.use('/maps', mapsRoutes);
+  router.use('/catalog', catalogRoutes);
 
   app.use('/api/v1', router);
   // Also support root-level and /api paths for direct requests (e.g. /auth/otp/request)

@@ -1,105 +1,99 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  Armchair,
-  Tv,
-  Coffee,
-  Bed,
-  DoorClosed,
-  MirrorRectangular,
-  Refrigerator,
-  WashingMachine,
-  Box,
   Package,
-  PackagePlus,
-  Bike,
-  UtensilsCrossed,
   Minus,
   Plus,
   ArrowRight,
   Check,
+  Search,
+  SlidersHorizontal,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
-
-interface RoomItem {
-  id: string;
-  name: string;
-  icon: React.ComponentType<any>;
-  defaultCft: number;
-  baseRate: number;
-}
-
-interface RoomSection {
-  room: string;
-  icon: React.ComponentType<any>;
-  items: RoomItem[];
-}
-
-const CATALOG: RoomSection[] = [
-  {
-    room: 'Living Room',
-    icon: Armchair,
-    items: [
-      { id: 'sofa_3', name: '3-Seater Sofa', icon: Armchair, defaultCft: 40, baseRate: 800 },
-      { id: 'tv_unit', name: 'LED TV & Media Unit', icon: Tv, defaultCft: 25, baseRate: 400 },
-      { id: 'coffee_table', name: 'Coffee / Center Table', icon: Coffee, defaultCft: 12, baseRate: 200 },
-    ],
-  },
-  {
-    room: 'Bedroom Furniture',
-    icon: Bed,
-    items: [
-      { id: 'double_bed', name: 'King / Queen Bed with Mattress', icon: Bed, defaultCft: 65, baseRate: 1200 },
-      { id: 'wardrobe', name: 'Almirah / Wardrobe (2-3 Door)', icon: DoorClosed, defaultCft: 50, baseRate: 900 },
-      { id: 'dressing', name: 'Dressing Table with Mirror', icon: MirrorRectangular, defaultCft: 30, baseRate: 500 },
-    ],
-  },
-  {
-    room: 'Kitchen & Appliances',
-    icon: UtensilsCrossed,
-    items: [
-      { id: 'fridge', name: 'Double Door Refrigerator', icon: Refrigerator, defaultCft: 30, baseRate: 600 },
-      { id: 'washing', name: 'Automatic Washing Machine', icon: WashingMachine, defaultCft: 25, baseRate: 500 },
-      { id: 'microwave', name: 'Microwave Oven & Stand', icon: Box, defaultCft: 8, baseRate: 200 },
-    ],
-  },
-  {
-    room: 'Boxes & Miscellaneous',
-    icon: Package,
-    items: [
-      { id: 'boxes_sm', name: 'Carton Box (Books/Clothes - 15kg)', icon: Package, defaultCft: 4, baseRate: 60 },
-      { id: 'boxes_lg', name: 'Jumbo Box (Kitchenware/Linens - 25kg)', icon: PackagePlus, defaultCft: 12, baseRate: 120 },
-      { id: 'bicycle', name: 'Bicycle / Two-Wheeler', icon: Bike, defaultCft: 20, baseRate: 300 },
-    ],
-  },
-];
+import { catalogApi } from '@/lib/api';
+import { DEFAULT_CATALOG, mergeServerCatalog, type RoomSection } from '@/constants/inventory';
 
 export default function InventoryScreen() {
   const params = useLocalSearchParams();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [catalog, setCatalog] = useState<RoomSection[]>(DEFAULT_CATALOG);
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    catalogApi.listItems()
+      .then((items) => {
+        if (active && items.length > 0) {
+          const currentCatalog = mergeServerCatalog(items);
+          const availableIds = new Set(currentCatalog.flatMap((section) => section.items.map((item) => item.id)));
+          const availableCategories = new Set(currentCatalog.map((section) => section.room));
+          setCatalog(currentCatalog);
+          setSelectedCategory((previous) => availableCategories.has(previous) ? previous : 'All');
+          setQuantities((previous) => Object.fromEntries(
+            Object.entries(previous).filter(([id]) => availableIds.has(id))
+          ));
+        }
+      })
+      .catch(() => {
+        // Keep the offline-ready catalog available when the API cannot be reached.
+      })
+      .finally(() => {
+        if (active) setIsCatalogLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const update = (id: string, delta: number) => {
     setQuantities((prev) => ({
       ...prev,
-      [id]: Math.max(0, (prev[id] ?? 0) + delta),
+      [id]: Math.min(100, Math.max(0, (prev[id] ?? 0) + delta)),
     }));
   };
 
   const totalItems = Object.values(quantities).reduce((a, b) => a + b, 0);
+  const selectedLines = useMemo(
+    () => catalog.flatMap((section) => section.items
+      .filter((item) => (quantities[item.id] ?? 0) > 0)
+      .map((item) => ({
+        id: item.id,
+        itemId: item.serverId,
+        name: item.name,
+        quantity: quantities[item.id],
+        defaultCft: item.defaultCft,
+        baseRate: item.baseRate,
+      }))),
+    [catalog, quantities]
+  );
+  const estimatedVolume = selectedLines.reduce((total, item) => total + item.defaultCft * item.quantity, 0);
+  const estimatedGoodsCost = selectedLines.reduce((total, item) => total + item.baseRate * item.quantity, 0);
+  const categories = ['All', ...catalog.map((section) => section.room)];
+  const visibleCatalog = useMemo(() => catalog
+    .filter((section) => selectedCategory === 'All' || section.room === selectedCategory)
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase())),
+    }))
+    .filter((section) => section.items.length > 0), [catalog, search, selectedCategory]);
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Progress */}
       <View style={styles.progressContainer}>
         <View style={styles.progressItem}>
@@ -126,19 +120,74 @@ export default function InventoryScreen() {
 
       <View style={styles.titleGroup}>
         <Text style={styles.stepBadge}>STEP 2 OF 3</Text>
-        <Text style={styles.title}>Select Your Inventory</Text>
-        <Text style={styles.subtitle}>
-          Add items to get a transparent volume-based estimate. Additional items can always be added on moving day.
-        </Text>
+        <View style={styles.headingRow}>
+          <View style={styles.headingCopy}>
+            <Text style={styles.title}>Build your inventory</Text>
+            <Text style={styles.subtitle}>
+              Choose the goods you’re moving. You can adjust quantities at any time.
+            </Text>
+          </View>
+          <View style={styles.catalogCountBadge}>
+            <SlidersHorizontal size={14} color={Colors.navy} />
+            <Text style={styles.catalogCountText}>{catalog.reduce((n, section) => n + section.items.length, 0)}</Text>
+          </View>
+        </View>
       </View>
 
-      {CATALOG.map((section) => {
+      <View style={styles.searchBox}>
+        <Search size={17} color={Colors.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search sofa, boxes, appliances…"
+          placeholderTextColor={Colors.textMuted}
+          returnKeyType="search"
+        />
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+        {categories.map((category) => {
+          const active = selectedCategory === category;
+          return (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryChip, active && styles.categoryChipActive]}
+              onPress={() => setSelectedCategory(category)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>{category}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <View style={styles.selectionSummary}>
+        <View>
+          <Text style={styles.selectionEyebrow}>YOUR MOVE</Text>
+          <Text style={styles.selectionHeadline}>{totalItems} {totalItems === 1 ? 'item' : 'items'} selected</Text>
+        </View>
+        <View style={styles.selectionStats}>
+          <Text style={styles.selectionVolume}>{estimatedVolume} CFT</Text>
+          <Text style={styles.selectionCost}>Goods estimate ₹{estimatedGoodsCost.toLocaleString('en-IN')}</Text>
+        </View>
+      </View>
+
+      {isCatalogLoading && (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color={Colors.navy} />
+          <Text style={styles.loadingText}>Loading current item rates…</Text>
+        </View>
+      )}
+
+      {visibleCatalog.map((section) => {
         const SectionIcon = section.icon;
         return (
           <View key={section.room} style={styles.section}>
             <View style={styles.sectionHeader}>
               <SectionIcon size={18} color={Colors.navy} strokeWidth={2.2} />
               <Text style={styles.roomTitle}>{section.room}</Text>
+              <Text style={styles.sectionItemCount}>{section.items.length} goods</Text>
             </View>
 
             {section.items.map((item) => {
@@ -190,34 +239,45 @@ export default function InventoryScreen() {
         );
       })}
 
-      {/* Sticky Bottom Summary Bar */}
-      <View style={styles.ctaArea}>
-        <View style={styles.ctaBadge}>
-          <Text style={styles.ctaCount}>
-            {totalItems} {totalItems === 1 ? 'item' : 'items'} selected for relocation
-          </Text>
+      {visibleCatalog.length === 0 && (
+        <View style={styles.emptyState}>
+          <Package size={24} color={Colors.textMuted} />
+          <Text style={styles.emptyTitle}>No goods found</Text>
+          <Text style={styles.emptyCopy}>Try another name or choose a different category.</Text>
         </View>
+      )}
+
+      </ScrollView>
+
+      <View style={styles.ctaArea}>
         <TouchableOpacity
-          style={styles.cta}
-          onPress={() =>
-            router.push({
-              pathname: '/quote/summary',
-              params: { ...params, quantities: JSON.stringify(quantities) },
-            })
-          }
+          style={[styles.cta, totalItems === 0 && styles.ctaDisabled]}
+          disabled={totalItems === 0}
+          onPress={() => router.push({
+            pathname: '/quote/summary',
+            params: {
+              ...params,
+              quantities: JSON.stringify(quantities),
+              selectedItems: JSON.stringify(selectedLines),
+            },
+          })}
           activeOpacity={0.88}
         >
-          <Text style={styles.ctaText}>Proceed to Price Breakdown</Text>
-          <ArrowRight size={17} color={Colors.white} strokeWidth={2.4} />
+          <View style={styles.ctaCopy}>
+            <Text style={styles.ctaText}>{totalItems > 0 ? 'Review your estimate' : 'Add an item to continue'}</Text>
+            {totalItems > 0 && <Text style={styles.ctaSubtext}>{totalItems} goods · about {estimatedVolume} CFT</Text>}
+          </View>
+          <ArrowRight size={18} color={Colors.white} strokeWidth={2.4} />
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Colors.background },
   scroll: { flex: 1, backgroundColor: Colors.background },
-  container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
+  container: { paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, gap: Spacing.md, paddingBottom: Spacing.xxl },
 
   // Progress
   progressContainer: {
@@ -284,6 +344,22 @@ const styles = StyleSheet.create({
 
   // Title
   titleGroup: { gap: 4 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  headingCopy: { flex: 1, gap: 4 },
+  catalogCountBadge: {
+    minWidth: 44,
+    height: 40,
+    paddingHorizontal: 10,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.marigoldSubtle,
+    borderWidth: 1,
+    borderColor: Colors.marigoldBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  catalogCountText: { color: Colors.navy, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
   stepBadge: {
     color: Colors.marigoldDark,
     fontSize: FontSize.xxs,
@@ -302,6 +378,51 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.surface,
+    ...Shadow.sm,
+  },
+  searchInput: { flex: 1, color: Colors.text, fontSize: FontSize.sm, paddingVertical: Spacing.sm },
+  categoryRow: { gap: Spacing.sm, paddingVertical: 2, paddingRight: Spacing.md },
+  categoryChip: {
+    minHeight: 34,
+    paddingHorizontal: 13,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryChipActive: { backgroundColor: Colors.navy, borderColor: Colors.navy },
+  categoryChipText: { color: Colors.textSecondary, fontSize: FontSize.xxs, fontWeight: FontWeight.semibold },
+  categoryChipTextActive: { color: Colors.white },
+  selectionSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.navySubtle,
+    borderWidth: 1,
+    borderColor: Colors.navyBorder,
+  },
+  selectionEyebrow: { color: Colors.navyMuted, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1 },
+  selectionHeadline: { color: Colors.navyDark, fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginTop: 3 },
+  selectionStats: { alignItems: 'flex-end', gap: 3 },
+  selectionVolume: { color: Colors.navyDark, fontSize: FontSize.md, fontWeight: FontWeight.extrabold },
+  selectionCost: { color: Colors.textSecondary, fontSize: 10 },
+  loadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 2 },
+  loadingText: { color: Colors.textSecondary, fontSize: FontSize.xxs },
+
   // Section
   section: {
     backgroundColor: Colors.surface,
@@ -318,6 +439,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: Spacing.xs,
   },
+  sectionItemCount: { marginLeft: 'auto', color: Colors.textMuted, fontSize: FontSize.xxs, fontWeight: FontWeight.medium },
   roomTitle: {
     color: Colors.navyDark,
     fontSize: FontSize.xs,
@@ -391,38 +513,45 @@ const styles = StyleSheet.create({
     color: Colors.navyDark,
   },
 
-  ctaArea: {
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  ctaBadge: {
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 180,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
     backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.full,
-    paddingVertical: 5,
-    paddingHorizontal: Spacing.md,
-    alignSelf: 'center',
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    ...Shadow.sm,
   },
-  ctaCount: {
-    color: Colors.navy,
-    fontSize: FontSize.xxs,
-    fontWeight: FontWeight.bold,
+  emptyTitle: { color: Colors.navyDark, fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  emptyCopy: { color: Colors.textSecondary, fontSize: FontSize.xs, textAlign: 'center' },
+
+  ctaArea: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
   },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
+    justifyContent: 'space-between',
+    gap: Spacing.md,
     backgroundColor: Colors.navy,
     borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md + 2,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     ...Shadow.sm,
   },
+  ctaDisabled: { backgroundColor: Colors.navyMuted, opacity: 0.65 },
+  ctaCopy: { flex: 1, gap: 3 },
   ctaText: {
     color: Colors.white,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },
+  ctaSubtext: { color: 'rgba(255,255,255,0.72)', fontSize: FontSize.xxs },
 });

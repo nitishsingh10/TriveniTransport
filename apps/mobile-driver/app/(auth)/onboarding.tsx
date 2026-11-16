@@ -74,7 +74,6 @@ export default function DriverOnboardingScreen() {
   const loadSavedOnboarding = useOnboardingStore((s) => s.loadSavedOnboarding);
 
   const authUser = useAuthStore((s) => s.user);
-  const setAuth = useAuthStore((s) => s.setAuth);
 
   const [loading, setLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -175,23 +174,15 @@ export default function DriverOnboardingScreen() {
       Alert.alert('Agreement Required', 'Please accept the Driver Partner Safety & Compliance Pledge.');
       return;
     }
+    if (!authUser) {
+      Alert.alert('Sign in required', 'Please sign in before submitting driver onboarding details.');
+      router.replace('/(auth)/login');
+      return;
+    }
 
     setLoading(true);
     try {
       await submitOnboarding();
-
-      // Ensure auth store has the partner session
-      if (!authUser) {
-        setAuth(
-          {
-            id: 'vendor-partner-001',
-            role: 'vendor',
-            name: driverKyc.fullName || 'Driver Partner',
-            phone: driverKyc.phone || '9888888888',
-          },
-          'mock-vendor-access-token'
-        );
-      }
 
       Alert.alert(
         '🎉 Onboarding Complete!',

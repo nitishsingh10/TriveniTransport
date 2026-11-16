@@ -23,21 +23,20 @@ import {
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi } from '@/lib/api';
+import { DEFAULT_CATALOG } from '@/constants/inventory';
 
-const ITEM_RATES: Record<string, { name: string; rate: number }> = {
-  sofa_3: { name: '3-Seater Sofa', rate: 800 },
-  tv_unit: { name: 'LED TV & Unit', rate: 400 },
-  coffee_table: { name: 'Coffee Table', rate: 200 },
-  double_bed: { name: 'Double Bed & Mattress', rate: 1200 },
-  wardrobe: { name: 'Wardrobe / Almirah', rate: 900 },
-  dressing: { name: 'Dressing Table', rate: 500 },
-  fridge: { name: 'Refrigerator', rate: 600 },
-  washing: { name: 'Washing Machine', rate: 500 },
-  microwave: { name: 'Microwave Oven', rate: 200 },
-  boxes_sm: { name: 'Carton Boxes (Small)', rate: 60 },
-  boxes_lg: { name: 'Jumbo Boxes (Large)', rate: 120 },
-  bicycle: { name: 'Bicycle / Two-Wheeler', rate: 300 },
-};
+interface SelectedItem {
+  id: string;
+  itemId?: string;
+  name: string;
+  quantity: number;
+  defaultCft: number;
+  baseRate: number;
+}
+
+const FALLBACK_ITEMS = new Map(
+  DEFAULT_CATALOG.flatMap((section) => section.items.map((item) => [item.id, item] as const))
+);
 
 const ZONE_RATE = 3500;
 const LABOUR_RATE = 1200;
@@ -50,24 +49,43 @@ export default function SummaryScreen() {
     floor: string;
     lift: string;
     quantities: string;
+    selectedItems: string;
   }>();
 
-  const quantities = useMemo<Record<string, number>>(
-    () => JSON.parse(params.quantities ?? '{}'),
-    [params.quantities]
-  );
+  const quantities = useMemo<Record<string, number>>(() => {
+    try { return JSON.parse(params.quantities ?? '{}'); } catch { return {}; }
+  }, [params.quantities]);
+
+  const selectedItems = useMemo<SelectedItem[]>(() => {
+    try {
+      const parsed = JSON.parse(params.selectedItems ?? '[]');
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+    return Object.entries(quantities)
+      .filter(([, quantity]) => Number(quantity) > 0)
+      .map(([id, quantity]) => {
+        const item = FALLBACK_ITEMS.get(id);
+        return {
+          id,
+          name: item?.name ?? id,
+          quantity: Number(quantity),
+          defaultCft: item?.defaultCft ?? 20,
+          baseRate: item?.baseRate ?? 500,
+        };
+      });
+  }, [params.selectedItems, quantities]);
 
   const itemLines = useMemo(
-    () =>
-      Object.entries(quantities)
-        .filter(([, qty]) => qty > 0)
-        .map(([id, qty]) => ({
-          label: ITEM_RATES[id]?.name ?? id,
-          qty,
-          unitPrice: ITEM_RATES[id]?.rate ?? 0,
-          total: qty * (ITEM_RATES[id]?.rate ?? 0),
-        })),
-    [quantities]
+    () => selectedItems.map((item) => ({
+      id: item.itemId || item.id,
+      itemId: item.itemId,
+      label: item.name,
+      qty: item.quantity,
+      cft: item.defaultCft,
+      unitPrice: item.baseRate,
+      total: item.quantity * item.baseRate,
+    })),
+    [selectedItems]
   );
 
   const goodsSubtotal = itemLines.reduce((s, l) => s + l.total, 0);
@@ -87,7 +105,7 @@ export default function SummaryScreen() {
       const scheduledDate = today.toISOString().split('T')[0];
 
       const itemsPayload = itemLines.map((line) => ({
-        customName: line.label,
+        ...(line.itemId ? { itemId: line.itemId } : { customName: line.label, customCft: line.cft }),
         quantity: line.qty,
         packingTier: 'standard' as const,
       }));
@@ -95,6 +113,7 @@ export default function SummaryScreen() {
       if (itemsPayload.length === 0) {
         itemsPayload.push({
           customName: 'General Household Furniture',
+          customCft: 20,
           quantity: 1,
           packingTier: 'standard' as const,
         });

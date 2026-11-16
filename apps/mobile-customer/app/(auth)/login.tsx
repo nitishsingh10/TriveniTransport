@@ -38,10 +38,10 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [showSwitchPrompt, setShowSwitchPrompt] = useState<'to_signup' | 'to_login' | null>(null);
 
-  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
-  const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+  const isPhoneValid = method === 'phone' && /^[6-9]\d{9}$/.test(identifier.replace(/\D/g, ''));
+  const isEmailValid = method === 'email' && identifier.trim().length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
   const isIdentifierValid = method === 'phone' ? isPhoneValid : isEmailValid;
-  const isNameValid = authMode === 'login' || name.trim().length >= 2;
+  const isNameValid = authMode === 'login' || (name.trim().length >= 2 && name.trim().length <= 150);
   const canSubmit = isIdentifierValid && isNameValid;
   const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
 
@@ -60,8 +60,8 @@ export default function LoginScreen() {
 
   const handleSendOtp = async () => {
     if (!canSubmit) {
-      if (authMode === 'signup' && name.trim().length < 2) {
-        setErrorMsg('Please enter your full name (minimum 2 characters).');
+      if (authMode === 'signup' && !isNameValid) {
+        setErrorMsg('Please enter your full name (2–150 characters).');
         return;
       }
       if (!isIdentifierValid) {
@@ -223,6 +223,7 @@ export default function LoginScreen() {
                     placeholder="e.g. Rahul Sharma"
                     placeholderTextColor={Colors.inputPlaceholder}
                     value={name}
+                    maxLength={150}
                     onChangeText={(t) => {
                       setName(t);
                       setErrorMsg('');
@@ -292,6 +293,7 @@ export default function LoginScreen() {
                     placeholder="you@example.com"
                     placeholderTextColor={Colors.inputPlaceholder}
                     keyboardType="email-address"
+                    maxLength={254}
                     autoCapitalize="none"
                     autoCorrect={false}
                     value={identifier}

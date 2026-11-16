@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   RotateCcw,
   AlertCircle,
-  Sparkles,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
@@ -50,6 +49,10 @@ export default function OtpScreen() {
     const t = setTimeout(() => setResendTimer((p) => p - 1), 1000);
     return () => clearTimeout(t);
   }, [resendTimer]);
+
+  useEffect(() => {
+    if (!resolvedIdentifier) router.replace('/(auth)/login' as any);
+  }, [resolvedIdentifier]);
 
   const handleChange = (val: string, index: number) => {
     setErrorMsg('');
@@ -107,7 +110,7 @@ export default function OtpScreen() {
     setUserNotFound(false);
 
     try {
-      const res = await authApi.verifyOtp(resolvedIdentifier || '9820098200', finalOtp, isSignupBool, name);
+      const res = await authApi.verifyOtp(resolvedIdentifier, finalOtp, isSignupBool, name);
       const userPhone = res.user?.phone ? (res.user.phone.startsWith('+91') ? res.user.phone : `+91${res.user.phone}`) : undefined;
       const userName = res.user?.name || name || (isEmail ? '' : 'Customer');
 
@@ -151,17 +154,11 @@ export default function OtpScreen() {
     setErrorMsg('');
     setUserNotFound(false);
     try {
-      await authApi.requestOtp(resolvedIdentifier || '9820098200', isSignupBool);
+      await authApi.requestOtp(resolvedIdentifier, isSignupBool);
     } catch (e: any) {
       setErrorMsg(e.message || 'Could not resend code. Please try again.');
     }
     inputRefs.current[0]?.focus();
-  };
-
-  const handleDevFill = () => {
-    const devCode = ['1', '2', '3', '4', '5', '6'];
-    setOtp(devCode);
-    handleVerify('123456');
   };
 
   return (
@@ -216,18 +213,6 @@ export default function OtpScreen() {
                 </View>
               </View>
             ) : null}
-
-            {/* Dev hint & 1-tap fill banner */}
-            <TouchableOpacity
-              style={styles.devHint}
-              onPress={handleDevFill}
-              activeOpacity={0.8}
-            >
-              <Sparkles size={13} color="#B45309" />
-              <Text style={styles.devHintText}>
-                Dev test mode: tap to auto-fill <Text style={{ fontWeight: 'bold' }}>123456</Text>
-              </Text>
-            </TouchableOpacity>
 
             {/* OTP Boxes */}
             <View style={styles.otpRow}>
@@ -410,25 +395,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     textDecorationLine: 'underline',
-  },
-
-  devHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(247, 163, 0, 0.12)',
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: Colors.marigoldBorder,
-    alignSelf: 'center',
-  },
-  devHintText: {
-    color: '#B45309',
-    fontSize: FontSize.xxs,
-    fontWeight: FontWeight.semibold,
   },
 
   otpRow: {

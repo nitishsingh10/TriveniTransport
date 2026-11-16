@@ -20,21 +20,28 @@ import {
   Wallet,
   Clock,
   Truck,
+  User,
+  UserPlus,
+  LogIn,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { driverAuthApi } from '@/lib/api';
 
 type Method = 'phone' | 'email';
+type AuthMode = 'login' | 'signup';
 
 export default function DriverLoginScreen() {
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [method, setMethod] = useState<Method>('phone');
+  const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
-  const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
+  const isPhoneValid = method === 'phone' && /^[6-9]\d{9}$/.test(identifier.replace(/\D/g, ''));
+  const isEmailValid = method === 'email' && identifier.trim().length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
   const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
+  const canCreateAccount = authMode === 'login' || (name.trim().length >= 2 && name.trim().length <= 150);
   const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
 
   const switchMethod = (m: Method) => {
@@ -44,13 +51,21 @@ export default function DriverLoginScreen() {
   };
 
   const handleSendOtp = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || !canCreateAccount) {
+      if (authMode === 'signup' && !canCreateAccount) setErrorMsg('Enter your full name (2–150 characters).');
+      else if (!canSubmit) setErrorMsg(method === 'phone' ? 'Enter a valid 10-digit Indian mobile number.' : 'Enter a valid email address.');
+      return;
+    }
 
     setLoading(true);
     setErrorMsg('');
     try {
-      await driverAuthApi.requestOtp(resolvedIdentifier);
-      router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
+      const isSignup = authMode === 'signup';
+      await driverAuthApi.requestOtp(resolvedIdentifier, isSignup);
+      router.push({
+        pathname: '/(auth)/otp',
+        params: { identifier: resolvedIdentifier, isSignup: String(isSignup), name: isSignup ? name.trim() : '' },
+      });
     } catch (e: any) {
       if (e.status === 429) {
         setErrorMsg('Too many OTP requests. Please wait a few minutes.');
@@ -58,9 +73,10 @@ export default function DriverLoginScreen() {
         setErrorMsg('No partner account found. Please contact support.');
       } else if (e.status === 403) {
         setErrorMsg('Your partner account is inactive. Please contact Triveni support.');
+      } else if (e.code === 'ALREADY_EXISTS') {
+        setErrorMsg('A partner account already exists. Sign in with it instead.');
       } else {
-        // Allow dev mode to proceed to OTP screen
-        router.push({ pathname: '/(auth)/otp', params: { identifier: resolvedIdentifier } });
+        setErrorMsg(e.message || 'Unable to send a verification code. Check your connection and try again.');
       }
     } finally {
       setLoading(false);
@@ -107,14 +123,54 @@ export default function DriverLoginScreen() {
 
           {/* Form Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Driver Sign In</Text>
+            <View style={styles.authModeToggle}>
+              <TouchableOpacity
+                style={[styles.authModeTab, authMode === 'login' && styles.authModeTabActive]}
+                onPress={() => { setAuthMode('login'); setErrorMsg(''); }}
+                activeOpacity={0.8}
+              >
+                <LogIn size={14} color={authMode === 'login' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.authModeText, authMode === 'login' && styles.authModeTextActive]}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.authModeTab, authMode === 'signup' && styles.authModeTabActive]}
+                onPress={() => { setAuthMode('signup'); setErrorMsg(''); }}
+                activeOpacity={0.8}
+              >
+                <UserPlus size={14} color={authMode === 'signup' ? Colors.navy : Colors.textMuted} />
+                <Text style={[styles.authModeText, authMode === 'signup' && styles.authModeTextActive]}>New Partner</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.cardTitle}>{authMode === 'login' ? 'Driver Sign In' : 'Create Partner Account'}</Text>
             <Text style={styles.cardSubtitle}>
-              Enter your registered mobile number or email to access your assignments and payouts.
+              {authMode === 'login'
+                ? 'Enter your registered mobile number or email to access assignments and payouts.'
+                : 'Verify your mobile number or email, then add your vehicle and driver details.'}
             </Text>
 
             {!!errorMsg && (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{errorMsg}</Text>
+              </View>
+            )}
+
+            {authMode === 'signup' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.countryCodeBox}><User size={16} color={Colors.navy} /></View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Rahul Sharma"
+                    placeholderTextColor={Colors.inputPlaceholder}
+                    value={name}
+                    maxLength={150}
+                    onChangeText={(value) => { setName(value); setErrorMsg(''); }}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
               </View>
             )}
 
@@ -157,7 +213,10 @@ export default function DriverLoginScreen() {
                     keyboardType="phone-pad"
                     maxLength={10}
                     value={identifier}
-                    onChangeText={setIdentifier}
+                    onChangeText={(value) => {
+                      setIdentifier(value.replace(/\D/g, '').slice(0, 10));
+                      setErrorMsg('');
+                    }}
                     returnKeyType="done"
                     onSubmitEditing={handleSendOtp}
                   />
@@ -173,10 +232,14 @@ export default function DriverLoginScreen() {
                     placeholder="partner@example.com"
                     placeholderTextColor={Colors.inputPlaceholder}
                     keyboardType="email-address"
+                    maxLength={254}
                     autoCapitalize="none"
                     autoCorrect={false}
                     value={identifier}
-                    onChangeText={setIdentifier}
+                    onChangeText={(value) => {
+                      setIdentifier(value);
+                      setErrorMsg('');
+                    }}
                     returnKeyType="done"
                     onSubmitEditing={handleSendOtp}
                   />
@@ -189,17 +252,17 @@ export default function DriverLoginScreen() {
             <TouchableOpacity
               style={[
                 styles.submitBtn,
-                (!canSubmit || loading) && styles.submitBtnDisabled,
+                (!canSubmit || !canCreateAccount || loading) && styles.submitBtnDisabled,
               ]}
               onPress={handleSendOtp}
               activeOpacity={0.88}
-              disabled={!canSubmit || loading}
+              disabled={!canSubmit || !canCreateAccount || loading}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <View style={styles.btnContent}>
-                  <Text style={styles.submitBtnText}>Get OTP Code</Text>
+                  <Text style={styles.submitBtnText}>{authMode === 'login' ? 'Get OTP Code' : 'Create Account with OTP'}</Text>
                   <ArrowRight size={16} color={Colors.white} strokeWidth={2.4} />
                 </View>
               )}
@@ -208,13 +271,13 @@ export default function DriverLoginScreen() {
             {/* Onboard New Vehicle / Register CTA */}
             <View style={styles.onboardDividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR NEW DRIVER PARTNER</Text>
+              <Text style={styles.dividerText}>{authMode === 'login' ? 'NEW DRIVER PARTNER?' : 'NEXT STEP'}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             <TouchableOpacity
               style={styles.onboardBtn}
-              onPress={() => router.push('/(auth)/onboarding' as any)}
+              onPress={() => { setAuthMode('signup'); setErrorMsg(''); }}
               activeOpacity={0.88}
             >
               <View style={styles.onboardBtnContent}>
@@ -222,8 +285,12 @@ export default function DriverLoginScreen() {
                   <Truck size={18} color={Colors.navy} strokeWidth={2.2} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.onboardBtnTitle}>Onboard Commercial Vehicle</Text>
-                  <Text style={styles.onboardBtnSubtitle}>Upload RC, plate & driver licence</Text>
+                  <Text style={styles.onboardBtnTitle}>
+                    {authMode === 'login' ? 'Create a partner account' : 'Add your vehicle details next'}
+                  </Text>
+                  <Text style={styles.onboardBtnSubtitle}>
+                    {authMode === 'login' ? 'Verify your number, then continue onboarding' : 'Continue after OTP verification'}
+                  </Text>
                 </View>
                 <ArrowRight size={16} color={Colors.navy} />
               </View>
@@ -393,6 +460,28 @@ const styles = StyleSheet.create({
   },
 
   // Method Toggle
+  authModeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  authModeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 8,
+  },
+  authModeTabActive: { backgroundColor: Colors.white, ...Shadow.sm },
+  authModeText: { fontSize: FontSize.xs, color: Colors.textMuted, fontWeight: FontWeight.semibold },
+  authModeTextActive: { color: Colors.navy },
+
   methodToggle: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',

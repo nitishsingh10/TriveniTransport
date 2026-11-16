@@ -6,6 +6,7 @@
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
 // Auto-detect development machine LAN IP when running in Expo Go on a local machine,
@@ -52,22 +53,46 @@ const STORAGE_KEYS = {
   USER_DATA: 'triveni_customer_user',
 };
 
+async function getSecret(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') return AsyncStorage.getItem(key);
+
+  const secureValue = await SecureStore.getItemAsync(key);
+  if (secureValue !== null) return secureValue;
+
+  // Migrate credentials from older app versions that stored tokens in AsyncStorage.
+  const legacyValue = await AsyncStorage.getItem(key);
+  if (legacyValue !== null) {
+    await SecureStore.setItemAsync(key, legacyValue);
+    await AsyncStorage.removeItem(key);
+  }
+  return legacyValue;
+}
+
+async function setSecret(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+    return;
+  }
+  await SecureStore.setItemAsync(key, value);
+  await AsyncStorage.removeItem(key);
+}
+
+async function removeSecret(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+    return;
+  }
+  await Promise.all([SecureStore.deleteItemAsync(key), AsyncStorage.removeItem(key)]);
+}
+
 // ── Token Storage Helpers ──────────────────────────────────────────
 export const tokenStorage = {
   async getAccessToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch {
-      return null;
-    }
+    return getSecret(STORAGE_KEYS.ACCESS_TOKEN);
   },
 
   async getRefreshToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-    } catch {
-      return null;
-    }
+    return getSecret(STORAGE_KEYS.REFRESH_TOKEN);
   },
 
   async getUser<T = any>(): Promise<T | null> {
@@ -80,38 +105,27 @@ export const tokenStorage = {
   },
 
   async setUser(user: any): Promise<void> {
-    try {
-      if (user) {
-        await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-      } else {
-        await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
-      }
-    } catch (e) {
-      console.warn('Error saving customer user data:', e);
-    }
+    if (user) await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+    else await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
   },
 
   async setTokens(access: string, refresh?: string): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
-      if (refresh) {
-        await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
-      }
-    } catch (e) {
-      console.warn('Error saving tokens:', e);
+      await setSecret(STORAGE_KEYS.ACCESS_TOKEN, access);
+      if (refresh) await setSecret(STORAGE_KEYS.REFRESH_TOKEN, refresh);
+      else await removeSecret(STORAGE_KEYS.REFRESH_TOKEN);
+    } catch (error) {
+      await tokenStorage.clear().catch(() => {});
+      throw error;
     }
   },
 
   async clear(): Promise<void> {
-    try {
-      await AsyncStorage.multiRemove([
-        STORAGE_KEYS.ACCESS_TOKEN,
-        STORAGE_KEYS.REFRESH_TOKEN,
-        STORAGE_KEYS.USER_DATA,
-      ]);
-    } catch (e) {
-      console.warn('Error clearing tokens:', e);
-    }
+    await Promise.all([
+      removeSecret(STORAGE_KEYS.ACCESS_TOKEN),
+      removeSecret(STORAGE_KEYS.REFRESH_TOKEN),
+      AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
+    ]);
   },
 };
 
@@ -125,6 +139,46 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+let sessionExpiredHandler: (() => void) | null = null;
+let refreshInFlight: Promise<{ accessToken: string; refreshToken: string } | null> | null = null;
+
+export function setSessionExpiredHandler(handler: () => void): void {
+  sessionExpiredHandler = handler;
+}
+
+async function refreshSession(): Promise<{ accessToken: string; refreshToken: string } | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const refreshToken = await tokenStorage.getRefreshToken();
+      if (!refreshToken) return null;
+
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshRes.status === 401) {
+          await tokenStorage.clear();
+          sessionExpiredHandler?.();
+          return null;
+        }
+        if (!refreshRes.ok) return null;
+
+        const data = await refreshRes.json();
+        if (typeof data?.accessToken !== 'string' || typeof data?.refreshToken !== 'string') return null;
+        await tokenStorage.setTokens(data.accessToken, data.refreshToken);
+        return { accessToken: data.accessToken, refreshToken: data.refreshToken };
+      } catch {
+        return null;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -143,26 +197,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     let res = await fetch(url, { ...options, headers });
 
     // Handle token expiration: attempt automatic refresh once
-    if (res.status === 401 && !path.includes('/auth/')) {
-      const refreshToken = await tokenStorage.getRefreshToken();
-      if (refreshToken) {
-        try {
-          const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
-          if (refreshRes.ok) {
-            const refreshData = await refreshRes.json();
-            if (refreshData?.accessToken) {
-              await tokenStorage.setTokens(refreshData.accessToken, refreshData.refreshToken || refreshToken);
-              headers.Authorization = `Bearer ${refreshData.accessToken}`;
-              res = await fetch(url, { ...options, headers });
-            }
-          }
-        } catch {
-          // Token refresh failure falls through
-        }
+    if (res.status === 401 && !path.startsWith('/auth/')) {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        headers.Authorization = `Bearer ${refreshed.accessToken}`;
+        res = await fetch(url, { ...options, headers });
       }
     }
 
@@ -170,7 +209,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
-      throw new ApiError(res.status, err?.code || 'API_ERROR', err?.message || res.statusText);
+      const payload = err?.error ?? err;
+      throw new ApiError(res.status, payload?.code || 'API_ERROR', payload?.message || res.statusText);
     }
 
     return (await res.json()) as T;
@@ -332,13 +372,6 @@ export const authApi = {
       }),
     });
 
-    if (data.accessToken) {
-      await tokenStorage.setTokens(data.accessToken, data.refreshToken);
-      if (data.user) {
-        await tokenStorage.setUser(data.user);
-      }
-    }
-
     return data;
   },
 
@@ -354,6 +387,21 @@ export const authApi = {
     } finally {
       await tokenStorage.clear();
     }
+  },
+};
+
+export interface CatalogApiItem {
+  id: string;
+  name: string;
+  category: string;
+  defaultCft: number | string;
+  defaultWeightKg: number | string;
+  baseHandlingRate: number | string;
+}
+
+export const catalogApi = {
+  async listItems(): Promise<CatalogApiItem[]> {
+    return request<CatalogApiItem[]>('/catalog/items');
   },
 };
 
@@ -409,9 +457,11 @@ export const bookingApi = {
     scheduledDate: string;
     scheduledSlot: string;
     items: Array<{
+      itemId?: string;
       customName?: string | null;
       quantity: number;
       packingTier: 'lite' | 'standard' | 'premium';
+      customCft?: number;
     }>;
     addons?: string[];
     paymentMethod?: string;

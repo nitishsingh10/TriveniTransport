@@ -87,6 +87,7 @@ model OtpChallenge {
   phone      String?    @db.VarChar(15)
   email      String?    @db.VarChar(254)
   otpHash    String     @map("otp_hash") @db.VarChar(255)
+  role       UserRole   @default(customer) @map("user_role")
   purpose    OtpPurpose @default(login)
   attempts   Int        @default(0)
   expiresAt  DateTime   @map("expires_at")

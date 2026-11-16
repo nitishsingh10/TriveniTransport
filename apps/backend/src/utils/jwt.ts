@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { getEnv } from '../config/env';
 import { UserRole } from '@triveni/shared-types';
 
@@ -14,6 +15,7 @@ export function signRefreshToken(userId: string, role: UserRole): string {
   const { JWT_REFRESH_SECRET, JWT_REFRESH_EXPIRES_IN } = getEnv();
   return jwt.sign({ sub: userId, role }, JWT_REFRESH_SECRET, {
     algorithm: 'HS256',
+    jwtid: crypto.randomUUID(),
     expiresIn: (JWT_REFRESH_EXPIRES_IN || '30d') as any,
   });
 }

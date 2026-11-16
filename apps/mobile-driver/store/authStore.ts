@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AuthUser } from '@triveni/shared-types';
-import { tokenStorage } from '@/lib/api';
+import { setSessionExpiredHandler, tokenStorage } from '@/lib/api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -27,7 +27,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       await tokenStorage.setTokens(accessToken, refreshToken);
       await tokenStorage.setUser(user);
     } catch (e) {
+      await tokenStorage.clear().catch(() => {});
       console.warn('Error persisting driver session:', e);
+      throw e;
     }
     set({ user, accessToken, isAuthenticated: true, isHydrated: true });
   },
@@ -49,13 +51,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       ]);
 
       if (token) {
-        const user: AuthUser = savedUser || {
-          id: 'driver-partner',
-          role: 'vendor',
-          name: 'Driver Partner',
-        };
+        if (!savedUser || savedUser.role !== 'vendor' || !savedUser.id) {
+          await tokenStorage.clear();
+          set({ user: null, accessToken: null, isAuthenticated: false, isHydrated: true });
+          return false;
+        }
         set({
-          user,
+          user: savedUser,
           accessToken: token,
           isAuthenticated: true,
           isHydrated: true,
@@ -77,3 +79,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   toggleOnline: (status) =>
     set((state) => ({ isOnline: status !== undefined ? status : !state.isOnline })),
 }));
+
+setSessionExpiredHandler(() => {
+  void useAuthStore.getState().clearAuth();
+});

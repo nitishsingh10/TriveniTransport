@@ -220,12 +220,22 @@ async function main() {
     { name: 'Wardrobe (3-door)', category: 'Bedroom', defaultCft: 90, defaultWeightKg: 80, baseHandlingRate: 1200 },
     { name: 'Wardrobe (2-door)', category: 'Bedroom', defaultCft: 60, defaultWeightKg: 55, baseHandlingRate: 900 },
     { name: 'Dressing Table', category: 'Bedroom', defaultCft: 25, defaultWeightKg: 20, baseHandlingRate: 400 },
+    { name: 'Single Mattress', category: 'Bedroom', defaultCft: 20, defaultWeightKg: 25, baseHandlingRate: 250 },
+    { name: 'Bedside Table', category: 'Bedroom', defaultCft: 8, defaultWeightKg: 12, baseHandlingRate: 150 },
+    { name: 'Chest of Drawers', category: 'Bedroom', defaultCft: 30, defaultWeightKg: 35, baseHandlingRate: 450 },
+    { name: 'Study Desk', category: 'Bedroom', defaultCft: 35, defaultWeightKg: 30, baseHandlingRate: 450 },
+    { name: 'Baby Crib / Cot', category: 'Bedroom', defaultCft: 30, defaultWeightKg: 25, baseHandlingRate: 400 },
     // Living Room
     { name: 'Sofa (3-seater)', category: 'Living Room', defaultCft: 60, defaultWeightKg: 50, baseHandlingRate: 700 },
     { name: 'Sofa (2-seater)', category: 'Living Room', defaultCft: 40, defaultWeightKg: 35, baseHandlingRate: 500 },
     { name: 'TV Unit / Entertainment Unit', category: 'Living Room', defaultCft: 30, defaultWeightKg: 25, baseHandlingRate: 400 },
     { name: 'Coffee Table', category: 'Living Room', defaultCft: 15, defaultWeightKg: 10, baseHandlingRate: 200 },
     { name: 'Recliner', category: 'Living Room', defaultCft: 35, defaultWeightKg: 30, baseHandlingRate: 450 },
+    { name: 'Armchair', category: 'Living Room', defaultCft: 22, defaultWeightKg: 20, baseHandlingRate: 300 },
+    { name: 'Bookshelf', category: 'Living Room', defaultCft: 35, defaultWeightKg: 35, baseHandlingRate: 450 },
+    { name: 'Display Cabinet / Showcase', category: 'Living Room', defaultCft: 50, defaultWeightKg: 45, baseHandlingRate: 650 },
+    { name: 'Shoe Rack', category: 'Living Room', defaultCft: 12, defaultWeightKg: 15, baseHandlingRate: 200 },
+    { name: 'Floor Lamp', category: 'Living Room', defaultCft: 8, defaultWeightKg: 6, baseHandlingRate: 120 },
     // Kitchen
     { name: 'Refrigerator (Single Door)', category: 'Kitchen', defaultCft: 20, defaultWeightKg: 40, baseHandlingRate: 600 },
     { name: 'Refrigerator (Double Door)', category: 'Kitchen', defaultCft: 30, defaultWeightKg: 65, baseHandlingRate: 900 },
@@ -233,33 +243,55 @@ async function main() {
     { name: 'Washing Machine (Top Load)', category: 'Kitchen', defaultCft: 18, defaultWeightKg: 40, baseHandlingRate: 500 },
     { name: 'Microwave', category: 'Kitchen', defaultCft: 5, defaultWeightKg: 12, baseHandlingRate: 200 },
     { name: 'Dishwasher', category: 'Kitchen', defaultCft: 15, defaultWeightKg: 45, baseHandlingRate: 500 },
+    { name: 'Gas Stove / Cooktop', category: 'Kitchen', defaultCft: 8, defaultWeightKg: 15, baseHandlingRate: 180 },
+    { name: 'Water Purifier', category: 'Kitchen', defaultCft: 6, defaultWeightKg: 12, baseHandlingRate: 150 },
+    { name: 'Kitchen Cabinet / Island', category: 'Kitchen', defaultCft: 45, defaultWeightKg: 50, baseHandlingRate: 650 },
+    { name: 'Air Fryer / Small Appliance', category: 'Kitchen', defaultCft: 4, defaultWeightKg: 8, baseHandlingRate: 100 },
     // Electronics
     { name: 'LED TV (32-43 inch)', category: 'Electronics', defaultCft: 8, defaultWeightKg: 8, baseHandlingRate: 300 },
     { name: 'LED TV (50+ inch)', category: 'Electronics', defaultCft: 15, defaultWeightKg: 15, baseHandlingRate: 500 },
     { name: 'Desktop Computer / Monitor', category: 'Electronics', defaultCft: 8, defaultWeightKg: 10, baseHandlingRate: 250 },
     { name: 'AC (Split Unit — indoor + outdoor)', category: 'Electronics', defaultCft: 25, defaultWeightKg: 35, baseHandlingRate: 800 },
+    { name: 'Laptop / Tablet', category: 'Electronics', defaultCft: 3, defaultWeightKg: 4, baseHandlingRate: 100 },
+    { name: 'Printer / Scanner', category: 'Electronics', defaultCft: 8, defaultWeightKg: 12, baseHandlingRate: 180 },
+    { name: 'Home Theatre / Speaker Set', category: 'Electronics', defaultCft: 15, defaultWeightKg: 18, baseHandlingRate: 250 },
+    { name: 'Air Cooler', category: 'Electronics', defaultCft: 25, defaultWeightKg: 20, baseHandlingRate: 350 },
+    { name: 'Inverter / UPS', category: 'Electronics', defaultCft: 12, defaultWeightKg: 25, baseHandlingRate: 250 },
+    { name: 'Ceiling Fan', category: 'Electronics', defaultCft: 5, defaultWeightKg: 8, baseHandlingRate: 120 },
     // Dining
     { name: 'Dining Table (4-seater)', category: 'Dining', defaultCft: 40, defaultWeightKg: 30, baseHandlingRate: 500 },
     { name: 'Dining Table (6-seater)', category: 'Dining', defaultCft: 55, defaultWeightKg: 45, baseHandlingRate: 700 },
     { name: 'Dining Chair', category: 'Dining', defaultCft: 6, defaultWeightKg: 5, baseHandlingRate: 100 },
+    { name: 'Bar Stool', category: 'Dining', defaultCft: 5, defaultWeightKg: 5, baseHandlingRate: 90 },
     // Cartons
     { name: 'Carton Box (Medium)', category: 'Carton', defaultCft: 5, defaultWeightKg: 15, baseHandlingRate: 150 },
     { name: 'Carton Box (Large)', category: 'Carton', defaultCft: 8, defaultWeightKg: 20, baseHandlingRate: 200 },
+    { name: 'Carton Box (Small)', category: 'Carton', defaultCft: 3, defaultWeightKg: 8, baseHandlingRate: 90 },
+    { name: 'Suitcase / Travel Bag', category: 'Carton', defaultCft: 8, defaultWeightKg: 12, baseHandlingRate: 140 },
+    { name: 'Plastic Storage Crate', category: 'Carton', defaultCft: 6, defaultWeightKg: 10, baseHandlingRate: 120 },
+    { name: 'Bicycle', category: 'Vehicle', defaultCft: 20, defaultWeightKg: 18, baseHandlingRate: 300 },
+    { name: 'Scooter / Motorcycle', category: 'Vehicle', defaultCft: 45, defaultWeightKg: 120, baseHandlingRate: 1200 },
+    { name: 'Treadmill / Exercise Machine', category: 'Sports & Outdoor', defaultCft: 40, defaultWeightKg: 55, baseHandlingRate: 700 },
+    { name: 'Garden Chair / Outdoor Set', category: 'Sports & Outdoor', defaultCft: 18, defaultWeightKg: 18, baseHandlingRate: 250 },
+    { name: 'Office Chair', category: 'Office', defaultCft: 18, defaultWeightKg: 15, baseHandlingRate: 250 },
+    { name: 'Filing Cabinet', category: 'Office', defaultCft: 25, defaultWeightKg: 35, baseHandlingRate: 400 },
+    { name: 'Office Desk / Workstation', category: 'Office', defaultCft: 45, defaultWeightKg: 45, baseHandlingRate: 600 },
+    { name: 'Safe / Locker', category: 'Office', defaultCft: 12, defaultWeightKg: 80, baseHandlingRate: 700 },
   ];
 
   await Promise.all(
-    items.map((item) =>
-      prisma.item.create({
-        data: {
-          ...item,
-          active: true,
-          effectiveFrom,
-          createdBy: admin.id,
-        },
-      })
-    )
+    items.map(async (item) => {
+      const existing = await prisma.item.findFirst({
+        where: { name: item.name, category: item.category },
+        select: { id: true },
+      });
+      if (existing) return existing;
+      return prisma.item.create({
+        data: { ...item, active: true, effectiveFrom, createdBy: admin.id },
+      });
+    })
   );
-  console.log('✅ Items:', items.length, 'catalog items created');
+  console.log('✅ Items:', items.length, 'catalog items ensured');
 
   // ── Pricing Rules ────────────────────────────────────────────
   const pricingRules = [
