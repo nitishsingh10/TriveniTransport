@@ -271,7 +271,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     marginBottom: 4,
   },
   badgeZeroAdvanceText: {
-    color: '#15803D',
+    color: Colors.success,
     fontSize: 10,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 0.8,
@@ -304,11 +304,11 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     padding: Spacing.sm + 2,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: Colors.warningBorder,
   },
   noticeText: {
     flex: 1,
-    color: '#92400E',
+    color: Colors.warning,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -377,7 +377,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
   methodDesc: {
-    color: '#166534',
+    color: Colors.success,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -392,7 +392,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     borderRadius: 6,
   },
   activePillText: {
-    color: '#15803D',
+    color: Colors.success,
     fontSize: 9,
     fontWeight: FontWeight.extrabold,
   },
@@ -403,7 +403,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     borderRadius: 6,
   },
   disabledPillText: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 9,
     fontWeight: FontWeight.bold,
   },

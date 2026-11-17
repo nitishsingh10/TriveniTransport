@@ -14,30 +14,40 @@ import {
 } from 'lucide-react';
 import { AdminDataService, AdminAuditLog, AdminNotification } from '../adminData';
 import styles from '../admin.module.css';
+import { AdminDataNotice } from '../AdminDataNotice';
 
 export default function AdminAuditPage() {
   const [logs, setLogs] = useState<AdminAuditLog[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [l, n] = await Promise.all([
-      AdminDataService.listAuditLogs(),
-      AdminDataService.listNotifications(),
-    ]);
-    setLogs(l);
-    setNotifications(n);
+    setLoading(true);
+    setError(null);
+    try {
+      const [l, n] = await Promise.all([AdminDataService.listAuditLogs(), AdminDataService.listNotifications()]);
+      setLogs(l);
+      setNotifications(n);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load audit data.');
+    } finally { setLoading(false); }
   };
 
   const handleRetry = async (id: string) => {
     setRetryingId(id);
-    await AdminDataService.retryNotification(id);
-    await loadData();
-    setRetryingId(null);
+    setError(null);
+    try {
+      await AdminDataService.retryNotification(id);
+      await loadData();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not retry notification.');
+    } finally { setRetryingId(null); }
   };
 
   const renderChannelIcon = (channel: AdminNotification['channel']) => {
@@ -62,6 +72,7 @@ export default function AdminAuditPage() {
           <p>Immutable append-only pricing logs, booking state change records, and multi-channel notification status.</p>
         </div>
       </div>
+      <AdminDataNotice loading={loading} error={error} onRetry={loadData} />
 
       {/* ── Append-Only Audit Trail ─────────────────────────────────── */}
       <div className={styles.sectionCard}>

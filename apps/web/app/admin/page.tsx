@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { AdminDataService, AdminBooking, AdminVendor, AdminVehicle } from './adminData';
 import styles from './admin.module.css';
+import { AdminDataNotice } from './AdminDataNotice';
 
 export default function AdminOverviewPage() {
   const [metrics, setMetrics] = useState({
@@ -41,23 +42,33 @@ export default function AdminOverviewPage() {
   const [vendorDraft, setVendorDraft] = useState<string>('');
   const [vehicleDraft, setVehicleDraft] = useState<string>('');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [m, b, ven, veh] = await Promise.all([
-      AdminDataService.getMetrics(),
-      AdminDataService.listBookings(),
-      AdminDataService.listVendors(),
-      AdminDataService.listVehicles(),
-    ]);
-
-    setMetrics(m as any);
-    setBookings(b);
-    setVendors(ven);
-    setVehicles(veh);
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [m, b, ven, veh] = await Promise.all([
+        AdminDataService.getMetrics(),
+        AdminDataService.listBookings(),
+        AdminDataService.listVendors(),
+        AdminDataService.listVehicles(),
+      ]);
+      setMetrics(m);
+      setBookings(b);
+      setVendors(ven);
+      setVehicles(veh);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not load live dashboard data.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenDrawer = (b: AdminBooking) => {
@@ -70,20 +81,26 @@ export default function AdminOverviewPage() {
 
   const handleUpdateStatus = async () => {
     if (!selectedBooking) return;
-    await AdminDataService.updateBookingStatus(
-      selectedBooking.id,
-      statusDraft,
-      `Status updated to ${statusDraft} via Executive Overview`
-    );
-    setActionSuccess(`Booking ${selectedBooking.id} updated to ${statusDraft}`);
-    loadData();
+    setActionError(null);
+    try {
+      await AdminDataService.updateBookingStatus(selectedBooking.id, statusDraft, `Status updated to ${statusDraft} via Executive Overview`);
+      setActionSuccess(`Booking ${selectedBooking.id} updated to ${statusDraft}`);
+      await loadData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Could not update booking status.');
+    }
   };
 
   const handleUpdateAssignment = async () => {
     if (!selectedBooking || !vendorDraft) return;
-    await AdminDataService.assignBooking(selectedBooking.id, vendorDraft, vehicleDraft || undefined);
-    setActionSuccess(`Driver & vehicle assigned to ${selectedBooking.id}`);
-    loadData();
+    setActionError(null);
+    try {
+      await AdminDataService.assignBooking(selectedBooking.id, vendorDraft, vehicleDraft || undefined);
+      setActionSuccess(`Driver & vehicle assigned to ${selectedBooking.id}`);
+      await loadData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Could not assign driver and vehicle.');
+    }
   };
 
   const renderStatusPill = (status: AdminBooking['status']) => {
@@ -151,6 +168,8 @@ export default function AdminOverviewPage() {
           </Link>
         </div>
       </div>
+      <AdminDataNotice loading={loading} error={loadError} onRetry={loadData} />
+      {actionError && <div className={styles.sectionCard} role="alert">{actionError}</div>}
 
       {/* ── 4-Up KPI Cards ──────────────────────────────────────────── */}
       <div className={styles.kpiGrid}>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { AdminDataService, AdminBooking, AdminVendor, AdminVehicle } from '../adminData';
 import styles from '../admin.module.css';
+import { AdminDataNotice } from '../AdminDataNotice';
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
@@ -28,23 +29,28 @@ export default function AdminBookingsPage() {
   const [vendorDraft, setVendorDraft] = useState<string>('');
   const [vehicleDraft, setVehicleDraft] = useState<string>('');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, [search, statusFilter]);
 
   const loadData = async () => {
-    const [b, ven, veh] = await Promise.all([
-      AdminDataService.listBookings({
-        status: statusFilter,
-        search,
-      }),
-      AdminDataService.listVendors(),
-      AdminDataService.listVehicles(),
-    ]);
-    setBookings(b);
-    setVendors(ven);
-    setVehicles(veh);
+    setLoading(true);
+    setError(null);
+    try {
+      const [b, ven, veh] = await Promise.all([
+        AdminDataService.listBookings({ status: statusFilter, search }),
+        AdminDataService.listVendors(),
+        AdminDataService.listVehicles(),
+      ]);
+      setBookings(b);
+      setVendors(ven);
+      setVehicles(veh);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load bookings.');
+    } finally { setLoading(false); }
   };
 
   const handleOpenDrawer = (b: AdminBooking) => {
@@ -57,20 +63,26 @@ export default function AdminBookingsPage() {
 
   const handleUpdateStatus = async () => {
     if (!selectedBooking) return;
-    await AdminDataService.updateBookingStatus(
-      selectedBooking.id,
-      statusDraft,
-      `Status changed to ${statusDraft} via Bookings Console`
-    );
-    setActionSuccess(`Status updated to ${statusDraft}`);
-    loadData();
+    setError(null);
+    try {
+      await AdminDataService.updateBookingStatus(selectedBooking.id, statusDraft, `Status changed to ${statusDraft} via Bookings Console`);
+      setActionSuccess(`Status updated to ${statusDraft}`);
+      await loadData();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not update booking status.');
+    }
   };
 
   const handleUpdateAssignment = async () => {
     if (!selectedBooking || !vendorDraft) return;
-    await AdminDataService.assignBooking(selectedBooking.id, vendorDraft, vehicleDraft || undefined);
-    setActionSuccess(`Captain & vehicle assigned to ${selectedBooking.id}`);
-    loadData();
+    setError(null);
+    try {
+      await AdminDataService.assignBooking(selectedBooking.id, vendorDraft, vehicleDraft || undefined);
+      setActionSuccess(`Captain & vehicle assigned to ${selectedBooking.id}`);
+      await loadData();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not assign driver and vehicle.');
+    }
   };
 
   const renderStatusPill = (status: AdminBooking['status']) => {
@@ -131,6 +143,7 @@ export default function AdminBookingsPage() {
           <p>Complete lifecycle management, manual pricing overrides, and vehicle dispatching.</p>
         </div>
       </div>
+      <AdminDataNotice loading={loading} error={error} onRetry={loadData} />
 
       {/* ── Filter / Search Bar ──────────────────────────────────────── */}
       <div className={styles.filterBar}>
