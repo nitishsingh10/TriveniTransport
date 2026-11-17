@@ -6,10 +6,7 @@
     "development": {
       "environment": "development",
       "developmentClient": true,
-      "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDYFyxjF-rH88t1EtsuyV9usljTTh0aEnQ"
-      }
+      "distribution": "internal"
     },
     "preview": {
       "environment": "preview",
@@ -18,8 +15,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.trivenitransport.online",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDYFyxjF-rH88t1EtsuyV9usljTTh0aEnQ"
+        "EXPO_PUBLIC_API_URL": "https://api.trivenitransport.online"
       }
     },
     "production": {
@@ -28,8 +24,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.trivenitransport.online",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDYFyxjF-rH88t1EtsuyV9usljTTh0aEnQ"
+        "EXPO_PUBLIC_API_URL": "https://api.trivenitransport.online"
       }
     }
   },
@@ -37,4 +32,3 @@
     "production": {}
   }
 }
-
