@@ -161,7 +161,7 @@ export default function AdminOverviewPage() {
         </div>
 
         <div className={styles.headerActions}>
-          <Link href="/admin/bookings" className={styles.tableActionBtn} style={{ padding: '9px 16px', background: '#F7A300', color: '#081220', borderColor: '#F7A300' }}>
+          <Link href="/admin/bookings" className={styles.tableActionBtn} style={{ padding: '9px 16px', background: '#F7A300', color: '#111111', borderColor: '#F7A300' }}>
             <span>Manage All Bookings</span>
             <ArrowRight size={14} />
           </Link>
@@ -434,7 +434,7 @@ export default function AdminOverviewPage() {
                       onChange={e => setVendorDraft(e.target.value)}
                       style={{
                         width: '100%',
-                        background: '#081220',
+                        background: '#08090B',
                         color: '#FFFFFF',
                         border: '1px solid rgba(255,255,255,0.12)',
                         padding: '10px',
@@ -460,7 +460,7 @@ export default function AdminOverviewPage() {
                       onChange={e => setVehicleDraft(e.target.value)}
                       style={{
                         width: '100%',
-                        background: '#081220',
+                        background: '#08090B',
                         color: '#FFFFFF',
                         border: '1px solid rgba(255,255,255,0.12)',
                         padding: '10px',
@@ -497,7 +497,7 @@ export default function AdminOverviewPage() {
                     onChange={e => setStatusDraft(e.target.value as any)}
                     style={{
                       width: '100%',
-                      background: '#081220',
+                      background: '#08090B',
                       color: '#FFFFFF',
                       border: '1px solid rgba(255,255,255,0.12)',
                       padding: '10px',

@@ -359,7 +359,7 @@ export default function AdminBookingsPage() {
                       onChange={e => setVendorDraft(e.target.value)}
                       style={{
                         width: '100%',
-                        background: '#081220',
+                        background: '#08090B',
                         color: '#FFFFFF',
                         border: '1px solid rgba(255,255,255,0.12)',
                         padding: '10px',
@@ -385,7 +385,7 @@ export default function AdminBookingsPage() {
                       onChange={e => setVehicleDraft(e.target.value)}
                       style={{
                         width: '100%',
-                        background: '#081220',
+                        background: '#08090B',
                         color: '#FFFFFF',
                         border: '1px solid rgba(255,255,255,0.12)',
                         padding: '10px',
@@ -421,7 +421,7 @@ export default function AdminBookingsPage() {
                     onChange={e => setStatusDraft(e.target.value as any)}
                     style={{
                       width: '100%',
-                      background: '#081220',
+                      background: '#08090B',
                       color: '#FFFFFF',
                       border: '1px solid rgba(255,255,255,0.12)',
                       padding: '10px',

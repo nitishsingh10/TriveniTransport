@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: '#081220',
+    background: '#08090B',
     border: '1px solid rgba(255, 255, 255, 0.12)',
     padding: '12px 14px 12px 42px',
     borderRadius: '10px',
@@ -78,7 +78,7 @@ export default function AdminLoginPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'radial-gradient(ellipse at top, #0D1F37 0%, #081220 100%)',
+        background: 'radial-gradient(ellipse at top, #151618 0%, #050506 78%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
         style={{
           width: '100%',
           maxWidth: '440px',
-          background: '#0D1F37',
+          background: '#0D0F11',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: '16px',
           padding: '36px 32px',
@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
               height: '54px',
               borderRadius: '14px',
               background: 'linear-gradient(135deg, #F7A300 0%, #D48800 100%)',
-              color: '#081220',
+              color: '#111111',
               fontWeight: 900,
               fontSize: '26px',
               display: 'flex',
@@ -173,7 +173,7 @@ export default function AdminLoginPage() {
                     fontSize: '13px',
                     fontWeight: 600,
                     background: method === m ? '#F7A300' : 'transparent',
-                    color: method === m ? '#081220' : '#94A3B8',
+                    color: method === m ? '#111111' : '#94A3B8',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -221,7 +221,7 @@ export default function AdminLoginPage() {
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #F7A300 0%, #D48800 100%)',
-                color: '#081220',
+                color: '#111111',
                 border: 'none',
                 padding: '13px',
                 borderRadius: '10px',
@@ -294,7 +294,7 @@ export default function AdminLoginPage() {
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #F7A300 0%, #D48800 100%)',
-                color: '#081220',
+                color: '#111111',
                 border: 'none',
                 padding: '13px',
                 borderRadius: '10px',

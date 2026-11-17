@@ -818,23 +818,23 @@
   }
 }
 
-/* Refined admin surface: calm ink canvas, quiet borders, restrained gold. */
+/* Premium black and graphite surfaces with restrained Triveni gold. */
 .adminRoot {
-  --admin-canvas: #081220;
-  --admin-surface: #0D1F37;
-  --admin-surface-raised: #142945;
-  --admin-line: rgba(205, 220, 239, 0.09);
-  --admin-text: #F4F6FA;
-  --admin-muted: #A1ADBD;
+  --admin-canvas: #070809;
+  --admin-surface: #101113;
+  --admin-surface-raised: #17191C;
+  --admin-line: rgba(232, 236, 242, 0.09);
+  --admin-text: #F5F5F3;
+  --admin-muted: #A2A6AD;
   --admin-accent: #F7A300;
   background:
-    radial-gradient(ellipse at top, #0D1F37 0%, #081220 72%),
+    radial-gradient(ellipse at 60% -18%, rgba(247, 163, 0, 0.055), transparent 42%),
     var(--admin-canvas);
   color: var(--admin-text);
 }
 
 .sidebar {
-  background: rgba(13, 31, 55, 0.96);
+  background: rgba(9, 10, 12, 0.97);
   border-right-color: var(--admin-line);
   backdrop-filter: blur(18px);
 }
@@ -844,7 +844,7 @@
 }
 
 .topbar {
-  background: rgba(13, 31, 55, 0.86);
+  background: rgba(8, 9, 11, 0.9);
   border-bottom-color: var(--admin-line);
 }
 
@@ -873,7 +873,7 @@
 
 .kpiCard,
 .sectionCard {
-  background: linear-gradient(145deg, rgba(13, 31, 55, 0.98), rgba(9, 24, 43, 0.98));
+  background: linear-gradient(145deg, #121416, #0D0F11);
   border-color: var(--admin-line);
   border-radius: 18px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
@@ -909,6 +909,11 @@
 .tableWrapper {
   border-color: var(--admin-line);
   border-radius: 12px;
+}
+
+.searchInput {
+  background: #08090B;
+  border-color: var(--admin-line);
 }
 
 .dataTable th {
@@ -951,7 +956,7 @@
 }
 
 .drawerContent {
-  background: #0D1F37;
+  background: #0D0F11;
   border-left-color: var(--admin-line);
 }
 
