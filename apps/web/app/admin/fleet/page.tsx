@@ -162,7 +162,7 @@ export default function AdminFleetPage() {
                     </span>
                   </td>
                   <td>
-                    <span style={{ color: '#94A3B8', fontSize: 12.5 }}>{ven.assignedVehicle || 'Tata 407 (MH 12 RN 4071)'}</span>
+                    <span style={{ color: '#94A3B8', fontSize: 12.5 }}>{ven.assignedVehicle || 'No vehicle assigned'}</span>
                   </td>
                 </tr>
               ))}

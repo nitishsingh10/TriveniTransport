@@ -22,7 +22,7 @@ import styles from './admin.module.css';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isLoggedIn, role, loading: authLoading } = useAuth();
+  const { isLoggedIn, role, user, loading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isLoginRoute = pathname === '/admin/login';
 
@@ -51,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { label: 'Overview', href: '/admin', icon: LayoutDashboard },
-    { label: 'Bookings Console', href: '/admin/bookings', icon: Package, badge: 'Live' },
+    { label: 'Bookings Console', href: '/admin/bookings', icon: Package },
     { label: 'Fleet & Drivers', href: '/admin/fleet', icon: Truck },
     { label: 'Pricing & Catalog', href: '/admin/pricing', icon: Tag },
     { label: 'Audit & Alerts', href: '/admin/audit', icon: ShieldCheck },
@@ -94,7 +94,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Icon size={18} strokeWidth={isActive ? 2.4 : 2} />
                   <span>{item.label}</span>
                 </div>
-                {item.badge && <span className={styles.navBadge}>{item.badge}</span>}
               </Link>
             );
           })}
@@ -133,8 +132,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className={styles.adminUserSnippet}>
             <div className={styles.adminAvatar}>AD</div>
             <div className={styles.adminNameCol}>
-              <span className={styles.adminName}>Triveni Admin</span>
-              <span className={styles.adminRole}>Master Dispatcher</span>
+              <span className={styles.adminName}>{user?.name || 'Administrator'}</span>
+              <span className={styles.adminRole}>Administrator</span>
             </div>
           </div>
           <button
@@ -169,11 +168,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className={styles.topbarRight}>
-            <div className={styles.systemStatusPill}>
-              <span className={styles.statusDot} />
-              <span>Live Systems</span>
-            </div>
-
             <button
               type="button"
               className={styles.actionIconBtn}

@@ -31,7 +31,6 @@ export default function AdminOverviewPage() {
     pendingBookings: 0,
     totalRevenue: 0,
     activeRevenue: 0,
-    totalVehicles: 3,
   });
 
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
@@ -158,7 +157,7 @@ export default function AdminOverviewPage() {
       <div className={styles.pageHeader}>
         <div className={styles.pageTitleCol}>
           <h1>Executive Operations Console</h1>
-          <p>Real-time telemetry of Pune & Mumbai shifting assignments, dispatch pipelines, and fiscal turnover.</p>
+          <p>Bookings, dispatch, fleet availability and completed revenue at a glance.</p>
         </div>
 
         <div className={styles.headerActions}>
@@ -182,13 +181,13 @@ export default function AdminOverviewPage() {
           </div>
           <div className={styles.kpiValue}>{metrics.totalBookings}</div>
           <div className={styles.kpiSubtext}>
-            <span>100% cloud database synchronized</span>
+            <span>{metrics.completedBookings.toLocaleString('en-IN')} completed bookings</span>
           </div>
         </div>
 
         <div className={styles.kpiCard}>
           <div className={styles.kpiTopRow}>
-            <span className={styles.kpiLabel}>Active In-Transit</span>
+            <span className={styles.kpiLabel}>Active Bookings</span>
             <div className={styles.kpiIconWrapper} style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#38BDF8' }}>
               <Clock size={20} />
             </div>
@@ -227,7 +226,7 @@ export default function AdminOverviewPage() {
             {vehicles.filter(v => v.active).length} / {vehicles.length}
           </div>
           <div className={styles.kpiSubtext} style={{ color: '#C084FC' }}>
-            <span>1,900 CFT total volume on-duty</span>
+            <span>{vehicles.filter(v => v.active).reduce((total, vehicle) => total + vehicle.capacityCft, 0).toLocaleString('en-IN')} CFT available</span>
           </div>
         </div>
       </div>
@@ -235,7 +234,7 @@ export default function AdminOverviewPage() {
       {/* ── Active Moves Stream Table ─────────────────────────────────── */}
       <div className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitle}>Live Relocation Stream & Dispatch Queue</div>
+          <div className={styles.sectionTitle}>Recent Bookings & Dispatch Queue</div>
           <Link href="/admin/bookings" className={styles.tableActionBtn}>
             <span>View Full Log</span>
             <ChevronRight size={14} />
@@ -246,7 +245,7 @@ export default function AdminOverviewPage() {
           <table className={styles.dataTable}>
             <thead>
               <tr>
-                <th>Booking Ref</th>
+                <th>Booking ID</th>
                 <th>Customer Info</th>
                 <th>Route (Pickup ➔ Drop)</th>
                 <th>Scheduled Slot</th>
@@ -259,7 +258,7 @@ export default function AdminOverviewPage() {
             <tbody>
               {bookings.slice(0, 5).map(b => (
                 <tr key={b.id}>
-                  <td className={styles.bookingIdCell}>{b.id}</td>
+                  <td className={styles.bookingIdCell} title={b.id}>{b.id.slice(0, 8).toUpperCase()}</td>
                   <td>
                     <div className={styles.customerCell}>
                       <span className={styles.customerName}>{b.customerName}</span>
@@ -291,7 +290,7 @@ export default function AdminOverviewPage() {
                           {b.vendorName}
                         </div>
                         <div style={{ fontSize: 11, color: '#F7A300' }}>
-                          {b.vehicleNumber || 'Tata 407'}
+                          {b.vehicleNumber || 'Vehicle not assigned'}
                         </div>
                       </div>
                     ) : (
@@ -320,6 +319,13 @@ export default function AdminOverviewPage() {
                   </td>
                 </tr>
               ))}
+              {!loading && !loadError && bookings.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ padding: '36px 20px', textAlign: 'center', color: '#9AA8BA' }}>
+                    No bookings in the system yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

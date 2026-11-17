@@ -207,7 +207,7 @@ export default function AdminLoginPage() {
                   type={method === 'phone' ? 'tel' : 'email'}
                   value={identifier}
                   onChange={e => setIdentifier(method === 'phone' ? e.target.value.replace(/\D/g, '') : e.target.value)}
-                  placeholder={method === 'phone' ? '9999999999' : 'admin@triveni.com'}
+                  placeholder={method === 'phone' ? 'Admin mobile number' : 'Admin email address'}
                   maxLength={method === 'phone' ? 10 : undefined}
                   required
                   style={inputStyle}

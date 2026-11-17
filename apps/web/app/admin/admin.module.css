@@ -817,3 +817,158 @@
     padding: 20px 16px;
   }
 }
+
+/* Refined admin surface: calm ink canvas, quiet borders, restrained gold. */
+.adminRoot {
+  --admin-canvas: #081220;
+  --admin-surface: #0D1F37;
+  --admin-surface-raised: #142945;
+  --admin-line: rgba(205, 220, 239, 0.09);
+  --admin-text: #F4F6FA;
+  --admin-muted: #A1ADBD;
+  --admin-accent: #F7A300;
+  background:
+    radial-gradient(ellipse at top, #0D1F37 0%, #081220 72%),
+    var(--admin-canvas);
+  color: var(--admin-text);
+}
+
+.sidebar {
+  background: rgba(13, 31, 55, 0.96);
+  border-right-color: var(--admin-line);
+  backdrop-filter: blur(18px);
+}
+
+.mainWrapper {
+  background: transparent;
+}
+
+.topbar {
+  background: rgba(13, 31, 55, 0.86);
+  border-bottom-color: var(--admin-line);
+}
+
+.contentArea {
+  padding: 36px clamp(20px, 3vw, 44px);
+}
+
+.pageHeader {
+  margin-bottom: 24px;
+}
+
+.pageTitleCol h1 {
+  font-size: clamp(23px, 2.2vw, 29px);
+  letter-spacing: -0.035em;
+}
+
+.pageTitleCol p {
+  color: var(--admin-muted);
+  line-height: 1.6;
+}
+
+.kpiGrid {
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.kpiCard,
+.sectionCard {
+  background: linear-gradient(145deg, rgba(13, 31, 55, 0.98), rgba(9, 24, 43, 0.98));
+  border-color: var(--admin-line);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.kpiCard {
+  padding: 22px;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(247, 163, 0, 0.32);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+}
+
+.kpiLabel,
+.detailLabel,
+.navSectionLabel {
+  color: var(--admin-muted);
+}
+
+.kpiValue,
+.sectionTitle,
+.pageTitleCol h1 {
+  color: var(--admin-text);
+}
+
+.sectionCard {
+  padding: clamp(18px, 2vw, 26px);
+  margin-bottom: 20px;
+}
+
+.tableWrapper {
+  border-color: var(--admin-line);
+  border-radius: 12px;
+}
+
+.dataTable th {
+  background: rgba(255, 255, 255, 0.025);
+  color: #AAB6C6;
+  border-bottom-color: var(--admin-line);
+}
+
+.dataTable td {
+  border-bottom-color: rgba(205, 220, 239, 0.065);
+}
+
+.dataTable tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tableActionBtn,
+.secondaryActionBtn {
+  border-radius: 10px;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.tableActionBtn:hover,
+.secondaryActionBtn:hover {
+  transform: translateY(-1px);
+}
+
+.tableActionBtn:focus-visible,
+.secondaryActionBtn:focus-visible,
+.primaryActionBtn:focus-visible,
+.logoutBtn:focus-visible,
+.navLink:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 3px;
+}
+
+.statusPill {
+  border-radius: 999px;
+  letter-spacing: 0.015em;
+}
+
+.drawerContent {
+  background: #0D1F37;
+  border-left-color: var(--admin-line);
+}
+
+.drawerSection {
+  background: rgba(255, 255, 255, 0.025);
+  border-color: var(--admin-line);
+  border-radius: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adminRoot,
+  .adminRoot *,
+  .adminRoot *::before,
+  .adminRoot *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
