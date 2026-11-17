@@ -38,6 +38,9 @@ const BACKEND_URL =
 const nextConfig: NextConfig = {
   transpilePackages: ['@triveni/shared-types', '@triveni/shared-validation'],
   poweredByHeader: false,
+  experimental: {
+    agentUpgrade: 'security',
+  },
   async rewrites() {
     return [
       {
