@@ -353,13 +353,13 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   errorBox: {
     backgroundColor: Colors.errorLight,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: Colors.errorBorder,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
   errorText: {
-    color: '#DC2626',
+    color: Colors.error,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
   },

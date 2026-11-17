@@ -14,22 +14,28 @@ import {
 } from 'lucide-react';
 import { AdminDataService, AdminVendor, AdminVehicle } from '../adminData';
 import styles from '../admin.module.css';
+import { AdminDataNotice } from '../AdminDataNotice';
 
 export default function AdminFleetPage() {
   const [vendors, setVendors] = useState<AdminVendor[]>([]);
   const [vehicles, setVehicles] = useState<AdminVehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [ven, veh] = await Promise.all([
-      AdminDataService.listVendors(),
-      AdminDataService.listVehicles(),
-    ]);
-    setVendors(ven);
-    setVehicles(veh);
+    setLoading(true);
+    setError(null);
+    try {
+      const [ven, veh] = await Promise.all([AdminDataService.listVendors(), AdminDataService.listVehicles()]);
+      setVendors(ven);
+      setVehicles(veh);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load fleet data.');
+    } finally { setLoading(false); }
   };
 
   return (
@@ -41,6 +47,7 @@ export default function AdminFleetPage() {
           <p>Vehicle compliance documents, cubic feet (CFT) volumetric capacity, and driver performance.</p>
         </div>
       </div>
+      <AdminDataNotice loading={loading} error={error} onRetry={loadData} />
 
       {/* ── Vehicle Fleet Cards ─────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
@@ -132,7 +139,7 @@ export default function AdminFleetPage() {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#F7A300', fontWeight: 700, fontSize: 13 }}>
                       <Star size={14} fill="#F7A300" color="#F7A300" />
-                      <span>{ven.rating} / 5.0</span>
+                      <span>{ven.rating == null ? 'Not rated' : `${ven.rating.toFixed(1)} / 5.0`}</span>
                     </div>
                   </td>
                   <td>

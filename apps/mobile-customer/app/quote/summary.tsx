@@ -497,7 +497,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     backgroundColor: Colors.marigoldSubtle,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: Colors.warningBorder,
     padding: Spacing.md,
   },
   disclaimerIcon: {
@@ -505,7 +505,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   },
   disclaimerText: {
     flex: 1,
-    color: '#92400E',
+    color: Colors.warning,
     fontSize: FontSize.xxs,
     lineHeight: 16,
   },

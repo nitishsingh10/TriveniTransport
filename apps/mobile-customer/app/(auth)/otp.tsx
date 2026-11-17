@@ -393,7 +393,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: Spacing.xs,
     backgroundColor: Colors.errorLight,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: Colors.errorBorder,
     borderRadius: BorderRadius.md,
     padding: Spacing.sm,
   },
@@ -402,7 +402,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: 4,
   },
   errorText: {
-    color: '#B91C1C',
+    color: Colors.error,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
     lineHeight: 18,
@@ -412,7 +412,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     alignSelf: 'flex-start',
   },
   switchAuthText: {
-    color: '#991B1B',
+    color: Colors.error,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     textDecorationLine: 'underline',

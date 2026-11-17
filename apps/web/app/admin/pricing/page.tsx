@@ -4,22 +4,28 @@ import React, { useState, useEffect } from 'react';
 import { Tag, Layers, CheckCircle2, Sliders, IndianRupee, MapPin } from 'lucide-react';
 import { AdminDataService, AdminPricingItem, AdminPricingRule } from '../adminData';
 import styles from '../admin.module.css';
+import { AdminDataNotice } from '../AdminDataNotice';
 
 export default function AdminPricingPage() {
   const [items, setItems] = useState<AdminPricingItem[]>([]);
   const [rules, setRules] = useState<AdminPricingRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [itm, r] = await Promise.all([
-      AdminDataService.listPricingItems(),
-      AdminDataService.listPricingRules(),
-    ]);
-    setItems(itm);
-    setRules(r);
+    setLoading(true);
+    setError(null);
+    try {
+      const [itm, r] = await Promise.all([AdminDataService.listPricingItems(), AdminDataService.listPricingRules()]);
+      setItems(itm);
+      setRules(r);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load pricing data.');
+    } finally { setLoading(false); }
   };
 
   return (
@@ -31,6 +37,7 @@ export default function AdminPricingPage() {
           <p>Versioned item dimensions (CFT), handling base tariffs, and floor/tier multipliers.</p>
         </div>
       </div>
+      <AdminDataNotice loading={loading} error={error} onRetry={loadData} />
 
       {/* ── Pricing Rules & Multipliers ─────────────────────────────── */}
       <div className={styles.sectionCard}>

@@ -314,10 +314,10 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     borderRadius: BorderRadius.full,
     marginTop: 2,
     borderWidth: 1,
-    borderColor: 'rgba(217, 119, 6, 0.3)',
+    borderColor: Colors.warningBorder,
   },
   incompleteText: {
-    color: '#B45309',
+    color: Colors.warning,
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.bold,
   },
@@ -342,7 +342,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: Colors.marigoldSubtle,
     borderWidth: 1.5,
-    borderColor: '#FDE68A',
+    borderColor: Colors.warningBorder,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     gap: Spacing.sm,
@@ -356,11 +356,11 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   incompleteBannerTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: '#92400E',
+    color: Colors.warning,
   },
   incompleteBannerDesc: {
     fontSize: FontSize.xxs,
-    color: '#B45309',
+    color: Colors.warning,
     marginTop: 2,
     lineHeight: 14,
   },
@@ -457,7 +457,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   menuLabelHighlight: {
-    color: '#92400E',
+    color: Colors.warning,
   },
   menuSubtitle: {
     color: Colors.textSecondary,
