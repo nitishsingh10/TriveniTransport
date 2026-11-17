@@ -17,11 +17,6 @@
       "bundleIdentifier": "com.trivenitransports.customer",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Triveni Transports uses your location to automatically set your moving pickup address."
-      },
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCsPh4oHb_2lqhbJjgvxMbiy4u4f2S30Hc"
-        }
       }
     },
     "android": {
@@ -34,12 +29,7 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCsPh4oHb_2lqhbJjgvxMbiy4u4f2S30Hc"
-        }
-      }
+      ]
     },
     "web": {
       "bundler": "metro",

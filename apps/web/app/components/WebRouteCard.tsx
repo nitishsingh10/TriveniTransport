@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 import { Navigation, Clock, ExternalLink } from 'lucide-react';
 import styles from './WebRouteCard.module.css';
 
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+
 interface WebRouteCardProps {
   pickupAddress: string;
   dropAddress: string;
@@ -69,19 +71,18 @@ export default function WebRouteCard({
   durationMins,
   onOpenMapPicker,
 }: WebRouteCardProps) {
-  if (!pickupAddress || !dropAddress) return null;
-
   const pCoords = pickupCoords || resolveAddressCoords(pickupAddress, { lat: 19.076, lng: 72.8777 });
   const dCoords = dropCoords || resolveAddressCoords(dropAddress, { lat: 19.2183, lng: 72.9781 });
 
   const routeMapHtml = useMemo(() => {
+    const mapsScript = GOOGLE_MAPS_API_KEY
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&loading=async&callback=initMap"></script>`
+      : '';
     return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; }
       html, body, #map {
@@ -92,76 +93,99 @@ export default function WebRouteCard({
         background: #0d1f37;
         overflow: hidden;
       }
-      .leaflet-control-attribution, .leaflet-control-zoom {
-        display: none !important;
+      #map-error {
+        display: none;
+        position: absolute;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        color: #fff;
+        background: #0d1f37;
+        text-align: center;
+        font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
     </style>
   </head>
   <body>
     <div id="map"></div>
+    <div id="map-error"></div>
     <script>
-      function init() {
-        if (typeof L === 'undefined') return;
-        var pickup = [${pCoords.lat}, ${pCoords.lng}];
-        var drop = [${dCoords.lat}, ${dCoords.lng}];
-
-        var map = L.map('map', {
-          zoomControl: false,
-          attributionControl: false,
-          dragging: false,
-          touchZoom: false,
-          scrollWheelZoom: false,
-          doubleClickZoom: false
-        }).setView(pickup, 11);
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-          subdomains: 'abcd'
-        }).addTo(map);
-
-        setTimeout(function() { map.invalidateSize(); }, 250);
-        setTimeout(function() { map.invalidateSize(); }, 700);
-
-        var polyline = L.polyline([pickup, drop], {
-          color: '#F7A300',
-          weight: 4,
-          opacity: 0.95,
-          lineCap: 'round',
-          dashArray: '6, 8'
-        }).addTo(map);
-
-        L.circleMarker(pickup, {
-          radius: 7,
-          fillColor: '#F7A300',
-          color: '#FFFFFF',
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 1
-        }).addTo(map);
-
-        L.circleMarker(drop, {
-          radius: 7,
-          fillColor: '#0D1F37',
-          color: '#38BDF8',
-          weight: 2.5,
-          opacity: 1,
-          fillOpacity: 1
-        }).addTo(map);
-
-        try {
-          map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
-        } catch(e) {}
+      function showMapError(message) {
+        var error = document.getElementById('map-error');
+        error.textContent = message;
+        error.style.display = 'flex';
       }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+      function initMap() {
+        if (!window.google || !google.maps) {
+          showMapError('Google Maps could not load. Check its API key, billing, and allowed origins.');
+          return;
+        }
+        var pickup = { lat: ${pCoords.lat}, lng: ${pCoords.lng} };
+        var drop = { lat: ${dCoords.lat}, lng: ${dCoords.lng} };
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: pickup,
+          zoom: 11,
+          backgroundColor: '#0d1f37',
+          disableDefaultUI: true,
+          clickableIcons: false,
+          gestureHandling: 'none',
+          styles: [
+            { elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#d5dde8' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#091524' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#8b641f' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#091524' }] },
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+          ]
+        });
+        window.__triveniMapLoaded = true;
+        new google.maps.Polyline({
+          path: [pickup, drop],
+          geodesic: true,
+          strokeColor: '#F7A300',
+          strokeOpacity: 0.95,
+          strokeWeight: 4,
+          map: map
+        });
+        new google.maps.Marker({
+          position: pickup,
+          map: map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#F7A300', fillOpacity: 1, strokeColor: '#FFFFFF', strokeWeight: 2 },
+          title: 'Pickup'
+        });
+        new google.maps.Marker({
+          position: drop,
+          map: map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#0D1F37', fillOpacity: 1, strokeColor: '#38BDF8', strokeWeight: 2.5 },
+          title: 'Drop-off'
+        });
+
+        var bounds = new google.maps.LatLngBounds();
+        bounds.extend(pickup);
+        bounds.extend(drop);
+        map.fitBounds(bounds, 30);
+        google.maps.event.addListenerOnce(map, 'idle', function() {
+          if (map.getZoom() > 14) map.setZoom(14);
+        });
+      }
+
+      if (!${Boolean(GOOGLE_MAPS_API_KEY)}) {
+        showMapError('Google Maps key is not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.');
       } else {
-        init();
+        window.setTimeout(function() {
+          if (!window.__triveniMapLoaded) showMapError('Google Maps could not load. Check its API key, billing, and allowed origins.');
+        }, 12000);
       }
     </script>
+    ${mapsScript}
   </body>
 </html>`;
   }, [pCoords.lat, pCoords.lng, dCoords.lat, dCoords.lng]);
+
+  if (!pickupAddress || !dropAddress) return null;
 
   return (
     <div className={styles.routeCard}>

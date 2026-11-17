@@ -262,6 +262,8 @@ export class AuthService {
 
     let userId: string;
     let userName: string;
+    let userPhone: string | undefined;
+    let userEmail: string | undefined;
     const displayName = name?.trim() || undefined;
 
     if (role === 'customer') {
@@ -280,6 +282,8 @@ export class AuthService {
           });
           userId = customer.id;
           userName = customer.name;
+          userPhone = customer.phone || undefined;
+          userEmail = customer.email || undefined;
         } catch (error) {
           if (isUniqueConstraintError(error)) throw accountExists('customer', target.type);
           throw error;
@@ -288,6 +292,8 @@ export class AuthService {
         if (!existing) throw userNotFound(target.type, 'customer');
         userId = existing.id;
         userName = existing.name;
+        userPhone = existing.phone || undefined;
+        userEmail = existing.email || undefined;
       }
     } else if (role === 'vendor') {
       const existing = target.type === 'email'
@@ -307,6 +313,8 @@ export class AuthService {
           });
           userId = vendor.id;
           userName = vendor.name;
+          userPhone = vendor.phone || undefined;
+          userEmail = vendor.email || undefined;
         } catch (error) {
           if (isUniqueConstraintError(error)) throw accountExists('vendor', target.type);
           throw error;
@@ -318,6 +326,8 @@ export class AuthService {
         }
         userId = existing.id;
         userName = existing.name;
+        userPhone = existing.phone || undefined;
+        userEmail = existing.email || undefined;
       }
     } else {
       const admin = target.type === 'email'
@@ -326,9 +336,11 @@ export class AuthService {
       if (!admin) throw { statusCode: 404, code: 'NOT_FOUND', message: 'Admin account not found or unauthorized.' };
       userId = admin.id;
       userName = admin.name;
+      userPhone = admin.phone || undefined;
+      userEmail = admin.email || undefined;
     }
 
-    return this.issueTokens(userId, role, userName, target.value);
+    return this.issueTokens(userId, role, userName, { phone: userPhone, email: userEmail });
   }
   /**
    * Refreshes access token using a valid, non-revoked refresh token
@@ -410,7 +422,12 @@ export class AuthService {
   }
 
   // Helper
-  private static async issueTokens(userId: string, role: UserRole, name?: string, phoneOrEmail?: string) {
+  private static async issueTokens(
+    userId: string,
+    role: UserRole,
+    name?: string,
+    contact: { phone?: string; email?: string } = {},
+  ) {
     const accessToken = signAccessToken(userId, role);
     const refreshToken = signRefreshToken(userId, role);
 
@@ -430,8 +447,6 @@ export class AuthService {
       },
     });
 
-    const isEmail = phoneOrEmail?.includes('@');
-
     return {
       accessToken,
       refreshToken,
@@ -440,8 +455,8 @@ export class AuthService {
         id: userId,
         role,
         name: name || (role === 'admin' ? 'Admin' : role === 'vendor' ? 'Partner' : 'Customer'),
-        phone: isEmail ? '' : (phoneOrEmail || ''),
-        email: isEmail ? phoneOrEmail : undefined,
+        phone: contact.phone || '',
+        email: contact.email,
       },
     };
   }

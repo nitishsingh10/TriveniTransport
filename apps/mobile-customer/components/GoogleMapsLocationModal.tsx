@@ -26,6 +26,8 @@ import {
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { mapsApi, PlaceLocation } from '@/lib/api';
 
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+
 interface GoogleMapsLocationModalProps {
   visible: boolean;
   title: string;
@@ -62,6 +64,7 @@ export function GoogleMapsLocationModal({
   const [loading, setLoading] = useState(false);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [isMapMoving, setIsMapMoving] = useState(false);
+  const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
 
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
     lat: 18.5679,
@@ -317,13 +320,14 @@ export function GoogleMapsLocationModal({
   const mapHtml = useMemo(() => {
     const startLat = initialMapCoords.current.lat || 18.5679;
     const startLng = initialMapCoords.current.lng || 73.9143;
+    const mapsScript = GOOGLE_MAPS_API_KEY
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&loading=async&callback=initMap"></script>`
+      : '';
     return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       html, body, #map {
@@ -336,17 +340,30 @@ export function GoogleMapsLocationModal({
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
-      .leaflet-control-attribution, .leaflet-control-zoom {
-        display: none !important;
-      }
-      .leaflet-tile {
-        transition: opacity 0.2s linear;
+      #map-error {
+        display: none;
+        position: absolute;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        color: #fff;
+        background: #091524;
+        text-align: center;
+        font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
     </style>
   </head>
   <body>
     <div id="map"></div>
+    <div id="map-error"></div>
     <script>
+      function showMapError(message) {
+        var error = document.getElementById('map-error');
+        error.textContent = message;
+        error.style.display = 'flex';
+      }
+
       function postToApp(data) {
         try {
           if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
@@ -361,58 +378,57 @@ export function GoogleMapsLocationModal({
       }
 
       window.onerror = function(msg, url, line) {
+        showMapError('Google Maps could not load. Check the Maps JavaScript API key, billing, and allowed origins.');
         postToApp({ type: 'MAP_ERROR', error: msg + ' at ' + line });
       };
 
       function initMap() {
-        if (typeof L === 'undefined') {
-          postToApp({ type: 'MAP_ERROR', error: 'Leaflet failed to load from CDN' });
+        if (!window.google || !google.maps) {
+          showMapError('Google Maps could not load. Check the Maps JavaScript API key, billing, and allowed origins.');
+          postToApp({ type: 'MAP_ERROR', error: 'Google Maps JavaScript API failed to load' });
           return;
         }
-
-        var map = L.map('map', {
-          zoomControl: false,
-          attributionControl: false,
-          inertia: true,
-          inertiaDeceleration: 3000
-        }).setView([${startLat}, ${startLng}], 15);
-        window.map = map;
-
-        // CartoDB Dark Matter luxury midnight tiles
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-          subdomains: 'abcd'
-        }).addTo(map);
-
-        setTimeout(function() {
-          if (window.map) window.map.invalidateSize();
-        }, 250);
-        setTimeout(function() {
-          if (window.map) window.map.invalidateSize();
-        }, 700);
-
-        map.whenReady(function() {
-          postToApp({ type: 'MAP_READY' });
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: { lat: ${startLat}, lng: ${startLng} },
+          zoom: 15,
+          backgroundColor: '#091524',
+          disableDefaultUI: true,
+          clickableIcons: false,
+          gestureHandling: 'greedy',
+          styles: [
+            { elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#d5dde8' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#091524' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#8b641f' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#091524' }] },
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+          ]
         });
+        window.map = map;
+        window.__triveniMapLoaded = true;
 
-        map.on('movestart', function() {
+        map.addListener('dragstart', function() {
           postToApp({ type: 'MAP_DRAGGING' });
         });
 
-        map.on('moveend', function() {
-          var c = map.getCenter();
+        map.addListener('idle', function() {
+          var c = map.getCenter().toJSON();
           postToApp({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng });
         });
 
-        map.on('click', function(e) {
-          map.flyTo(e.latlng, map.getZoom(), { duration: 0.6 });
+        map.addListener('click', function(e) {
+          if (e.latLng) map.panTo(e.latLng);
         });
 
         window.flyToSpot = function(lat, lng) {
           if (window.map) {
-            window.map.flyTo([lat, lng], 16, { duration: 1.0 });
+            window.map.panTo({ lat: lat, lng: lng });
+            window.map.setZoom(16);
           }
         };
+
+        postToApp({ type: 'MAP_READY' });
 
         window.addEventListener('message', function(ev) {
           if (ev.data && ev.data.type === 'FLY_TO') {
@@ -421,12 +437,19 @@ export function GoogleMapsLocationModal({
         });
       }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initMap);
+      if (!${Boolean(GOOGLE_MAPS_API_KEY)}) {
+        showMapError('Google Maps key is not configured. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY and restart the app.');
+        postToApp({ type: 'MAP_ERROR', error: 'Google Maps API key is not configured' });
       } else {
-        initMap();
+        window.setTimeout(function() {
+          if (!window.__triveniMapLoaded) {
+            showMapError('Google Maps could not load. Check the API key, billing, and allowed origins.');
+            postToApp({ type: 'MAP_ERROR', error: 'Google Maps JavaScript API timed out' });
+          }
+        }, 12000);
       }
     </script>
+    ${mapsScript}
   </body>
 </html>`;
   }, [visible]);
@@ -440,7 +463,7 @@ export function GoogleMapsLocationModal({
     >
       <View style={styles.modalContainer}>
         {/* Full-screen Uber-style Themed Map Viewport */}
-        <View style={styles.mapViewport}>
+        <View style={[styles.mapViewport, { bottom: bottomSheetHeight }]}>
           {Platform.OS === 'web' ? (
             <iframe
               id="triveni-map-iframe"
@@ -456,7 +479,7 @@ export function GoogleMapsLocationModal({
           ) : (
             <WebView
               ref={webViewRef}
-              source={{ html: mapHtml, baseUrl: 'https://cdnjs.cloudflare.com' }}
+              source={{ html: mapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
               onMessage={handleNativeMessage}
               style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#091524' }}
               javaScriptEnabled={true}
@@ -669,7 +692,13 @@ export function GoogleMapsLocationModal({
         </TouchableOpacity>
 
         {/* ── Bottom Glassmorphic Pin Confirmation Sheet ───────────────── */}
-        <View style={styles.bottomGlassSheet}>
+        <View
+          style={styles.bottomGlassSheet}
+          onLayout={(event) => {
+            const height = event.nativeEvent.layout.height;
+            setBottomSheetHeight((current) => Math.abs(current - height) > 1 ? height : current);
+          }}
+        >
           {/* Subtle drag handle */}
           <View style={styles.sheetHandle} />
 

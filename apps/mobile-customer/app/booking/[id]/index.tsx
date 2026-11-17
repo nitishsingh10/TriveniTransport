@@ -35,6 +35,8 @@ import {
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, CURATED_LOCATIONS, type BookingItem } from '@/lib/api';
 
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+
 interface Milestone {
   key: string;
   label: string;
@@ -175,13 +177,14 @@ export default function BookingTrackScreen() {
   }, [telemetry, pickupCoords, dropCoords]);
 
   const liveMapHtml = useMemo(() => {
+    const mapsScript = GOOGLE_MAPS_API_KEY
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&loading=async&callback=initMap"></script>`
+      : '';
     return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; }
       html, body, #map {
@@ -193,81 +196,101 @@ export default function BookingTrackScreen() {
         background: #091524;
         overflow: hidden;
       }
-      .leaflet-control-attribution, .leaflet-control-zoom {
-        display: none !important;
+      #map-error {
+        display: none;
+        position: absolute;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        color: #fff;
+        background: #091524;
+        text-align: center;
+        font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
     </style>
   </head>
   <body>
     <div id="map"></div>
+    <div id="map-error"></div>
     <script>
-      function init() {
-        if (typeof L === 'undefined') return;
-        var pickup = [${pickupCoords.lat}, ${pickupCoords.lng}];
-        var drop = [${dropCoords.lat}, ${dropCoords.lng}];
-        var truck = [${truckCoords.lat}, ${truckCoords.lng}];
-
-        var map = L.map('map', {
-          zoomControl: false,
-          attributionControl: false,
-          dragging: true,
-          touchZoom: true
-        }).setView(truck, 12);
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-          subdomains: 'abcd'
-        }).addTo(map);
-
-        setTimeout(function() { map.invalidateSize(); }, 250);
-        setTimeout(function() { map.invalidateSize(); }, 700);
-
-        // Route dashed line
-        var polyline = L.polyline([pickup, truck, drop], {
-          color: '#F7A300',
-          weight: 3.5,
-          opacity: 0.9,
-          dashArray: '6, 8'
-        }).addTo(map);
-
-        // Pickup pin (Gold)
-        L.circleMarker(pickup, {
-          radius: 6,
-          fillColor: '#F7A300',
-          color: '#FFFFFF',
-          weight: 2,
-          fillOpacity: 1
-        }).addTo(map);
-
-        // Drop pin (Cyan)
-        L.circleMarker(drop, {
-          radius: 6,
-          fillColor: '#0D1F37',
-          color: '#38BDF8',
-          weight: 2.5,
-          fillOpacity: 1
-        }).addTo(map);
-
-        // Moving Truck Marker
-        var truckIcon = L.divIcon({
-          className: 'custom-truck',
-          html: '<div style="width:28px;height:28px;border-radius:14px;background:#F7A300;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px #F7A300;border:2px solid #FFFFFF;"><span style="font-size:13px;line-height:28px;text-align:center;">🚚</span></div>',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
-        L.marker(truck, { icon: truckIcon }).addTo(map);
-
-        try {
-          map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 14 });
-        } catch(e) {}
+      function showMapError(message) {
+        var error = document.getElementById('map-error');
+        error.textContent = message;
+        error.style.display = 'flex';
       }
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+      function initMap() {
+        if (!window.google || !google.maps) {
+          showMapError('Google Maps could not load. Check its API key, billing, and allowed origins.');
+          return;
+        }
+        var pickup = { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} };
+        var drop = { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} };
+        var truck = { lat: ${truckCoords.lat}, lng: ${truckCoords.lng} };
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: truck,
+          zoom: 12,
+          backgroundColor: '#091524',
+          disableDefaultUI: true,
+          clickableIcons: false,
+          gestureHandling: 'cooperative',
+          styles: [
+            { elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#d5dde8' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#091524' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2e46' }] },
+            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#8b641f' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#091524' }] },
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+          ]
+        });
+        window.__triveniMapLoaded = true;
+
+        var route = new google.maps.Polyline({
+          path: [pickup, truck, drop],
+          geodesic: true,
+          strokeColor: '#F7A300',
+          strokeOpacity: 0.9,
+          strokeWeight: 3.5,
+          map: map
+        });
+        new google.maps.Marker({
+          position: pickup,
+          map: map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: '#F7A300', fillOpacity: 1, strokeColor: '#FFFFFF', strokeWeight: 2 },
+          title: 'Pickup'
+        });
+        new google.maps.Marker({
+          position: drop,
+          map: map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: '#0D1F37', fillOpacity: 1, strokeColor: '#38BDF8', strokeWeight: 2.5 },
+          title: 'Drop-off'
+        });
+        new google.maps.Marker({
+          position: truck,
+          map: map,
+          label: { text: '🚚', fontSize: '16px' },
+          title: 'Driver location'
+        });
+
+        var bounds = new google.maps.LatLngBounds();
+        route.getPath().forEach(function(point) { bounds.extend(point); });
+        map.fitBounds(bounds, 30);
+        google.maps.event.addListenerOnce(map, 'idle', function() {
+          if (map.getZoom() > 14) map.setZoom(14);
+        });
+      }
+
+      if (!${Boolean(GOOGLE_MAPS_API_KEY)}) {
+        showMapError('Google Maps key is not configured. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.');
       } else {
-        init();
+        window.setTimeout(function() {
+          if (!window.__triveniMapLoaded) showMapError('Google Maps could not load. Check its API key, billing, and allowed origins.');
+        }, 12000);
       }
     </script>
+    ${mapsScript}
   </body>
 </html>`;
   }, [pickupCoords, dropCoords, truckCoords]);
@@ -293,7 +316,7 @@ export default function BookingTrackScreen() {
           />
         ) : (
           <WebView
-            source={{ html: liveMapHtml, baseUrl: 'https://cdnjs.cloudflare.com' }}
+            source={{ html: liveMapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
             style={{
               width: '100%',
               height: 200,

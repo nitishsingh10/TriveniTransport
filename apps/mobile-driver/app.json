@@ -18,11 +18,6 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Triveni Driver uses your location to broadcast live telemetry to operations and customers while fulfilling active moves.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Triveni Driver uses your background location to broadcast transit progress while duty is active."
-      },
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCsPh4oHb_2lqhbJjgvxMbiy4u4f2S30Hc"
-        }
       }
     },
     "android": {
@@ -36,12 +31,7 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCsPh4oHb_2lqhbJjgvxMbiy4u4f2S30Hc"
-        }
-      }
+      ]
     },
     "web": {
       "bundler": "metro",

@@ -79,6 +79,7 @@ export default function WebMapModal({
   const [loading, setLoading] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isMapMoving, setIsMapMoving] = useState(false);
+  const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
 
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
     lat: 18.5679,
@@ -90,8 +91,22 @@ export default function WebMapModal({
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const reverseGeocodeTimer = useRef<NodeJS.Timeout | null>(null);
+  const bottomSheetRef = useRef<HTMLDivElement>(null);
 
   const initialMapCoords = useRef({ lat: 18.5679, lng: 73.9143 });
+
+  useEffect(() => {
+    if (!isOpen || !bottomSheetRef.current || typeof ResizeObserver === 'undefined') return;
+    const sheet = bottomSheetRef.current;
+    const updateHeight = () => {
+      const height = sheet.getBoundingClientRect().height;
+      setBottomSheetHeight((current) => Math.abs(current - height) > 1 ? height : current);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   // Sync state when modal opens
   useEffect(() => {
@@ -275,19 +290,20 @@ export default function WebMapModal({
 
   const isPickup = activeType === 'pickup';
 
-  // Memoize map HTML so dragging the pin NEVER reloads the iframe (Uses Leaflet + CartoDB midnight tiles: 0ms latency, zero API key required)
+  // Memoize map HTML so dragging the pin NEVER reloads the iframe.
   const mapHtml = useMemo(() => {
     if (!isOpen) return '';
     const startLat = initialMapCoords.current.lat || 18.5679;
     const startLng = initialMapCoords.current.lng || 73.9143;
+    const mapsScript = GMAPS_KEY
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&loading=async&callback=initMap"></script>`
+      : '';
     return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
         <style>
           * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
           html, body, #map {
@@ -298,14 +314,30 @@ export default function WebMapModal({
             overflow: hidden;
             background: #0d1f37;
           }
-          .leaflet-control-attribution, .leaflet-control-zoom {
-            display: none !important;
+          #map-error {
+            display: none;
+            position: absolute;
+            inset: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: #fff;
+            background: #0d1f37;
+            text-align: center;
+            font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           }
         </style>
       </head>
       <body>
         <div id="map"></div>
+        <div id="map-error"></div>
         <script>
+          function showMapError(message) {
+            var error = document.getElementById('map-error');
+            error.textContent = message;
+            error.style.display = 'flex';
+          }
+
           function postToParent(data) {
             try {
               if (window.parent && window.parent.postMessage) {
@@ -315,53 +347,61 @@ export default function WebMapModal({
           }
 
           function initMap() {
-            if (typeof L === 'undefined') return;
+            if (!window.google || !google.maps) {
+              showMapError('Google Maps could not load. Check the Maps JavaScript API key, billing, and allowed origins.');
+              postToParent({ type: 'MAP_ERROR' });
+              return;
+            }
 
-            var map = L.map('map', {
-              zoomControl: false,
-              attributionControl: false,
-              inertia: true,
-              inertiaDeceleration: 3000
-            }).setView([${startLat}, ${startLng}], 15);
+            var map = new google.maps.Map(document.getElementById('map'), {
+              center: { lat: ${startLat}, lng: ${startLng} },
+              zoom: 15,
+              backgroundColor: '#0d1f37',
+              disableDefaultUI: true,
+              clickableIcons: false,
+              gestureHandling: 'greedy',
+              styles: ${JSON.stringify(DARK_MAP_STYLES)}
+            });
             window.map = map;
+            window.__triveniMapLoaded = true;
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-              maxZoom: 19,
-              subdomains: 'abcd'
-            }).addTo(map);
-
-            setTimeout(function() {
-              if (window.map) window.map.invalidateSize();
-            }, 250);
-
-            map.on('movestart', function() {
+            map.addListener('dragstart', function() {
               postToParent({ type: 'MAP_DRAGGING' });
             });
 
-            map.on('moveend', function() {
-              var c = map.getCenter();
+            map.addListener('idle', function() {
+              var c = map.getCenter().toJSON();
               postToParent({ type: 'PIN_COORDS', lat: c.lat, lng: c.lng });
             });
 
-            map.on('click', function(e) {
-              map.flyTo(e.latlng, map.getZoom(), { duration: 0.6 });
+            map.addListener('click', function(e) {
+              if (e.latLng) map.panTo(e.latLng);
             });
 
             window.addEventListener('message', function(ev) {
               if (ev.data && ev.data.type === 'FLY_TO') {
                 if (window.map) {
-                  window.map.flyTo([ev.data.lat, ev.data.lng], 16, { duration: 0.8 });
+                  window.map.panTo({ lat: ev.data.lat, lng: ev.data.lng });
+                  window.map.setZoom(16);
                 }
               }
             });
+
+            postToParent({ type: 'MAP_READY' });
           }
 
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initMap);
+          if (!${Boolean(GMAPS_KEY)}) {
+            showMapError('Google Maps key is not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY and restart the web app.');
+            postToParent({ type: 'MAP_ERROR' });
           } else {
-            initMap();
+            window.setTimeout(function() {
+              if (!window.__triveniMapLoaded) {
+                showMapError('Google Maps could not load. Check the API key, billing, and allowed origins.');
+              }
+            }, 12000);
           }
         </script>
+        ${mapsScript}
       </body>
     </html>
   `;
@@ -373,7 +413,7 @@ export default function WebMapModal({
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
         {/* Map Viewport */}
-        <div className={styles.mapViewport}>
+        <div className={styles.mapViewport} style={{ bottom: bottomSheetHeight }}>
           <iframe
             id="web-triveni-map-iframe"
             srcDoc={mapHtml}
@@ -514,7 +554,7 @@ export default function WebMapModal({
         </button>
 
         {/* ── Bottom Glassmorphic Confirmation Sheet ───────────────────── */}
-        <div className={styles.bottomGlassSheet}>
+        <div className={styles.bottomGlassSheet} ref={bottomSheetRef}>
           <div className={styles.sheetHandle} />
 
           <div className={styles.sheetStatusRow}>
