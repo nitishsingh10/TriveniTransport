@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants
 import { useAuthStore } from '@/store/authStore';
 import { customerApi } from '@/lib/api';
 import { showToast } from '@/components/ToastHost';
+import { isCustomerProfileComplete, normalizeIndianPhone } from '@/lib/customerProfile';
 
 export default function CompleteProfileScreen() {
   const { colors: Colors } = useAppTheme();
@@ -33,6 +34,7 @@ export default function CompleteProfileScreen() {
 
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
+  const syncCustomerProfile = useAuthStore((s) => s.syncCustomerProfile);
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   const [name, setName] = useState(
@@ -42,7 +44,38 @@ export default function CompleteProfileScreen() {
     user?.phone ? user.phone.replace(/^\+91/, '').replace(/\D/g, '') : ''
   );
   const [loading, setLoading] = useState(false);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+
+    const checkSavedProfile = async () => {
+      try {
+        const savedUser = await syncCustomerProfile();
+        if (!isActive || !savedUser) return;
+
+        if (isCustomerProfileComplete(savedUser)) {
+          router.replace('/(tabs)');
+          return;
+        }
+
+        setName(savedUser.name && !['customer', 'valued customer'].includes(savedUser.name.trim().toLowerCase()) ? savedUser.name : '');
+        setPhone(normalizeIndianPhone(savedUser.phone));
+      } catch (error) {
+        // Keep the form available during a temporary API outage. The submit
+        // action will still report any save error to the customer.
+        console.warn('Could not check saved customer profile:', error);
+      } finally {
+        if (isActive) setIsCheckingProfile(false);
+      }
+    };
+
+    void checkSavedProfile();
+    return () => {
+      isActive = false;
+    };
+  }, [syncCustomerProfile]);
 
   const cleanPhone = phone.replace(/\D/g, '');
   const isNameValid = name.trim().length >= 2;
@@ -70,7 +103,8 @@ export default function CompleteProfileScreen() {
 
       await updateUser({
         name: res.name,
-        phone: `+91${res.phone}`,
+        phone: res.phone || cleanPhone,
+        profileCompleted: res.profileCompleted ?? true,
       });
 
       showToast({ title: 'Profile completed', message: 'Welcome to Triveni Transports.', variant: 'success' });
@@ -86,6 +120,19 @@ export default function CompleteProfileScreen() {
     await clearAuth();
     router.replace('/(auth)/login');
   };
+
+  if (isCheckingProfile) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.bgBlobNavy} />
+        <View style={styles.bgBlobMarigold} />
+        <View style={styles.checkingContainer}>
+          <ActivityIndicator color={Colors.marigold} size="large" />
+          <Text style={styles.checkingText}>Checking your saved profile…</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -227,6 +274,17 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     position: 'relative',
   },
   flex: { flex: 1 },
+  checkingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  checkingText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
 
   bgBlobNavy: {
     position: 'absolute',

@@ -7,6 +7,7 @@ import { FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/constants
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
+import { isCustomerProfileComplete } from '@/lib/customerProfile';
 
 interface TabBarIconProps {
   name: 'home' | 'bookings' | 'support' | 'profile';
@@ -92,7 +93,7 @@ export default function TabLayout() {
   }
 
   // If user signed up with email but has not completed their profile with name & phone
-  if (user?.email && (!user.phone || !user.name || user.name === 'Customer' || user.name === 'Valued Customer')) {
+  if (user?.email && !isCustomerProfileComplete(user)) {
     return <Redirect href={'/complete-profile' as any} />;
   }
 

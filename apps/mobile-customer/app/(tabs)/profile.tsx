@@ -30,6 +30,7 @@ import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants
 import { useAuthStore } from '@/store/authStore';
 import { bookingApi } from '@/lib/api';
 import { AppearanceControl } from '@/components/AppearanceControl';
+import { isCustomerProfileComplete } from '@/lib/customerProfile';
 
 export default function ProfileScreen() {
   const { colors: Colors } = useAppTheme();
@@ -65,7 +66,7 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   };
 
-  const isProfileIncomplete = !user?.phone || !user?.name || user.name === 'Valued Customer' || user.name === 'Customer';
+  const isProfileIncomplete = !isCustomerProfileComplete(user);
 
   const MENU_ITEMS = [
     {

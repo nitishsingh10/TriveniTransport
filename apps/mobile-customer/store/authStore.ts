@@ -1,7 +1,7 @@
 // Auth store — keeps credentials in SecureStore and the non-secret profile in AsyncStorage.
 import { create } from 'zustand';
 import type { AuthUser } from '@triveni/shared-types';
-import { setSessionExpiredHandler, tokenStorage } from '@/lib/api';
+import { customerApi, setSessionExpiredHandler, tokenStorage } from '@/lib/api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -10,6 +10,7 @@ interface AuthState {
   isHydrated: boolean;
   setAuth: (user: AuthUser, accessToken: string, refreshToken?: string) => Promise<void>;
   updateUser: (partialUser: Partial<AuthUser>) => Promise<void>;
+  syncCustomerProfile: () => Promise<AuthUser | null>;
   clearAuth: () => Promise<void>;
   hydrateAuth: () => Promise<boolean>;
   setHydrated: (hydrated?: boolean) => void;
@@ -43,6 +44,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e) {
       console.warn('Error updating user session:', e);
     }
+  },
+
+  syncCustomerProfile: async () => {
+    const current = get().user;
+    if (!current || current.role !== 'customer') return null;
+
+    const profile = await customerApi.getProfile();
+    const updated: AuthUser = {
+      ...current,
+      name: profile.name,
+      phone: profile.phone,
+      email: profile.email ?? current.email,
+      profileCompleted: profile.profileCompleted,
+    };
+
+    await tokenStorage.setUser(updated);
+    set({ user: updated });
+    return updated;
   },
 
   clearAuth: async () => {

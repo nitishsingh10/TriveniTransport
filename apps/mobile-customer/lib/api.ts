@@ -359,7 +359,7 @@ export const authApi = {
       accessToken: string;
       refreshToken: string;
       userId: string;
-      user?: { id: string; role: string; name: string; phone?: string; email?: string };
+      user?: { id: string; role: string; name: string; phone?: string; email?: string; profileCompleted?: boolean };
     }>('/auth/otp/verify', {
       method: 'POST',
       body: JSON.stringify({
@@ -507,6 +507,7 @@ export const customerApi = {
       name: string;
       phone?: string | null;
       email?: string | null;
+      profileCompleted?: boolean;
       whatsappOptIn?: boolean;
       createdAt: string;
       bookingsCount?: number;
@@ -519,6 +520,7 @@ export const customerApi = {
       name: string;
       phone?: string | null;
       email?: string | null;
+      profileCompleted?: boolean;
       createdAt: string;
     }>('/customer/me', {
       method: 'PATCH',

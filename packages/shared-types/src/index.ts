@@ -280,6 +280,7 @@ export interface AuthUser {
   name: string;
   phone?: string | null;
   email?: string | null;
+  profileCompleted?: boolean;
 }
 
 export interface AuthResponse {

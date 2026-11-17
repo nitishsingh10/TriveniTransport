@@ -1,5 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { getEnv } from '../../config/env';
+import { isCustomerProfileComplete } from '../customer/profile';
 import { UserRole } from '@triveni/shared-types';
 import { sendSmsOtp } from '../../services/msg91';
 import { EmailService } from '../../services/resend';
@@ -264,6 +265,7 @@ export class AuthService {
     let userName: string;
     let userPhone: string | undefined;
     let userEmail: string | undefined;
+    let userProfileCompleted: boolean | undefined;
     const displayName = name?.trim() || undefined;
 
     if (role === 'customer') {
@@ -284,6 +286,7 @@ export class AuthService {
           userName = customer.name;
           userPhone = customer.phone || undefined;
           userEmail = customer.email || undefined;
+          userProfileCompleted = isCustomerProfileComplete(customer.name, customer.phone);
         } catch (error) {
           if (isUniqueConstraintError(error)) throw accountExists('customer', target.type);
           throw error;
@@ -294,6 +297,7 @@ export class AuthService {
         userName = existing.name;
         userPhone = existing.phone || undefined;
         userEmail = existing.email || undefined;
+        userProfileCompleted = isCustomerProfileComplete(existing.name, existing.phone);
       }
     } else if (role === 'vendor') {
       const existing = target.type === 'email'
@@ -340,7 +344,11 @@ export class AuthService {
       userEmail = admin.email || undefined;
     }
 
-    return this.issueTokens(userId, role, userName, { phone: userPhone, email: userEmail });
+    return this.issueTokens(userId, role, userName, {
+      phone: userPhone,
+      email: userEmail,
+      profileCompleted: userProfileCompleted,
+    });
   }
   /**
    * Refreshes access token using a valid, non-revoked refresh token
@@ -426,7 +434,7 @@ export class AuthService {
     userId: string,
     role: UserRole,
     name?: string,
-    contact: { phone?: string; email?: string } = {},
+    contact: { phone?: string; email?: string; profileCompleted?: boolean } = {},
   ) {
     const accessToken = signAccessToken(userId, role);
     const refreshToken = signRefreshToken(userId, role);
@@ -457,6 +465,7 @@ export class AuthService {
         name: name || (role === 'admin' ? 'Admin' : role === 'vendor' ? 'Partner' : 'Customer'),
         phone: contact.phone || '',
         email: contact.email,
+        profileCompleted: contact.profileCompleted,
       },
     };
   }

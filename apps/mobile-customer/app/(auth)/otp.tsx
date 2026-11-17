@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import type { AuthUser } from '@triveni/shared-types';
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,6 +23,7 @@ import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
+import { isCustomerProfileComplete } from '@/lib/customerProfile';
 
 const OTP_LENGTH = 6;
 
@@ -48,6 +50,7 @@ export default function OtpScreen() {
   const [userNotFound, setUserNotFound] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const setAuth = useAuthStore((s) => s.setAuth);
+  const syncCustomerProfile = useAuthStore((s) => s.syncCustomerProfile);
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -119,20 +122,33 @@ export default function OtpScreen() {
       const userPhone = res.user?.phone ? (res.user.phone.startsWith('+91') ? res.user.phone : `+91${res.user.phone}`) : undefined;
       const userName = res.user?.name || name || (isEmail ? '' : 'Customer');
 
+      const verifiedUser = {
+        id: res.userId,
+        role: 'customer' as const,
+        name: userName,
+        phone: userPhone,
+        email: res.user?.email ?? (isEmail ? resolvedIdentifier : undefined),
+        profileCompleted: res.user?.profileCompleted,
+      };
+
       await setAuth(
-        {
-          id: res.userId,
-          role: 'customer',
-          name: userName,
-          phone: userPhone,
-          email: res.user?.email ?? (isEmail ? resolvedIdentifier : undefined),
-        },
+        verifiedUser,
         res.accessToken,
         res.refreshToken
       );
+
+      // The OTP response is a snapshot. Read the saved customer profile so that
+      // stale or partial local auth data cannot send a completed account back
+      // through profile setup on every sign-in.
+      let profileUser: AuthUser = verifiedUser;
+      try {
+        profileUser = (await syncCustomerProfile()) || verifiedUser;
+      } catch (profileError) {
+        console.warn('Could not refresh customer profile after sign-in:', profileError);
+      }
       setLoading(false);
 
-      const isProfileIncomplete = isEmail && (!userPhone || !userName || userName === 'Customer' || userName === 'Valued Customer');
+      const isProfileIncomplete = isEmail && !isCustomerProfileComplete(profileUser);
       if (isProfileIncomplete) {
         router.replace('/complete-profile' as any);
       } else {

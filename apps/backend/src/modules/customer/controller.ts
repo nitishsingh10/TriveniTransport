@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/prisma';
 import { z } from 'zod';
+import { isCustomerProfileComplete } from './profile';
 
 const UpdatePreferencesSchema = z.object({
   whatsappOptIn: z.boolean().optional(),
@@ -36,8 +37,13 @@ export class CustomerController {
         return next({ statusCode: 404, code: 'NOT_FOUND', message: 'Customer account not found' });
       }
 
+      // Completion is derived from the persisted profile fields so it cannot
+      // drift from the name or phone number.
+      const profileCompleted = isCustomerProfileComplete(customer.name, customer.phone);
+
       res.status(200).json({
         ...customer,
+        profileCompleted,
         bookingsCount: customer._count.bookings,
       });
     } catch (e: any) {
@@ -50,35 +56,49 @@ export class CustomerController {
       const customerId = req.user!.id;
       const data = UpdateProfileSchema.parse(req.body);
 
-      if (data.phone) {
-        const existing = await prisma.customer.findFirst({
-          where: {
-            phone: data.phone,
-            NOT: { id: customerId },
+      const updated = await prisma.$transaction(async (tx) => {
+        const current = await tx.customer.findUnique({
+          where: { id: customerId },
+          select: { id: true },
+        });
+        if (!current) {
+          throw { statusCode: 404, code: 'NOT_FOUND', message: 'Customer account not found' };
+        }
+
+        if (data.phone) {
+          const existing = await tx.customer.findFirst({
+            where: {
+              phone: data.phone,
+              NOT: { id: customerId },
+            },
+            select: { id: true },
+          });
+          if (existing) {
+            throw {
+              statusCode: 409,
+              code: 'PHONE_IN_USE',
+              message: 'This mobile number is already linked to another account.',
+            };
+          }
+        }
+
+        return tx.customer.update({
+          where: { id: customerId },
+          data,
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            createdAt: true,
           },
         });
-        if (existing) {
-          return next({
-            statusCode: 409,
-            code: 'PHONE_IN_USE',
-            message: 'This mobile number is already linked to another account.',
-          });
-        }
-      }
-
-      const updated = await prisma.customer.update({
-        where: { id: customerId },
-        data,
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          createdAt: true,
-        },
       });
 
-      res.status(200).json(updated);
+      res.status(200).json({
+        ...updated,
+        profileCompleted: isCustomerProfileComplete(updated.name, updated.phone),
+      });
     } catch (e: any) {
       if (e instanceof z.ZodError) {
         return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: e.errors[0]?.message || 'Invalid input', details: e.errors });
