@@ -2,15 +2,20 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Link, Stack } from 'expo-router';
 import { HelpCircle, ArrowLeft } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 
 export default function NotFoundScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   return (
     <>
       <Stack.Screen options={{ title: 'Page Not Found' }} />
       <View style={styles.container}>
         <View style={styles.iconCircle}>
-          <HelpCircle size={38} color={Colors.navy} />
+          <HelpCircle size={38} color={Colors.text} />
         </View>
         <Text style={styles.title}>Screen Doesn't Exist</Text>
         <Text style={styles.subtitle}>
@@ -28,7 +33,7 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -62,7 +67,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm + 4,
     paddingHorizontal: Spacing.xl,

@@ -10,43 +10,41 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
-  Camera,
-  CheckCircle2,
   ShieldCheck,
-  ArrowLeft,
+  CheckCircle2,
+  Camera,
+  Signature,
+  PackageCheck,
   Banknote,
   RotateCcw,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useDriverStore } from '@/store/driverStore';
+import { showToast } from '@/components/ToastHost';
 
 export default function DeliveryConfirmScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const activeJob = useDriverStore((s) => s.activeJob);
   const completeJob = useDriverStore((s) => s.completeJob);
 
-  // Checkbox states
-  const [checklist, setChecklist] = useState({
-    goodsInspected: true,
-    fragileVerified: true,
-    furniturePlaced: true,
-    paymentCollected: true,
-  });
-
-  const [hasPhoto, setHasPhoto] = useState(true);
-  const [customerName, setCustomerName] = useState(activeJob?.customerName || 'Rohit Sharma');
-  const [otpCode, setOtpCode] = useState('7842');
+  const [customerName, setCustomerName] = useState(activeJob?.customerName || '');
+  const [photoAdded, setPhotoAdded] = useState(false);
+  const [itemsChecked, setItemsChecked] = useState(false);
+  const [unloadingDone, setUnloadingDone] = useState(false);
+  const [paymentSettled, setPaymentSettled] = useState(false);
+  const [signed, setSigned] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const toggleCheck = (key: keyof typeof checklist) => {
-    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const allChecked = Object.values(checklist).every(Boolean) && hasPhoto;
+  const allChecked = photoAdded && itemsChecked && unloadingDone && paymentSettled && signed;
 
   const handleFinishDelivery = async () => {
     if (!allChecked) {
-      Alert.alert('Incomplete Checklist', 'Please complete all inspection checks and capture a delivery photo before final submission.');
+      showToast({ title: 'Complete the handover checklist', message: 'Finish all checks and add a delivery photo.', variant: 'error' });
       return;
     }
 
@@ -84,412 +82,310 @@ export default function DeliveryConfirmScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Back navigation */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.8}
-        >
-          <ArrowLeft size={18} color={Colors.navy} />
-          <Text style={styles.backBtnText}>Back to Move Console</Text>
-        </TouchableOpacity>
-
-        {/* Title Card */}
-        <View style={styles.card}>
-          <View style={styles.badgeRow}>
-            <View style={styles.podBadge}>
-              <ShieldCheck size={12} color={Colors.success} />
-              <Text style={styles.podBadgeText}>FINAL HANDOVER & POD</Text>
-            </View>
-            <Text style={styles.trackingText}>#{activeJob?.trackingCode ?? 'TRV-PUN-8492'}</Text>
-          </View>
-          <Text style={styles.title}>Proof of Delivery (POD)</Text>
-          <Text style={styles.subtitle}>
-            Complete the final handover inspection with the customer to generate the official tax receipt and release driver payout.
-          </Text>
+      <View style={styles.header}>
+        <View style={styles.headerIconCircle}>
+          <PackageCheck size={28} color={Colors.navyDark} />
         </View>
+        <Text style={styles.headerTitle}>Delivery & Handover</Text>
+        <Text style={styles.headerSubtitle}>
+          Complete mandatory delivery inspection before closing move {activeJob?.trackingCode}
+        </Text>
+      </View>
 
-        {/* Payment Collection Reminder */}
-        {activeJob && activeJob.collectAtDelivery > 0 && (
-          <View style={styles.paymentCard}>
-            <View style={styles.paymentIconBox}>
-              <Banknote size={20} color={Colors.marigoldDark} />
-            </View>
-            <View style={styles.paymentContent}>
-              <Text style={styles.paymentTitle}>Collect Balance at Delivery</Text>
-              <Text style={styles.paymentAmount}>₹{activeJob.collectAtDelivery}</Text>
-              <Text style={styles.paymentSub}>Collect via UPI QR or Cash before customer signature</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Inspection Checklist */}
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Verification Checkpoints */}
         <View style={styles.card}>
-          <Text style={styles.sectionHeading}>Mandatory Inspection Checklist</Text>
+          <Text style={styles.cardTitle}>Mandatory Checkpoints</Text>
 
+          {/* 1. Unload Check */}
           <TouchableOpacity
-            style={styles.checkItem}
-            onPress={() => toggleCheck('goodsInspected')}
-            activeOpacity={0.85}
+            style={[styles.checkRow, unloadingDone && styles.checkRowActive]}
+            onPress={() => setUnloadingDone(!unloadingDone)}
+            activeOpacity={0.8}
           >
-            <View style={[styles.checkbox, checklist.goodsInspected && styles.checkboxActive]}>
-              {checklist.goodsInspected && <CheckCircle2 size={16} color={Colors.white} />}
+            <View style={[styles.checkbox, unloadingDone && styles.checkboxActive]}>
+              {unloadingDone && <CheckCircle2 size={16} color={Colors.white} />}
             </View>
-            <Text style={styles.checkText}>All 18 items unloaded and verified with customer</Text>
+            <View style={styles.checkTextCol}>
+              <Text style={styles.checkLabel}>Unloading Completed</Text>
+              <Text style={styles.checkSub}>All goods safely transferred into customer residence.</Text>
+            </View>
           </TouchableOpacity>
 
+          {/* 2. Inventory Damage Check */}
           <TouchableOpacity
-            style={styles.checkItem}
-            onPress={() => toggleCheck('fragileVerified')}
-            activeOpacity={0.85}
+            style={[styles.checkRow, itemsChecked && styles.checkRowActive]}
+            onPress={() => setItemsChecked(!itemsChecked)}
+            activeOpacity={0.8}
           >
-            <View style={[styles.checkbox, checklist.fragileVerified && styles.checkboxActive]}>
-              {checklist.fragileVerified && <CheckCircle2 size={16} color={Colors.white} />}
+            <View style={[styles.checkbox, itemsChecked && styles.checkboxActive]}>
+              {itemsChecked && <CheckCircle2 size={16} color={Colors.white} />}
             </View>
-            <Text style={styles.checkText}>Fragile items & electronics inspected without damage</Text>
+            <View style={styles.checkTextCol}>
+              <Text style={styles.checkLabel}>Goods Inspected & Verified</Text>
+              <Text style={styles.checkSub}>Customer inspected high-value and fragile goods.</Text>
+            </View>
           </TouchableOpacity>
 
+          {/* 3. POD Photo Capture */}
           <TouchableOpacity
-            style={styles.checkItem}
-            onPress={() => toggleCheck('furniturePlaced')}
-            activeOpacity={0.85}
+            style={[styles.checkRow, photoAdded && styles.checkRowActive]}
+            onPress={() => setPhotoAdded(!photoAdded)}
+            activeOpacity={0.8}
           >
-            <View style={[styles.checkbox, checklist.furniturePlaced && styles.checkboxActive]}>
-              {checklist.furniturePlaced && <CheckCircle2 size={16} color={Colors.white} />}
+            <View style={[styles.checkbox, photoAdded && styles.checkboxActive]}>
+              {photoAdded && <CheckCircle2 size={16} color={Colors.white} />}
             </View>
-            <Text style={styles.checkText}>Beds and major wardrobes assembled in customer rooms</Text>
+            <View style={styles.checkTextCol}>
+              <Text style={styles.checkLabel}>Proof of Delivery (Photo)</Text>
+              <Text style={styles.checkSub}>
+                {photoAdded ? 'Photo captured & geo-tagged.' : 'Tap to take picture of unloaded goods at site.'}
+              </Text>
+            </View>
+            <Camera size={20} color={photoAdded ? Colors.success : Colors.textMuted} />
           </TouchableOpacity>
 
+          {/* 4. Payment Settlement */}
           <TouchableOpacity
-            style={styles.checkItem}
-            onPress={() => toggleCheck('paymentCollected')}
-            activeOpacity={0.85}
+            style={[styles.checkRow, paymentSettled && styles.checkRowActive]}
+            onPress={() => setPaymentSettled(!paymentSettled)}
+            activeOpacity={0.8}
           >
-            <View style={[styles.checkbox, checklist.paymentCollected && styles.checkboxActive]}>
-              {checklist.paymentCollected && <CheckCircle2 size={16} color={Colors.white} />}
+            <View style={[styles.checkbox, paymentSettled && styles.checkboxActive]}>
+              {paymentSettled && <CheckCircle2 size={16} color={Colors.white} />}
             </View>
-            <Text style={styles.checkText}>Full final settlement received from customer</Text>
+            <View style={styles.checkTextCol}>
+              <Text style={styles.checkLabel}>Collect Pending Cash/UPI (₹{activeJob?.collectAtDelivery ?? 0})</Text>
+              <Text style={styles.checkSub}>Remaining balance collected before driver sign-off.</Text>
+            </View>
+            <Banknote size={20} color={paymentSettled ? Colors.success : Colors.textMuted} />
           </TouchableOpacity>
         </View>
 
-        {/* Photo Proof of Delivery */}
+        {/* Customer Handover & Signature */}
         <View style={styles.card}>
-          <Text style={styles.sectionHeading}>Photo Proof of Unloaded Goods</Text>
-          <Text style={styles.photoHint}>
-            Take a clear photo showing the unloaded cargo placed safely in the recipient's premises.
-          </Text>
+          <Text style={styles.cardTitle}>Customer Acknowledgment</Text>
 
-          {hasPhoto ? (
-            <View style={styles.photoPreviewCard}>
-              <View style={styles.photoFakeFrame}>
-                <CheckCircle2 size={24} color={Colors.success} />
-                <Text style={styles.photoCapturedText}>Unloading & Delivery Photo Captured</Text>
-                <Text style={styles.photoTimestamp}>Timestamp: Today · GPS Tagged</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.retakeBtn}
-                onPress={() => setHasPhoto(false)}
-                activeOpacity={0.8}
-              >
-                <RotateCcw size={13} color={Colors.navy} />
-                <Text style={styles.retakeText}>Retake Photo</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.captureBtn}
-              onPress={() => setHasPhoto(true)}
-              activeOpacity={0.85}
-            >
-              <Camera size={22} color={Colors.navy} />
-              <Text style={styles.captureBtnText}>Tap to Capture Photo</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Customer Handover OTP */}
-        <View style={styles.card}>
-          <Text style={styles.sectionHeading}>Customer Delivery Handover</Text>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Received By (Customer Name)</Text>
+            <Text style={styles.inputLabel}>Received By (Customer / Representative)</Text>
             <TextInput
               style={styles.input}
               value={customerName}
               onChangeText={setCustomerName}
-              placeholder="Customer Full Name"
+              placeholder="e.g. Ramesh Kulkarni"
+              placeholderTextColor={Colors.textMuted}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Customer Handover OTP Code</Text>
-            <TextInput
-              style={styles.input}
-              value={otpCode}
-              onChangeText={setOtpCode}
-              keyboardType="number-pad"
-              maxLength={4}
-              placeholder="4-digit OTP"
-            />
-            <Text style={styles.inputSub}>Ask the customer for their 4-digit confirmation code</Text>
-          </View>
+          <TouchableOpacity
+            style={[styles.signBox, signed && styles.signBoxActive]}
+            onPress={() => setSigned(!signed)}
+            activeOpacity={0.8}
+          >
+            <Signature size={24} color={signed ? Colors.success : Colors.textMuted} />
+            <Text style={[styles.signLabel, signed && styles.signLabelActive]}>
+              {signed ? 'Customer Digital Signature Acknowledged ✓' : 'Tap to Record Customer Signature On Screen'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Submit Button */}
+        {/* Actions */}
         <TouchableOpacity
-          style={[styles.finishBtn, !allChecked && styles.finishBtnDisabled]}
+          style={[styles.submitBtn, !allChecked && styles.submitBtnDisabled]}
           onPress={handleFinishDelivery}
+          disabled={loading || !allChecked}
           activeOpacity={0.88}
-          disabled={!allChecked || loading}
         >
-          <CheckCircle2 size={18} color={Colors.white} />
-          <Text style={styles.finishBtnText}>Confirm Delivery & Credit Payout</Text>
+          <Text style={styles.submitBtnText}>
+            {loading ? 'Submitting Handover...' : 'Confirm Delivery & Close Trip'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <RotateCcw size={15} color={Colors.textMuted} />
+          <Text style={styles.cancelBtnText}>Back to Active Console</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  container: {
-    padding: Spacing.md,
-    gap: Spacing.md,
-    paddingBottom: Spacing.xxl,
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  backBtn: {
-    flexDirection: 'row',
+  header: {
+    paddingTop: 54,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: Spacing.xs,
+    gap: 4,
   },
-  backBtnText: {
-    color: Colors.navy,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+  headerIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.marigoldSubtle,
+    borderWidth: 1,
+    borderColor: Colors.marigoldBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.navyDark,
+  },
+  headerSubtitle: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  container: {
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    paddingBottom: Spacing.xxl + 20,
   },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
-    padding: Spacing.md + 2,
-    gap: Spacing.sm + 2,
+    padding: Spacing.lg,
+    gap: Spacing.sm + 4,
     ...Shadow.sm,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  podBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Colors.successLight,
-    borderWidth: 1,
-    borderColor: Colors.successBorder,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-  },
-  podBadgeText: {
-    fontSize: 9,
-    fontWeight: FontWeight.bold,
-    color: Colors.success,
-  },
-  trackingText: {
-    fontSize: 11,
+  cardTitle: {
+    fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     color: Colors.navyDark,
-  },
-  title: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.extrabold,
-    color: Colors.navyDark,
-  },
-  subtitle: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    lineHeight: 18,
   },
 
-  // Payment Reminder Card
-  paymentCard: {
+  checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.marigoldSubtle,
-    borderWidth: 1,
-    borderColor: Colors.marigoldBorder,
-    borderRadius: BorderRadius.xl,
     padding: Spacing.md,
-  },
-  paymentIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.marigoldBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: Colors.cardBorder,
   },
-  paymentContent: {
+  checkRowActive: {
+    backgroundColor: Colors.successLight,
+    borderColor: Colors.success,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+  },
+  checkboxActive: {
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
+  },
+  checkTextCol: {
     flex: 1,
   },
-  paymentTitle: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
-  },
-  paymentAmount: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.extrabold,
-    color: Colors.navyDark,
-    marginTop: 1,
-  },
-  paymentSub: {
-    fontSize: 10,
-    color: Colors.navyMuted,
-    marginTop: 1,
-  },
-
-  // Checklist
-  sectionHeading: {
+  checkLabel: {
     fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.bold,
     color: Colors.navyDark,
   },
-  checkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm + 2,
-    paddingVertical: Spacing.xs,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
-    backgroundColor: Colors.surfaceSubtle,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxActive: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
-  },
-  checkText: {
-    flex: 1,
-    fontSize: FontSize.xs,
-    color: Colors.navyDark,
-    fontWeight: FontWeight.medium,
-    lineHeight: 17,
-  },
-
-  // Photo Box
-  photoHint: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    lineHeight: 15,
-  },
-  photoPreviewCard: {
-    backgroundColor: Colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  photoFakeFrame: {
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: Spacing.xs,
-  },
-  photoCapturedText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
-  },
-  photoTimestamp: {
+  checkSub: {
     fontSize: 10,
-    color: Colors.textMuted,
-  },
-  retakeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: Spacing.xs,
-  },
-  retakeText: {
-    fontSize: 11,
-    color: Colors.navy,
-    fontWeight: FontWeight.bold,
-  },
-  captureBtn: {
-    backgroundColor: Colors.surfaceSubtle,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: Colors.navyBorder,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    gap: 6,
-  },
-  captureBtnText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
 
-  // Inputs
   inputGroup: {
     gap: 4,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.textSecondary,
   },
   input: {
     borderWidth: 1.5,
     borderColor: Colors.inputBorder,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     backgroundColor: Colors.inputBg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
+    paddingVertical: Spacing.sm + 2,
     fontSize: FontSize.sm,
-    color: Colors.navy,
+    color: Colors.navyDark,
     fontWeight: FontWeight.medium,
   },
-  inputSub: {
-    fontSize: 10,
+
+  signBox: {
+    height: 80,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.cardBorder,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+  },
+  signBoxActive: {
+    borderColor: Colors.success,
+    backgroundColor: Colors.successLight,
+  },
+  signLabel: {
+    fontSize: FontSize.xs,
     color: Colors.textMuted,
+    fontWeight: FontWeight.semibold,
+  },
+  signLabelActive: {
+    color: Colors.success,
+    fontWeight: FontWeight.bold,
   },
 
-  // Finish Button
-  finishBtn: {
-    backgroundColor: Colors.navy,
+  submitBtn: {
+    backgroundColor: Colors.navyDark,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md + 2,
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    ...Shadow.sm,
+    justifyContent: 'center',
+    ...Shadow.glowSm,
   },
-  finishBtnDisabled: {
+  submitBtnDisabled: {
     opacity: 0.5,
   },
-  finishBtnText: {
+  submitBtnText: {
     color: Colors.white,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
+  },
+
+  cancelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+  },
+  cancelBtnText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
   },
 });

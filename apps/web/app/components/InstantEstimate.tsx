@@ -363,13 +363,15 @@ export default function InstantEstimate() {
       </div>
 
       {/* Interactive map modal */}
-      <WebMapModal
-        isOpen={mapModalType !== null}
-        type={mapModalType || 'pickup'}
-        initialAddress={mapModalType === 'pickup' ? pickup : drop}
-        onClose={() => setMapModalType(null)}
-        onSelectLocation={handleLocationSelected}
-      />
+      {mapModalType !== null && (
+        <WebMapModal
+          isOpen={mapModalType !== null}
+          type={mapModalType}
+          initialAddress={mapModalType === 'pickup' ? pickup : drop}
+          onClose={() => setMapModalType(null)}
+          onSelectLocation={handleLocationSelected}
+        />
+      )}
     </>
   );
 }

@@ -3,7 +3,9 @@ import { Tabs, Redirect } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Package, Headphones, User, PhoneCall } from 'lucide-react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/constants/theme';
+import { FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
 
 interface TabBarIconProps {
@@ -13,7 +15,9 @@ interface TabBarIconProps {
 }
 
 function TabBarIcon({ name, label, focused }: TabBarIconProps) {
-  const iconColor = focused ? Colors.navy : Colors.tabInactive;
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const iconColor = focused ? Colors.text : Colors.tabInactive;
   const strokeWidth = focused ? 2.4 : 1.8;
 
   return (
@@ -31,6 +35,7 @@ function TabBarIcon({ name, label, focused }: TabBarIconProps) {
 }
 
 function HeaderBrand() {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.headerBrand}>
       <Image
@@ -51,6 +56,8 @@ function HeaderBrand() {
 }
 
 function HeaderCallButton() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <TouchableOpacity
       style={styles.headerCallBtn}
@@ -59,7 +66,7 @@ function HeaderCallButton() {
       accessibilityLabel="Call 24/7 Helpline"
     >
       <View style={styles.callIconBox}>
-        <PhoneCall size={12} color={Colors.navy} strokeWidth={2.4} />
+        <PhoneCall size={12} color={Colors.text} strokeWidth={2.4} />
       </View>
       <Text style={styles.headerCallText}>Support</Text>
     </TouchableOpacity>
@@ -67,6 +74,8 @@ function HeaderCallButton() {
 }
 
 export default function TabLayout() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const user = useAuthStore((s) => s.user);
@@ -97,13 +106,13 @@ export default function TabLayout() {
           elevation: 0,
           shadowOpacity: 0,
         },
-        headerTintColor: Colors.navy,
+        headerTintColor: Colors.text,
         headerTitleAlign: 'left',
         headerTitle: () => <HeaderBrand />,
         headerRight: () => <HeaderCallButton />,
         tabBarStyle: [styles.tabBar, { height: 56 + bottomInset, paddingBottom: bottomInset }],
         tabBarShowLabel: false,
-        tabBarActiveTintColor: Colors.navy,
+        tabBarActiveTintColor: Colors.text,
         tabBarInactiveTintColor: Colors.tabInactive,
       }}
     >
@@ -147,7 +156,7 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.tabBackground,
     borderTopColor: Colors.tabBorder,
@@ -156,7 +165,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 8,
     elevation: 8,
-    shadowColor: Colors.navy,
+    shadowColor: Colors.brandSurface,
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -184,7 +193,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   labelFocused: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   activeDot: {
@@ -211,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 15,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 1.5,
@@ -230,7 +239,7 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   headerSubtitle: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 8,
     fontWeight: FontWeight.bold,
     letterSpacing: 1.2,
@@ -251,12 +260,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCallText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 11,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.2,

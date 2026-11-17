@@ -27,7 +27,9 @@ import {
   Sparkles,
   X,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import type { ConfigurationType } from '@triveni/shared-types';
 import { GoogleMapsLocationModal } from '@/components/GoogleMapsLocationModal';
 import { GoogleMapsRouteCard } from '@/components/GoogleMapsRouteCard';
@@ -52,6 +54,9 @@ const CONFIGS: ConfigOption[] = [
 const FLOORS = ['Ground', '1st', '2nd', '3rd', '4th', '5th+'];
 
 export default function QuoteIndexScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const params = useLocalSearchParams<{
     pickup?: string;
     drop?: string;
@@ -295,7 +300,7 @@ export default function QuoteIndexScreen() {
           activeOpacity={0.88}
         >
           <View style={styles.mapPinIconBox}>
-            <Compass size={18} color={Colors.navy} strokeWidth={2.4} />
+            <Compass size={18} color={Colors.text} strokeWidth={2.4} />
           </View>
           <View style={styles.mapPinBannerTextCol}>
             <Text style={styles.mapPinBannerTitle}>Select on Map</Text>
@@ -304,7 +309,7 @@ export default function QuoteIndexScreen() {
             </Text>
           </View>
           <View style={styles.bannerArrowCircle}>
-            <ArrowRight size={14} color={Colors.navy} strokeWidth={2.6} />
+            <ArrowRight size={14} color={Colors.text} strokeWidth={2.6} />
           </View>
         </TouchableOpacity>
 
@@ -431,8 +436,8 @@ export default function QuoteIndexScreen() {
               onPress={() => setMapModalType('drop')}
               activeOpacity={0.75}
             >
-              <Flag size={12} color={Colors.navy} strokeWidth={2.4} />
-              <Text style={[styles.mapPickerTriggerText, { color: Colors.navy }]}>Pin Map</Text>
+              <Flag size={12} color={Colors.text} strokeWidth={2.4} />
+              <Text style={[styles.mapPickerTriggerText, { color: Colors.text }]}>Pin Map</Text>
             </TouchableOpacity>
           </View>
 
@@ -441,7 +446,7 @@ export default function QuoteIndexScreen() {
             <View style={styles.suggestionsContainer}>
               {isDropLoading && (
                 <View style={styles.suggestionLoadingRow}>
-                  <ActivityIndicator size="small" color={Colors.navy} />
+                  <ActivityIndicator size="small" color={Colors.text} />
                   <Text style={styles.suggestionLoadingText}>Searching Google Maps locations...</Text>
                 </View>
               )}
@@ -453,7 +458,7 @@ export default function QuoteIndexScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={[styles.suggestionPinBox, { backgroundColor: Colors.navySubtle }]}>
-                    <MapPin size={14} color={Colors.navy} strokeWidth={2.2} />
+                    <MapPin size={14} color={Colors.text} strokeWidth={2.2} />
                   </View>
                   <View style={styles.suggestionTextBox}>
                     <Text style={styles.suggestionMainText} numberOfLines={1}>
@@ -478,7 +483,7 @@ export default function QuoteIndexScreen() {
             onPress={handleUseCurrentLocationForPickup}
             activeOpacity={0.75}
           >
-            <Crosshair size={12} color={Colors.navy} strokeWidth={2.2} />
+            <Crosshair size={12} color={Colors.text} strokeWidth={2.2} />
             <Text style={styles.quickGpsText}>My GPS Location</Text>
           </TouchableOpacity>
 
@@ -550,7 +555,7 @@ export default function QuoteIndexScreen() {
                 <View style={[styles.configIconBox, isSelected && styles.configIconBoxActive]}>
                   <Icon
                     size={16}
-                    color={isSelected ? Colors.marigold : Colors.navy}
+                    color={isSelected ? Colors.marigold : Colors.text}
                     strokeWidth={isSelected ? 2.4 : 1.8}
                   />
                 </View>
@@ -605,7 +610,7 @@ export default function QuoteIndexScreen() {
       >
         <View style={styles.liftInfo}>
           <View style={styles.liftIconCircle}>
-            <Layers size={18} color={Colors.navy} strokeWidth={2.2} />
+            <Layers size={18} color={Colors.text} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.liftTitle}>Service Lift / Elevator Available</Text>
@@ -641,7 +646,7 @@ export default function QuoteIndexScreen() {
         activeOpacity={0.88}
       >
         <Text style={styles.ctaText}>Proceed to Item Inventory</Text>
-        <ArrowRight size={17} color={Colors.navy} strokeWidth={2.6} />
+        <ArrowRight size={17} color={Colors.text} strokeWidth={2.6} />
       </TouchableOpacity>
 
       {/* Full-Screen Uber-Themed Interactive Map Pinning Modal */}
@@ -659,7 +664,7 @@ export default function QuoteIndexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -675,12 +680,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.06)',
+    borderColor: Colors.cardBorder,
     ...Shadow.sm,
   },
   progressItem: {
@@ -691,12 +696,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
   },
   progressCircleActive: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
   },
   progressNum: {
     color: Colors.textMuted,
@@ -714,20 +719,20 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   progressLabelActive: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   progressLine: {
     flex: 1,
     height: 2,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.inputBorder,
     marginHorizontal: Spacing.sm,
     marginBottom: 16,
   },
   progressLineActive: {
     flex: 1,
     height: 2,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     marginHorizontal: Spacing.sm,
     marginBottom: 16,
   },
@@ -769,10 +774,10 @@ const styles = StyleSheet.create({
 
   // ── Location Card ────────────────────────────────────────────
   locationCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xxl,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.06)',
+    borderColor: Colors.cardBorder,
     padding: Spacing.md,
     gap: Spacing.md,
     ...Shadow.md,
@@ -782,7 +787,7 @@ const styles = StyleSheet.create({
   mapPinHeroBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0D1F37',
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.xl,
     padding: 12,
     gap: 12,
@@ -919,10 +924,10 @@ const styles = StyleSheet.create({
 
   // Google Maps Style Suggestions
   suggestionsContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.1)',
+    borderColor: Colors.navyBorder,
     overflow: 'hidden',
     marginTop: 4,
     ...Shadow.md,
@@ -977,22 +982,22 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(13, 31, 55, 0.05)',
+    borderTopColor: Colors.cardBorderSubtle,
   },
   quickGpsChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.12)',
+    borderColor: Colors.navyBorder,
     gap: 4,
     ...Shadow.sm,
   },
   quickGpsText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 10,
     fontWeight: FontWeight.bold,
   },
@@ -1045,13 +1050,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.08)',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.surface,
     ...Shadow.sm,
   },
   configChipActive: {
-    borderColor: Colors.navy,
-    backgroundColor: Colors.navy,
+    borderColor: Colors.brandSurface,
+    backgroundColor: Colors.brandSurface,
     ...Shadow.md,
   },
   configIconBox: {
@@ -1084,13 +1089,13 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.08)',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.surface,
     ...Shadow.sm,
   },
   floorChipActive: {
-    borderColor: Colors.navy,
-    backgroundColor: Colors.navy,
+    borderColor: Colors.brandSurface,
+    backgroundColor: Colors.brandSurface,
     ...Shadow.md,
   },
   floorText: {
@@ -1107,10 +1112,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.06)',
+    borderColor: Colors.cardBorder,
     padding: Spacing.md,
     ...Shadow.sm,
   },
@@ -1144,7 +1149,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: Colors.inputBorder,
     justifyContent: 'center',
     padding: 3,
   },
@@ -1155,7 +1160,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
   },
   toggleThumbActive: {
     alignSelf: 'flex-end',
@@ -1177,7 +1182,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   ctaText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm + 1,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 0.2,

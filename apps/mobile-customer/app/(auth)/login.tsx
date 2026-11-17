@@ -23,13 +23,18 @@ import {
   UserPlus,
   LogIn,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { authApi } from '@/lib/api';
 
 type AuthMode = 'login' | 'signup';
 type Method = 'phone' | 'email';
 
 export default function LoginScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [method, setMethod] = useState<Method>('phone');
   const [name, setName] = useState('');
@@ -157,7 +162,7 @@ export default function LoginScreen() {
                 onPress={() => switchAuthMode('login')}
                 activeOpacity={0.8}
               >
-                <LogIn size={14} color={authMode === 'login' ? Colors.navy : Colors.textMuted} />
+                <LogIn size={14} color={authMode === 'login' ? Colors.text : Colors.textMuted} />
                 <Text style={[styles.modeTabBtnText, authMode === 'login' && styles.modeTabBtnTextActive]}>
                   Sign In
                 </Text>
@@ -167,7 +172,7 @@ export default function LoginScreen() {
                 onPress={() => switchAuthMode('signup')}
                 activeOpacity={0.8}
               >
-                <UserPlus size={14} color={authMode === 'signup' ? Colors.navy : Colors.textMuted} />
+                <UserPlus size={14} color={authMode === 'signup' ? Colors.text : Colors.textMuted} />
                 <Text style={[styles.modeTabBtnText, authMode === 'signup' && styles.modeTabBtnTextActive]}>
                   Create Account
                 </Text>
@@ -193,7 +198,7 @@ export default function LoginScreen() {
                     onPress={() => switchAuthMode('signup')}
                     activeOpacity={0.8}
                   >
-                    <UserPlus size={13} color={Colors.navy} />
+                    <UserPlus size={13} color={Colors.text} />
                     <Text style={styles.switchPromptBtnText}>Create Account Now</Text>
                   </TouchableOpacity>
                 )}
@@ -203,7 +208,7 @@ export default function LoginScreen() {
                     onPress={() => switchAuthMode('login')}
                     activeOpacity={0.8}
                   >
-                    <LogIn size={13} color={Colors.navy} />
+                    <LogIn size={13} color={Colors.text} />
                     <Text style={styles.switchPromptBtnText}>Sign In to Existing Account</Text>
                   </TouchableOpacity>
                 )}
@@ -216,7 +221,7 @@ export default function LoginScreen() {
                 <Text style={styles.inputLabel}>Full Name</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.countryCodeBox}>
-                    <User size={16} color={Colors.navy} />
+                    <User size={16} color={Colors.text} />
                   </View>
                   <TextInput
                     style={styles.input}
@@ -242,7 +247,7 @@ export default function LoginScreen() {
                 onPress={() => switchMethod('phone')}
                 activeOpacity={0.8}
               >
-                <Phone size={13} color={method === 'phone' ? Colors.navy : Colors.textMuted} />
+                <Phone size={13} color={method === 'phone' ? Colors.text : Colors.textMuted} />
                 <Text style={[styles.methodTabText, method === 'phone' && styles.methodTabTextActive]}>
                   Mobile Number
                 </Text>
@@ -252,7 +257,7 @@ export default function LoginScreen() {
                 onPress={() => switchMethod('email')}
                 activeOpacity={0.8}
               >
-                <Mail size={13} color={method === 'email' ? Colors.navy : Colors.textMuted} />
+                <Mail size={13} color={method === 'email' ? Colors.text : Colors.textMuted} />
                 <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
                   Email Address
                 </Text>
@@ -378,7 +383,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -393,7 +398,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(13, 31, 55, 0.05)',
+    backgroundColor: Colors.navySubtle,
   },
   bgBlobMarigold: {
     position: 'absolute',
@@ -420,9 +425,9 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 6,
@@ -440,7 +445,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
     letterSpacing: 2.5,
     lineHeight: 26,
   },
@@ -459,7 +464,7 @@ const styles = StyleSheet.create({
   brandSubtitle: {
     fontSize: 10,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
     letterSpacing: 2,
   },
   logoTagline: {
@@ -482,11 +487,11 @@ const styles = StyleSheet.create({
 
   modeTabsRow: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.surfaceSubtle,
     borderRadius: 12,
     padding: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.cardBorder,
     marginBottom: 4,
   },
   modeTabBtn: {
@@ -499,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   modeTabBtnActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     ...Shadow.sm,
   },
   modeTabBtnText: {
@@ -508,7 +513,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   modeTabBtnTextActive: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
 
@@ -527,12 +532,12 @@ const styles = StyleSheet.create({
 
   methodToggle: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.surfaceSubtle,
     borderRadius: 10,
     padding: 3,
     gap: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: Colors.cardBorder,
   },
   methodTab: {
     flex: 1,
@@ -544,7 +549,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   methodTabActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: 'rgba(247, 163, 0, 0.3)',
     ...Shadow.sm,
@@ -555,7 +560,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   methodTabTextActive: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
 
@@ -566,7 +571,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -594,7 +599,7 @@ const styles = StyleSheet.create({
     borderRightColor: Colors.cardBorder,
   },
   countryCode: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },
@@ -602,7 +607,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.medium,
   },
@@ -614,7 +619,7 @@ const styles = StyleSheet.create({
   },
 
   submitBtn: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md + 2,
     alignItems: 'center',
@@ -647,7 +652,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   modeSwitchHighlight: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
     textDecorationLine: 'underline',
   },
@@ -660,7 +665,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   link: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.semibold,
   },
 
@@ -683,12 +688,12 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   trustBadgeText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 11,
     fontWeight: FontWeight.semibold,
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorLight,
     borderWidth: 1,
     borderColor: '#FECACA',
     borderRadius: BorderRadius.md,

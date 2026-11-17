@@ -2,7 +2,9 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Navigation, Clock, MapPin, ExternalLink } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { CURATED_LOCATIONS } from '@/lib/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
@@ -41,6 +43,9 @@ export function GoogleMapsRouteCard({
   durationMins,
   onOpenMapPicker,
 }: GoogleMapsRouteCardProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const pCoords = pickupCoords || resolveCoords(pickupAddress, { lat: 18.5679, lng: 73.9143 });
   const dCoords = dropCoords || resolveCoords(dropAddress, { lat: 18.5590, lng: 73.7868 });
 
@@ -176,7 +181,7 @@ export function GoogleMapsRouteCard({
         {onOpenMapPicker && (
           <TouchableOpacity onPress={onOpenMapPicker} style={styles.mapActionBtn} activeOpacity={0.8}>
             <Text style={styles.mapActionText}>Adjust on Map</Text>
-            <ExternalLink size={12} color={Colors.navy} />
+            <ExternalLink size={12} color={Colors.text} />
           </TouchableOpacity>
         )}
       </View>
@@ -227,7 +232,7 @@ export function GoogleMapsRouteCard({
       <View style={styles.metricsRow}>
         <View style={styles.metricItem}>
           <View style={styles.metricIconBox}>
-            <Navigation size={14} color={Colors.navy} strokeWidth={2.4} />
+            <Navigation size={14} color={Colors.text} strokeWidth={2.4} />
           </View>
           <View>
             <Text style={styles.metricLabel}>ROAD DISTANCE</Text>
@@ -255,7 +260,7 @@ export function GoogleMapsRouteCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   glassCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.88)',
     borderRadius: BorderRadius.xl,
@@ -302,7 +307,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4.5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.12)',
+    borderColor: Colors.navyBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -312,7 +317,7 @@ const styles = StyleSheet.create({
   mapActionText: {
     fontSize: 10.5,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   mapWrapper: {
     position: 'relative',
@@ -367,7 +372,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.08)',
+    borderColor: Colors.cardBorder,
   },
   metricItem: {
     flex: 1,

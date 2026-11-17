@@ -18,7 +18,9 @@ import {
   ArrowRight,
   Package,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import type { BookingStatus } from '@triveni/shared-types';
 import { bookingApi } from '@/lib/api';
 
@@ -34,54 +36,6 @@ interface BookingCardProps {
 }
 
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; bg: string; icon: React.ComponentType<any> }
-> = {
-  CONFIRMED: {
-    label: 'Assigning shortly',
-    color: '#D97706',
-    bg: '#FEF3C7',
-    icon: Clock,
-  },
-  ASSIGNED: {
-    label: 'Driver Assigned',
-    color: Colors.info,
-    bg: Colors.infoLight,
-    icon: Truck,
-  },
-  EN_ROUTE: {
-    label: 'En Route',
-    color: Colors.warning,
-    bg: Colors.warningLight,
-    icon: Navigation,
-  },
-  IN_PROGRESS: {
-    label: 'In Transit',
-    color: Colors.warning,
-    bg: Colors.warningLight,
-    icon: Truck,
-  },
-  COMPLETED: {
-    label: 'Delivered',
-    color: Colors.success,
-    bg: Colors.successLight,
-    icon: CheckCircle2,
-  },
-  CANCELLED: {
-    label: 'Cancelled',
-    color: Colors.error,
-    bg: Colors.errorLight,
-    icon: AlertCircle,
-  },
-  REQUESTED: {
-    label: 'Requested',
-    color: Colors.info,
-    bg: Colors.infoLight,
-    icon: Clock,
-  },
-};
-
 function BookingCard({
   id,
   pickup,
@@ -92,6 +46,17 @@ function BookingCard({
   itemsCount,
   status,
 }: BookingCardProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ComponentType<any> }> = {
+    CONFIRMED: { label: 'Assigning shortly', color: Colors.warning, bg: Colors.warningLight, icon: Clock },
+    ASSIGNED: { label: 'Driver Assigned', color: Colors.info, bg: Colors.infoLight, icon: Truck },
+    EN_ROUTE: { label: 'En Route', color: Colors.warning, bg: Colors.warningLight, icon: Navigation },
+    IN_PROGRESS: { label: 'In Transit', color: Colors.warning, bg: Colors.warningLight, icon: Truck },
+    COMPLETED: { label: 'Delivered', color: Colors.success, bg: Colors.successLight, icon: CheckCircle2 },
+    CANCELLED: { label: 'Cancelled', color: Colors.error, bg: Colors.errorLight, icon: AlertCircle },
+    REQUESTED: { label: 'Requested', color: Colors.info, bg: Colors.infoLight, icon: Clock },
+  };
   const config = STATUS_CONFIG[status] ?? {
     label: status,
     color: Colors.textMuted,
@@ -169,6 +134,8 @@ function BookingCard({
 }
 
 export default function BookingsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [filter, setFilter] = useState<'All' | 'Active' | 'Completed'>('All');
   const [realBookings, setRealBookings] = useState<BookingCardProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -251,14 +218,14 @@ export default function BookingsScreen() {
       <View style={styles.bookingsList}>
         {isLoading ? (
           <View style={styles.emptyState}>
-            <Package size={36} color={Colors.navy} />
+            <Package size={36} color={Colors.text} />
             <Text style={styles.emptyTitle}>Loading your bookings...</Text>
             <Text style={styles.emptySubtitle}>Fetching your latest relocations from Triveni servers</Text>
           </View>
         ) : filteredBookings.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconBox}>
-              <Package size={38} color={Colors.navy} strokeWidth={1.8} />
+              <Package size={38} color={Colors.text} strokeWidth={1.8} />
             </View>
             <Text style={styles.emptyTitle}>
               {filter === 'All' ? 'No Bookings Yet' : `No ${filter} Bookings`}
@@ -285,7 +252,7 @@ export default function BookingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
 
@@ -311,8 +278,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   filterChipActive: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   filterText: {
     color: Colors.textSecondary,
@@ -382,7 +349,7 @@ const styles = StyleSheet.create({
     paddingLeft: 18,
   },
   routeText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -426,7 +393,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
   },
   amountText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.extrabold,
   },
@@ -436,7 +403,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm + 2,
     ...Shadow.sm,
@@ -454,7 +421,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   emptyTitle: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
     marginTop: Spacing.sm,
@@ -478,7 +445,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.md,

@@ -6,16 +6,17 @@
 
 export const Colors = {
   // Canvas & Surfaces
-  background: '#F0F4F8',        // Clean light canvas (--brand-50 / --gray-50)
+  background: '#F8FAFC',        // Clean light canvas (--brand-50 / --gray-50)
   surface: '#FFFFFF',           // Pure white card background
   surfaceElevated: '#FFFFFF',
-  surfaceSubtle: '#F8FAFC',
+  surfaceSubtle: '#F1F5F9',
   cardBg: '#FFFFFF',
   cardBorder: '#E2E8F0',
   cardBorderSubtle: '#EDF2F7',
 
   // Primary Brand (Deep Navy palette)
   navy: '#0D1F37',              // Core Logo Navy
+  brandSurface: '#0D1F37',      // Brand surface with legible inverse text
   navyDark: '#050D17',          // Deep text navy
   navyLight: '#1C385B',         // Hover/accent navy
   navyMuted: '#486581',         // Muted navy
@@ -82,11 +83,11 @@ export const Spacing = {
 
 export const BorderRadius = {
   xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 28,
+  sm: 6,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  xxl: 22,
   full: 9999,
 } as const;
 
@@ -114,23 +115,23 @@ export const Shadow = {
   sm: {
     shadowColor: '#0D1F37',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   md: {
     shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   lg: {
     shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.10,
+    shadowRadius: 20,
+    elevation: 6,
   },
   glow: {
     shadowColor: '#F7A300',
@@ -147,3 +148,55 @@ export const Shadow = {
     elevation: 3,
   },
 } as const;
+
+export type ThemeColors = { [Key in keyof typeof Colors]: string };
+export type ThemeMode = 'light' | 'dark';
+
+export const LightColors: ThemeColors = Colors;
+export const DarkColors: ThemeColors = {
+  ...Colors,
+  background: '#0A1019',
+  surface: '#111A26',
+  surfaceElevated: '#182333',
+  surfaceSubtle: '#151F2D',
+  cardBg: '#111A26',
+  cardBorder: 'rgba(220, 232, 246, 0.10)',
+  cardBorderSubtle: 'rgba(220, 232, 246, 0.07)',
+  navy: '#0D1F37',
+  navyDark: '#F4F7FB',
+  navyLight: '#AFC2DA',
+  navyMuted: '#A1B2C7',
+  navySubtle: 'rgba(216, 227, 241, 0.08)',
+  navyBorder: 'rgba(216, 227, 241, 0.14)',
+  brandSurface: '#1A2A40',
+  marigoldDark: '#FFC04D',
+  text: '#F4F7FB',
+  textSecondary: '#B4C0D0',
+  textMuted: '#8492A5',
+  successLight: 'rgba(34, 197, 94, 0.16)',
+  successBorder: 'rgba(74, 222, 128, 0.30)',
+  warningLight: 'rgba(245, 158, 11, 0.16)',
+  warningBorder: 'rgba(251, 191, 36, 0.30)',
+  errorLight: 'rgba(239, 68, 68, 0.16)',
+  errorBorder: 'rgba(248, 113, 113, 0.30)',
+  infoLight: 'rgba(59, 130, 246, 0.16)',
+  infoBorder: 'rgba(96, 165, 250, 0.30)',
+  headerBackground: '#0D1520',
+  headerBorder: 'rgba(220, 232, 246, 0.10)',
+  tabBackground: '#0D1520',
+  tabBorder: 'rgba(220, 232, 246, 0.10)',
+  tabActive: '#F4F7FB',
+  tabInactive: '#8492A5',
+  inputBg: '#0D1520',
+  inputBorder: '#2B384B',
+  inputText: '#F4F7FB',
+  inputPlaceholder: '#8492A5',
+  glass: 'rgba(17, 26, 38, 0.92)',
+  glassBorder: 'rgba(220, 232, 246, 0.12)',
+  overlay: 'rgba(0, 0, 0, 0.62)',
+};
+
+export const ThemeColorsByMode: Record<ThemeMode, ThemeColors> = {
+  light: LightColors,
+  dark: DarkColors,
+};

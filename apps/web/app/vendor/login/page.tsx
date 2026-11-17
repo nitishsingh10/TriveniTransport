@@ -6,24 +6,28 @@ import { useRouter } from 'next/navigation';
 import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/useAuth';
+import { getRoleSafeDestination } from '../../lib/authNavigation';
+import { useOtpResendCooldown } from '../../lib/useOtpResendCooldown';
 import styles from './page.module.css';
 
 type Method = 'phone' | 'email';
 
 export default function VendorLoginPage() {
   const router = useRouter();
-  const { isLoggedIn, role, user, logout } = useAuth();
+  const { isLoggedIn, role, user, logout, loading: authLoading } = useAuth();
   const [method, setMethod] = useState<Method>('phone');
   const [identifier, setIdentifier] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { secondsRemaining, start: startResendCooldown, reset: resetResendCooldown } = useOtpResendCooldown();
 
-  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const phoneDigits = identifier.replace(/\D/g, '');
+  const isPhoneValid = method === 'phone' && /^[6-9]\d{9}$/.test(phoneDigits);
   const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
   const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
-  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+  const resolvedIdentifier = method === 'phone' ? phoneDigits : identifier.trim().toLowerCase();
 
   const switchMethod = (m: Method) => {
     setMethod(m);
@@ -31,6 +35,7 @@ export default function VendorLoginPage() {
     setError('');
     setOtpSent(false);
     setOtp('');
+    resetResendCooldown();
   };
 
   const handleIdentifierChange = (val: string) => {
@@ -54,12 +59,29 @@ export default function VendorLoginPage() {
     try {
       await auth.requestOtp(resolvedIdentifier, 'vendor', false);
       setOtpSent(true);
+      setOtp('');
+      startResendCooldown();
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError('Could not connect to partner dispatch service. Please try again.');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    if (loading || secondsRemaining > 0) return;
+    setError('');
+    setLoading(true);
+    try {
+      await auth.requestOtp(resolvedIdentifier, 'vendor', false);
+      setOtp('');
+      startResendCooldown();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not resend OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -75,8 +97,7 @@ export default function VendorLoginPage() {
       token.set(res.accessToken, res.refreshToken);
       token.setRole('vendor');
       if (res.user) token.setUser(res.user);
-      const next = new URLSearchParams(window.location.search).get('next') ?? '/admin/fleet';
-      router.push(next);
+      router.replace(getRoleSafeDestination('vendor'));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -88,7 +109,12 @@ export default function VendorLoginPage() {
     }
   };
 
+  if (authLoading) {
+    return <main className={styles.main} aria-busy="true"><div className={styles.container}><div className={styles.glassCard} role="status">Checking your session…</div></div></main>;
+  }
+
   if (isLoggedIn) {
+    const destination = getRoleSafeDestination(role);
     return (
       <main className={styles.main}>
         <div className={styles.bgMesh}>
@@ -115,7 +141,7 @@ export default function VendorLoginPage() {
               </div>
 
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-                <Link href={role === 'vendor' ? '/admin/fleet' : role === 'admin' ? '/admin' : '/bookings'} className={styles.submitBtn}>
+                <Link href={destination} className={styles.submitBtn}>
                   Continue to {role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →
                 </Link>
                 <button
@@ -189,15 +215,17 @@ export default function VendorLoginPage() {
 
                   {method === 'phone' ? (
                     <div className={styles.inputGroup}>
-                      <label>Registered Mobile Number</label>
+                      <label htmlFor="vendor-login-phone">Registered Mobile Number</label>
                       <div className={styles.inputWrapper}>
                         <span className={styles.countryCode}>+91</span>
                         <input
                           className={styles.input}
-                          type="text"
+                          id="vendor-login-phone"
+                          type="tel"
                           inputMode="numeric"
                           placeholder="99999 99999"
                           maxLength={10}
+                          pattern="[6-9][0-9]{9}"
                           value={identifier}
                           onChange={e => handleIdentifierChange(e.target.value)}
                           required
@@ -224,11 +252,13 @@ export default function VendorLoginPage() {
                     </div>
                   ) : (
                     <div className={styles.inputGroup}>
-                      <label>Registered Email Address</label>
+                      <label htmlFor="vendor-login-email">Registered Email Address</label>
                       <div className={styles.inputWrapper}>
                         <input
                           className={`${styles.input} ${styles.inputEmail}`}
+                          id="vendor-login-email"
                           type="email"
+                          autoComplete="email"
                           placeholder="partner@example.com"
                           value={identifier}
                           onChange={e => handleIdentifierChange(e.target.value)}
@@ -274,11 +304,14 @@ export default function VendorLoginPage() {
               ) : (
                 <form className={styles.form} onSubmit={verifyOtp}>
                   <div className={styles.inputGroup}>
-                    <label>Enter OTP</label>
+                    <label htmlFor="vendor-login-otp">Enter OTP</label>
                     <div className={styles.inputWrapper}>
                       <input
                         className={`${styles.input} ${styles.otpInput}`}
+                        id="vendor-login-otp"
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
                         placeholder="• • • • • •"
                         maxLength={6}
                         value={otp}
@@ -293,9 +326,12 @@ export default function VendorLoginPage() {
                     </span>
                     {process.env.NODE_ENV !== 'production' && (
                       <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
-                        Dev mode: use OTP <strong>123456</strong>
+                        Local development: check the backend terminal for the current OTP.
                       </span>
                     )}
+                    <button type="button" className={styles.resendButton} onClick={resendOtp} disabled={loading || secondsRemaining > 0}>
+                      {loading ? 'Sending…' : secondsRemaining > 0 ? `Resend code in ${secondsRemaining}s` : 'Resend code'}
+                    </button>
                   </div>
 
                   <button 
@@ -309,7 +345,7 @@ export default function VendorLoginPage() {
                   <button 
                     type="button"
                     className={styles.backBtn} 
-                    onClick={() => setOtpSent(false)}
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); resetResendCooldown(); }}
                   >
                     <ArrowLeft size={16} /> Change {method === 'phone' ? 'mobile number' : 'email'}
                   </button>

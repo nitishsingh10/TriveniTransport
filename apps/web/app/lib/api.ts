@@ -13,6 +13,7 @@ const getBaseUrl = (): string => {
 };
 
 const BASE = getBaseUrl();
+let refreshInFlight: Promise<boolean> | null = null;
 
 // ── Token helpers (localStorage, client-side only) ──────────────────
 export const token = {
@@ -81,22 +82,18 @@ async function apiFetch<T>(
 
   // Attempt transparent token refresh on 401
   if (res.status === 401 && retry) {
-    const refreshToken = token.getRefresh();
-    if (refreshToken) {
-      const refreshRes = await fetch(`${BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-      if (refreshRes.ok) {
-        const { accessToken: newAccess } = await refreshRes.json();
-        localStorage.setItem('tt_access', newAccess);
-        return apiFetch<T>(path, options, false); // retry once
-      }
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      return apiFetch<T>(path, options, false); // retry once
     }
+
     // Refresh failed — clear session and redirect to login
+    const role = token.getRole();
     token.clear();
-    if (typeof window !== 'undefined') window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      const loginPath = role === 'vendor' ? '/vendor/login' : role === 'admin' ? '/admin/login' : '/login';
+      window.location.href = loginPath;
+    }
     throw new Error('Session expired');
   }
 
@@ -108,6 +105,40 @@ async function apiFetch<T>(
   // 204 No Content
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+/** Refresh once for concurrent expired requests and store the rotated refresh token. */
+function refreshSession(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+
+  const currentRefreshToken = token.getRefresh();
+  if (!currentRefreshToken) return Promise.resolve(false);
+
+  refreshInFlight = (async () => {
+    try {
+      const response = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentRefreshToken }),
+      });
+      if (!response.ok) return false;
+
+      const refreshed = await response.json().catch(() => null);
+      if (
+        typeof refreshed?.accessToken !== 'string' ||
+        typeof refreshed?.refreshToken !== 'string'
+      ) return false;
+
+      token.set(refreshed.accessToken, refreshed.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
 }
 
 export class ApiError extends Error {
@@ -170,6 +201,42 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ refreshToken: token.getRefresh() }),
     }).finally(() => token.clear()),
+};
+
+export interface VendorProfile {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  status?: string;
+  _count?: { bookings: number };
+}
+
+export interface VendorVehicle {
+  id: string;
+  type: string;
+  capacityCft: number;
+  registrationNumber: string;
+  permitExpiry?: string;
+  fitnessCertExpiry?: string;
+  active: boolean;
+}
+
+export interface VendorJob {
+  id: string;
+  status: string;
+  scheduledDate: string;
+  scheduledSlot: string;
+  pickupAddress: string;
+  dropAddress: string;
+  customer?: { name: string; phone: string } | null;
+  vehicle?: { type: string; registrationNumber: string } | null;
+}
+
+export const vendor = {
+  getProfile: () => apiFetch<VendorProfile>('/vendor/profile'),
+  getVehicles: () => apiFetch<VendorVehicle[]>('/vendor/vehicles'),
+  getJobs: () => apiFetch<VendorJob[]>('/vendor/jobs'),
 };
 
 // ── Quotes ───────────────────────────────────────────────────────────

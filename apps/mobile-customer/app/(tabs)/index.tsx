@@ -31,7 +31,9 @@ import {
   Sparkles,
   X,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { bookingApi, mapsApi, type BookingItem, type PlaceLocation } from '@/lib/api';
 import { GoogleMapsLocationModal } from '@/components/GoogleMapsLocationModal';
@@ -44,8 +46,6 @@ const MOVING_SERVICES = [
     price: 'From ₹2,499',
     badge: 'Popular',
     icon: Home,
-    color: '#0D1F37',
-    iconBg: 'rgba(13, 31, 55, 0.08)',
     config: '2bhk',
   },
   {
@@ -55,8 +55,6 @@ const MOVING_SERVICES = [
     price: 'Custom quote',
     badge: 'Corporate',
     icon: Briefcase,
-    color: '#0D1F37',
-    iconBg: 'rgba(13, 31, 55, 0.08)',
     config: 'office',
   },
   {
@@ -66,8 +64,6 @@ const MOVING_SERVICES = [
     price: 'From ₹1,499',
     badge: 'Quick',
     icon: Package,
-    color: '#0D1F37',
-    iconBg: 'rgba(13, 31, 55, 0.08)',
     config: '1bhk',
   },
   {
@@ -77,8 +73,6 @@ const MOVING_SERVICES = [
     price: 'Safe transit',
     badge: 'Insured',
     icon: Car,
-    color: '#0D1F37',
-    iconBg: 'rgba(13, 31, 55, 0.08)',
     config: '1bhk',
   },
 ];
@@ -102,6 +96,9 @@ const TRUST_PILLARS = [
 ];
 
 export default function HomeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const user = useAuthStore((s) => s.user);
   const [activeBooking, setActiveBooking] = useState<BookingItem | null>(null);
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
@@ -441,7 +438,7 @@ export default function HomeScreen() {
                   returnKeyType="done"
                 />
               </View>
-              {isDropLoading && <ActivityIndicator size="small" color={Colors.navy} />}
+              {isDropLoading && <ActivityIndicator size="small" color={Colors.text} />}
               {drop.length > 0 && !isDropLoading && (
                 <TouchableOpacity
                   onPress={() => { setDrop(''); setShowDropSug(false); }}
@@ -455,8 +452,8 @@ export default function HomeScreen() {
                 onPress={() => setMapModalType('drop')}
                 activeOpacity={0.75}
               >
-                <Flag size={12} color={Colors.navy} />
-                <Text style={[styles.pinTagText, { color: Colors.navy }]}>Map</Text>
+                <Flag size={12} color={Colors.text} />
+                <Text style={[styles.pinTagText, { color: Colors.text }]}>Map</Text>
               </TouchableOpacity>
             </View>
 
@@ -471,7 +468,7 @@ export default function HomeScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={[styles.homeSugPinBox, { backgroundColor: Colors.navySubtle }]}>
-                      <MapPin size={12} color={Colors.navy} strokeWidth={2.2} />
+                      <MapPin size={12} color={Colors.text} strokeWidth={2.2} />
                     </View>
                     <View style={styles.homeSugTextCol}>
                       <Text style={styles.homeSugMain} numberOfLines={1}>{item.mainText}</Text>
@@ -492,7 +489,7 @@ export default function HomeScreen() {
             activeOpacity={0.88}
           >
             <Text style={styles.planCtaText}>Get Instant Estimate</Text>
-            <ArrowRight size={16} color={Colors.navy} strokeWidth={2.4} />
+            <ArrowRight size={16} color={Colors.text} strokeWidth={2.4} />
           </TouchableOpacity>
 
           {/* Quick Zone Suggestions */}
@@ -533,12 +530,12 @@ export default function HomeScreen() {
       {/* ── Reassurance Strip (Clean & Unobtrusive) ──────────────────── */}
       <View style={styles.assuranceStrip}>
         <View style={styles.assuranceItem}>
-          <ShieldCheck size={14} color={Colors.navy} />
+          <ShieldCheck size={14} color={Colors.text} />
           <Text style={styles.assuranceText}>₹0 Advance to Lock Date</Text>
         </View>
         <View style={styles.assuranceDot} />
         <View style={styles.assuranceItem}>
-          <Clock size={14} color={Colors.navy} />
+          <Clock size={14} color={Colors.text} />
           <Text style={styles.assuranceText}>On-Time Assurance</Text>
         </View>
         <View style={styles.assuranceDot} />
@@ -568,8 +565,8 @@ export default function HomeScreen() {
                 activeOpacity={0.85}
               >
                 <View style={styles.serviceCardTop}>
-                  <View style={[styles.serviceIconBox, { backgroundColor: item.iconBg }]}>
-                    <IconComp size={20} color={item.color} strokeWidth={2.2} />
+                  <View style={[styles.serviceIconBox, { backgroundColor: Colors.navySubtle }]}>
+                    <IconComp size={20} color={Colors.text} strokeWidth={2.2} />
                   </View>
                   <View style={styles.serviceBadge}>
                     <Text style={styles.serviceBadgeText}>{item.badge}</Text>
@@ -629,7 +626,7 @@ export default function HomeScreen() {
 }
 
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -666,12 +663,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.08)',
+    borderColor: Colors.cardBorder,
     ...Shadow.sm,
   },
   cityPillText: {
@@ -684,7 +681,7 @@ const styles = StyleSheet.create({
   activeMoveCard: {
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     padding: Spacing.md,
     borderWidth: 1,
@@ -775,7 +772,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
@@ -928,7 +925,7 @@ const styles = StyleSheet.create({
   planCtaText: {
     fontSize: FontSize.sm + 0.5,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   zoneShortcutsRow: {
@@ -959,14 +956,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.06)',
+    borderColor: Colors.cardBorder,
     ...Shadow.sm,
   },
   assuranceItem: {
@@ -1017,11 +1014,11 @@ const styles = StyleSheet.create({
   serviceCard: {
     flex: 1,
     minWidth: '47%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.06)',
+    borderColor: Colors.cardBorder,
     gap: Spacing.sm,
     ...Shadow.sm,
   },
@@ -1038,7 +1035,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   serviceBadge: {
-    backgroundColor: 'rgba(13, 31, 55, 0.05)',
+    backgroundColor: Colors.navySubtle,
     paddingHorizontal: 7,
     paddingVertical: 2.5,
     borderRadius: BorderRadius.full,
@@ -1073,16 +1070,16 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 11,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   // ── The Triveni Standard ────────────────────────────────────
   trustStack: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.06)',
+    borderColor: Colors.cardBorder,
     gap: Spacing.md,
     ...Shadow.sm,
   },
@@ -1128,10 +1125,10 @@ const styles = StyleSheet.create({
 
   // ── Home screen suggestion dropdown ─────────────────────────
   homeSuggestionsBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.08)',
+    borderColor: Colors.cardBorder,
     marginTop: 4,
     overflow: 'hidden',
   },

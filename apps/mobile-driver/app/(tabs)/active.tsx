@@ -25,7 +25,10 @@ import {
   AlertTriangle,
   FileCheck2,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { showToast } from '@/components/ToastHost';
 import { useDriverStore, type DriverJob } from '@/store/driverStore';
 import type { BookingStatus } from '@triveni/shared-types';
 
@@ -69,13 +72,15 @@ function resolveAddress(addr: string, fallback: { lat: number; lng: number }) {
 }
 
 export default function ActiveMoveConsole() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const activeJob = useDriverStore((s) => s.activeJob);
 
   if (!activeJob) {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIconCircle}>
-          <Truck size={36} color={Colors.navy} strokeWidth={1.8} />
+          <Truck size={36} color={Colors.text} strokeWidth={1.8} />
         </View>
         <Text style={styles.emptyTitle}>No Active Move in Progress</Text>
         <Text style={styles.emptySubtitle}>
@@ -96,6 +101,8 @@ export default function ActiveMoveConsole() {
 }
 
 function ActiveMoveScreen({ activeJob }: { activeJob: DriverJob }) {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const gps = useDriverStore((s) => s.gps);
   const updateJobStatus = useDriverStore((s) => s.updateJobStatus);
   const toggleGpsBroadcast = useDriverStore((s) => s.toggleGpsBroadcast);
@@ -527,7 +534,7 @@ function ActiveMoveScreen({ activeJob }: { activeJob: DriverJob }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: {
     padding: Spacing.md,
@@ -568,7 +575,7 @@ const styles = StyleSheet.create({
   },
   goToDutiesBtn: {
     marginTop: Spacing.md,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
@@ -654,8 +661,8 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   stepNumDone: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
     color: Colors.white,
   },
   stepDone: {},
@@ -672,12 +679,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   stepLineDone: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
   },
 
   // Primary Status Button
   primaryStatusBtn: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
@@ -889,7 +896,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     ...Shadow.sm,

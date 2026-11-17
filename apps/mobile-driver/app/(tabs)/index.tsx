@@ -27,12 +27,17 @@ import {
   Layers,
   Info,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { showToast } from '@/components/ToastHost';
 import { useDriverStore, DriverJob } from '@/store/driverStore';
 import { useAuthStore } from '@/store/authStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 
 export default function DutiesScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const isOnline = useAuthStore((s) => s.isOnline);
   const vendorId = useAuthStore((s) => s.user?.id);
   const activeJob = useDriverStore((s) => s.activeJob);
@@ -383,7 +388,7 @@ export default function DutiesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: {
     padding: Spacing.md,
@@ -401,18 +406,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
   },
-  loadErrorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.errorLight,
-    borderWidth: 1,
-    borderColor: Colors.errorBorder,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-  },
-  loadErrorText: { flex: 1, color: Colors.error, fontSize: FontSize.xs, lineHeight: 18 },
-  retryText: { color: Colors.navy, fontWeight: FontWeight.bold, fontSize: FontSize.sm },
   offlineBannerText: {
     flex: 1,
     color: Colors.navyDark,
@@ -514,7 +507,7 @@ const styles = StyleSheet.create({
   shiftOnboardText: {
     fontSize: 9,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   vehicleReg: {
     fontSize: 11,
@@ -565,7 +558,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   // Section Headers
@@ -612,7 +605,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
     borderWidth: 1.5,
-    borderColor: Colors.navy,
+    borderColor: Colors.brandSurface,
     padding: Spacing.md + 4,
     gap: Spacing.md,
     ...Shadow.md,
@@ -666,7 +659,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -754,7 +747,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   openConsoleBtn: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
@@ -908,10 +901,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     ...Shadow.sm,
   },
-  acceptBtnDisabled: { opacity: 0.55 },
   acceptBtnText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
@@ -955,7 +947,20 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: FontSize.xs,
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.medium,
   },
+  loadErrorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.errorLight,
+    borderWidth: 1,
+    borderColor: Colors.errorBorder,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+  },
+  loadErrorText: { flex: 1, color: Colors.error, fontSize: FontSize.xs, lineHeight: 18 },
+  retryText: { color: Colors.navyDark, fontWeight: FontWeight.bold, fontSize: FontSize.sm },
+  acceptBtnDisabled: { opacity: 0.55 },
 });

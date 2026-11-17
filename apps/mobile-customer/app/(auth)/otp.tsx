@@ -17,13 +17,18 @@ import {
   RotateCcw,
   AlertCircle,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/lib/api';
 
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const { identifier, phone: legacyPhone, isSignup, name } = useLocalSearchParams<{
     identifier: string;
     phone?: string;
@@ -177,7 +182,7 @@ export default function OtpScreen() {
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <ArrowLeft size={16} color={Colors.navy} />
+            <ArrowLeft size={16} color={Colors.text} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
 
@@ -229,7 +234,7 @@ export default function OtpScreen() {
                   keyboardType="number-pad"
                   maxLength={6}
                   textAlign="center"
-                  selectionColor={Colors.navy}
+                  selectionColor={Colors.text}
                 />
               ))}
             </View>
@@ -242,7 +247,7 @@ export default function OtpScreen() {
             >
               <RotateCcw
                 size={13}
-                color={resendTimer > 0 ? Colors.textMuted : Colors.navy}
+                color={resendTimer > 0 ? Colors.textMuted : Colors.text}
               />
               <Text
                 style={[
@@ -280,7 +285,7 @@ export default function OtpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -295,7 +300,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(13, 31, 55, 0.05)',
+    backgroundColor: Colors.navySubtle,
   },
   bgBlobMarigold: {
     position: 'absolute',
@@ -322,7 +327,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   backText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },
@@ -362,7 +367,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   phoneHighlight: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
 
@@ -370,7 +375,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.xs,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorLight,
     borderWidth: 1,
     borderColor: '#FECACA',
     borderRadius: BorderRadius.md,
@@ -410,12 +415,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.inputBorder,
     backgroundColor: Colors.inputBg,
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
   },
   otpBoxFilled: {
-    borderColor: Colors.navy,
+    borderColor: Colors.brandSurface,
     backgroundColor: Colors.surfaceSubtle,
   },
 
@@ -426,7 +431,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resend: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },

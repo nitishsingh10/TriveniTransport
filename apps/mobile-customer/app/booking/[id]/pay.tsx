@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
@@ -20,10 +19,16 @@ import {
   Check,
   Info,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, type BookingItem } from '@/lib/api';
+import { showToast } from '@/components/ToastHost';
 
 export default function BookingPayScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const [selectedMethod, setSelectedMethod] = useState<'cod' | 'upi' | 'card' | 'netbanking'>('cod');
   const [processing, setProcessing] = useState(false);
@@ -46,11 +51,11 @@ export default function BookingPayScreen() {
   const totalAmount = booking?.finalAmount || booking?.baseQuoteAmount || 12500;
 
   const handleOnlineMethodClick = (methodName: string) => {
-    Alert.alert(
-      'Online Payment Temporarily Disabled',
-      `${methodName} is temporarily paused. Please confirm your relocation using Cash on Delivery. Zero advance is required, and you can pay directly to your assigned captain on the day of delivery via Cash or UPI scanner.`,
-      [{ text: 'Got It, Use COD' }]
-    );
+    showToast({
+      title: `${methodName} is temporarily unavailable`,
+      message: 'Choose cash on delivery. No advance payment is required.',
+      variant: 'info',
+    });
   };
 
   const handleConfirmCod = async () => {
@@ -65,28 +70,11 @@ export default function BookingPayScreen() {
       }
       await new Promise((r) => setTimeout(r, 600));
       setProcessing(false);
-      Alert.alert(
-        '✓ Booking Confirmed (Cash on Delivery)',
-        `Your relocation is successfully booked! Zero advance payment required.\n\nTotal of ₹${totalAmount.toLocaleString('en-IN')} will be collected by your moving captain upon safe delivery at your new address.`,
-        [
-          {
-            text: 'View Move Details',
-            onPress: () => router.replace(`/booking/${id}`),
-          },
-        ]
-      );
+      showToast({ title: 'Move booked', message: `₹${totalAmount.toLocaleString('en-IN')} due on delivery.`, variant: 'success' });
+      router.replace(id ? `/booking/${id}` : '/(tabs)/bookings');
     } catch {
       setProcessing(false);
-      Alert.alert(
-        'Booking Recorded',
-        'Your booking with Cash on Delivery is confirmed. You can track your move status directly from the bookings tab.',
-        [
-          {
-            text: 'Go to Bookings',
-            onPress: () => router.replace(`/booking/${id}`),
-          },
-        ]
-      );
+      showToast({ title: 'Could not confirm booking', message: 'Please retry or check your bookings.', variant: 'error' });
     }
   };
 
@@ -101,7 +89,7 @@ export default function BookingPayScreen() {
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
-        <ArrowLeft size={16} color={Colors.navy} />
+        <ArrowLeft size={16} color={Colors.text} />
         <Text style={styles.backText}>Cancel & Go Back</Text>
       </TouchableOpacity>
 
@@ -249,7 +237,7 @@ export default function BookingPayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
 
@@ -260,7 +248,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   backText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },
@@ -276,7 +264,7 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   badgeZeroAdvance: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: Colors.successLight,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
@@ -312,7 +300,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     padding: Spacing.sm + 2,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -348,18 +336,18 @@ const styles = StyleSheet.create({
   methodCardCodActive: {
     borderColor: '#10B981',
     borderWidth: 2,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: Colors.successLight,
   },
   methodCardDisabled: {
     opacity: 0.55,
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: Colors.surfaceSubtle,
+    borderColor: Colors.cardBorder,
   },
   codIconWrapper: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -367,7 +355,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.inputBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -398,7 +386,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   activePill: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: Colors.successLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -409,7 +397,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.extrabold,
   },
   disabledPill: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: Colors.inputBorder,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -427,7 +415,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioCircleCodActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
   },
   radioCircleDisabled: {
     width: 18,
@@ -450,13 +438,13 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   securityText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 10,
     fontWeight: FontWeight.medium,
   },
 
   payCta: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md + 2,
     alignItems: 'center',

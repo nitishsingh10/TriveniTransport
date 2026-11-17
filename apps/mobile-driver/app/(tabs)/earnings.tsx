@@ -15,10 +15,16 @@ import {
   Building,
   ShieldCheck,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useDriverStore } from '@/store/driverStore';
+import { showToast } from '@/components/ToastHost';
 
 export default function EarningsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const completedJobs = useDriverStore((s) => s.completedJobs);
   const [withdrawing, setWithdrawing] = useState(false);
 
@@ -30,7 +36,7 @@ export default function EarningsScreen() {
 
   const handleWithdraw = () => {
     if (availableBalance <= 0) {
-      Alert.alert('No Balance', 'You currently do not have any cleared earnings to withdraw.');
+      showToast({ title: 'No balance to withdraw', message: 'Completed duty earnings will appear here.', variant: 'info' });
       return;
     }
 
@@ -45,7 +51,7 @@ export default function EarningsScreen() {
             setWithdrawing(true);
             setTimeout(() => {
               setWithdrawing(false);
-              Alert.alert('Payout Initiated! ⚡', `₹${availableBalance.toLocaleString('en-IN')} has been sent to your bank account via IMPS.`);
+              showToast({ title: 'Payout initiated', message: `₹${availableBalance.toLocaleString('en-IN')} sent via IMPS.`, variant: 'success' });
             }, 800);
           },
         },
@@ -119,7 +125,7 @@ export default function EarningsScreen() {
       {/* Payout Account Info */}
       <View style={styles.accountCard}>
         <View style={styles.accountIconBox}>
-          <Building size={20} color={Colors.navy} />
+          <Building size={20} color={Colors.text} />
         </View>
         <View style={styles.accountDetails}>
           <Text style={styles.accountTitle}>Registered Settlement Account</Text>
@@ -135,10 +141,10 @@ export default function EarningsScreen() {
         {completedJobs.length > 0 && (
           <TouchableOpacity
             style={styles.downloadStatementBtn}
-            onPress={() => Alert.alert('Statement Downloaded', 'TDS & Payout statement downloaded to your device.')}
+            onPress={() => showToast({ title: 'Statement download is coming soon', variant: 'info' })}
             activeOpacity={0.8}
           >
-            <Download size={13} color={Colors.navy} />
+            <Download size={13} color={Colors.text} />
             <Text style={styles.downloadStatementText}>Statement</Text>
           </TouchableOpacity>
         )}
@@ -189,7 +195,7 @@ export default function EarningsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: {
     padding: Spacing.md,
@@ -226,7 +232,7 @@ const styles = StyleSheet.create({
   walletBadgeText: {
     fontSize: 9,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   statusLive: {
     flexDirection: 'row',
@@ -264,7 +270,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   withdrawBtn: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     flexDirection: 'row',
@@ -354,7 +360,7 @@ const styles = StyleSheet.create({
   },
   accountUpi: {
     fontSize: 11,
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.semibold,
     marginTop: 2,
   },
@@ -389,7 +395,7 @@ const styles = StyleSheet.create({
   },
   downloadStatementText: {
     fontSize: 11,
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
 

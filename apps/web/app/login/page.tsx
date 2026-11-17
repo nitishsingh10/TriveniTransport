@@ -3,28 +3,32 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, token } from '../lib/api';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
+import { getRoleSafeDestination } from '../lib/authNavigation';
+import { useOtpResendCooldown } from '../lib/useOtpResendCooldown';
 import styles from './page.module.css';
 
 type Method = 'phone' | 'email';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isLoggedIn, role, user, logout } = useAuth();
+  const { isLoggedIn, role, user, logout, loading: authLoading } = useAuth();
   const [method, setMethod] = useState<Method>('phone');
   const [identifier, setIdentifier] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { secondsRemaining, start: startResendCooldown, reset: resetResendCooldown } = useOtpResendCooldown();
 
-  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const phoneDigits = identifier.replace(/\D/g, '');
+  const isPhoneValid = method === 'phone' && /^[6-9]\d{9}$/.test(phoneDigits);
   const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
   const canSubmit = method === 'phone' ? isPhoneValid : isEmailValid;
-  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+  const resolvedIdentifier = method === 'phone' ? phoneDigits : identifier.trim().toLowerCase();
 
   const switchMethod = (m: Method) => {
     setMethod(m);
@@ -32,6 +36,7 @@ export default function LoginPage() {
     setError('');
     setOtpSent(false);
     setOtp('');
+    resetResendCooldown();
   };
 
   const handleIdentifierChange = (val: string) => {
@@ -56,12 +61,29 @@ export default function LoginPage() {
     try {
       await auth.requestOtp(resolvedIdentifier, 'customer');
       setOtpSent(true);
+      setOtp('');
+      startResendCooldown();
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError('Could not send OTP. Please check your connection.');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    if (loading || secondsRemaining > 0) return;
+    setError('');
+    setLoading(true);
+    try {
+      await auth.requestOtp(resolvedIdentifier, 'customer');
+      setOtp('');
+      startResendCooldown();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not resend OTP. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -77,8 +99,7 @@ export default function LoginPage() {
       token.set(res.accessToken, res.refreshToken);
       token.setRole('customer');
       if (res.user) token.setUser(res.user);
-      const next = new URLSearchParams(window.location.search).get('next') ?? '/bookings';
-      router.push(next);
+      router.replace(getRoleSafeDestination('customer'));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -90,9 +111,12 @@ export default function LoginPage() {
     }
   };
 
+  if (authLoading) {
+    return <main className={styles.main} aria-busy="true"><div className={styles.container}><div className={styles.glassCard} role="status">Checking your session…</div></div></main>;
+  }
+
   if (isLoggedIn) {
-    const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null;
-    const destination = next || (role === 'vendor' ? '/admin/fleet' : role === 'admin' ? '/admin' : '/bookings');
+    const destination = getRoleSafeDestination(role);
 
     return (
       <main className={styles.main}>
@@ -195,15 +219,17 @@ export default function LoginPage() {
 
                   {method === 'phone' ? (
                     <div className={styles.inputGroup}>
-                      <label>Mobile Number</label>
+                    <label htmlFor="login-phone">Mobile Number</label>
                       <div className={styles.inputWrapper}>
                         <span className={styles.countryCode}>+91</span>
                         <input
                           className={styles.input}
-                          type="text"
+                          id="login-phone"
+                          type="tel"
                           inputMode="numeric"
                           placeholder="99999 99999"
                           maxLength={10}
+                          pattern="[6-9][0-9]{9}"
                           value={identifier}
                           onChange={e => handleIdentifierChange(e.target.value)}
                           required
@@ -230,11 +256,13 @@ export default function LoginPage() {
                     </div>
                   ) : (
                     <div className={styles.inputGroup}>
-                      <label>Email Address</label>
+                    <label htmlFor="login-email">Email Address</label>
                       <div className={styles.inputWrapper}>
                         <input
                           className={`${styles.input} ${styles.inputEmail}`}
+                          id="login-email"
                           type="email"
+                          autoComplete="email"
                           placeholder="you@example.com"
                           value={identifier}
                           onChange={e => handleIdentifierChange(e.target.value)}
@@ -280,12 +308,14 @@ export default function LoginPage() {
               ) : (
                 <form className={styles.form} onSubmit={verifyOtp}>
                   <div className={styles.inputGroup}>
-                    <label>Enter OTP</label>
+                    <label htmlFor="login-otp">Enter OTP</label>
                     <div className={styles.inputWrapper}>
                       <input
                         className={`${styles.input} ${styles.otpInput}`}
+                        id="login-otp"
                         type="text"
                         inputMode="numeric"
+                        autoComplete="one-time-code"
                         placeholder="• • • • • •"
                         maxLength={6}
                         value={otp}
@@ -300,9 +330,12 @@ export default function LoginPage() {
                     </span>
                     {process.env.NODE_ENV !== 'production' && (
                       <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
-                        Dev mode: use OTP <strong>123456</strong>
+                        Local development: check the backend terminal for the current OTP.
                       </span>
                     )}
+                    <button type="button" className={styles.resendButton} onClick={resendOtp} disabled={loading || secondsRemaining > 0}>
+                      {loading ? 'Sending…' : secondsRemaining > 0 ? `Resend code in ${secondsRemaining}s` : 'Resend code'}
+                    </button>
                   </div>
 
                   <button 
@@ -316,7 +349,7 @@ export default function LoginPage() {
                   <button 
                     type="button"
                     className={styles.backBtn} 
-                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); }}
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); resetResendCooldown(); }}
                   >
                     <ArrowLeft size={16} /> Change {method === 'phone' ? 'phone number' : 'email'}
                   </button>

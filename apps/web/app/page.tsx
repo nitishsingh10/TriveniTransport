@@ -16,18 +16,13 @@ import {
   ArrowRight,
   Smartphone,
   Star,
-  ArrowDown,
   Navigation,
-  Award,
   Users,
   Phone,
   ChevronDown,
   Home as HomeIcon,
   Briefcase,
   Car,
-  Layers,
-  Sparkles,
-  HelpCircle,
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -381,7 +376,7 @@ export default function Home() {
                   </p>
                   <div className={styles.loggedInActions}>
                     {role === 'vendor' ? (
-                      <Link href="/admin/fleet" className="btn btn-primary btn-sm">
+                      <Link href="/vendor/portal" className="btn btn-primary btn-sm">
                         <Truck size={15} /> Open Fleet Portal
                       </Link>
                     ) : role === 'admin' ? (

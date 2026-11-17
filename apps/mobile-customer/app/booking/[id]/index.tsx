@@ -32,7 +32,9 @@ import {
   Calendar,
   AlertCircle,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, CURATED_LOCATIONS, type BookingItem } from '@/lib/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
@@ -65,6 +67,9 @@ const STATUS_PROGRESS: Record<string, number> = {
 };
 
 export default function BookingTrackScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const [booking, setBooking] = useState<BookingItem | null>(null);
   const [telemetry, setTelemetry] = useState<{
@@ -116,7 +121,7 @@ export default function BookingTrackScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.navy} />
+        <ActivityIndicator size="large" color={Colors.text} />
         <Text style={styles.loadingText}>Fetching live move details...</Text>
       </View>
     );
@@ -376,13 +381,13 @@ export default function BookingTrackScreen() {
           <MapPin size={15} color={Colors.marigold} />
           <Text style={styles.routeText} numberOfLines={1}>{booking.pickupAddress}</Text>
           <ArrowRight size={13} color={Colors.textMuted} />
-          <Home size={15} color={Colors.navy} />
+          <Home size={15} color={Colors.text} />
           <Text style={styles.routeText} numberOfLines={1}>{booking.dropAddress}</Text>
         </View>
 
         <View style={styles.etaBar}>
           <View style={styles.etaItem}>
-            <Calendar size={14} color={Colors.navy} />
+            <Calendar size={14} color={Colors.text} />
             <Text style={styles.etaLabel}>Scheduled</Text>
           </View>
           <Text style={styles.etaValue}>
@@ -420,7 +425,7 @@ export default function BookingTrackScreen() {
               <Text style={styles.assigningPillText}>Verified Partner Fleet</Text>
             </View>
             <View style={styles.assigningPill}>
-              <Radio size={12} color={Colors.navy} />
+              <Radio size={12} color={Colors.text} />
               <Text style={styles.assigningPillText}>Auto-Unlocks When Accepted</Text>
             </View>
           </View>
@@ -431,7 +436,7 @@ export default function BookingTrackScreen() {
       ) : (
         <View style={styles.driverCard}>
           <View style={styles.driverAvatar}>
-            <User size={22} color={Colors.navy} strokeWidth={2.4} />
+            <User size={22} color={Colors.text} strokeWidth={2.4} />
           </View>
           <View style={styles.driverInfo}>
             <View style={styles.driverNameRow}>
@@ -463,7 +468,7 @@ export default function BookingTrackScreen() {
       {/* Milestone Timeline Card (Pure White Card) */}
       <View style={styles.timelineCard}>
         <View style={styles.timelineHeader}>
-          <Compass size={17} color={Colors.navy} />
+          <Compass size={17} color={Colors.text} />
           <Text style={styles.timelineTitle}>Live Move Timeline</Text>
         </View>
 
@@ -528,7 +533,7 @@ export default function BookingTrackScreen() {
           onPress={() => Linking.openURL('tel:8828647785')}
           activeOpacity={0.85}
         >
-          <PhoneCall size={16} color={Colors.navy} />
+          <PhoneCall size={16} color={Colors.text} />
           <Text style={styles.supportBtnText}>Call Helpline</Text>
         </TouchableOpacity>
       </View>
@@ -536,7 +541,7 @@ export default function BookingTrackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { gap: Spacing.md, paddingBottom: Spacing.xxl },
 
@@ -565,12 +570,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.1)',
+    borderColor: Colors.navyBorder,
     zIndex: 10,
     ...Shadow.sm,
   },
   gpsLiveText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 9.5,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
@@ -587,7 +592,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(13, 31, 55, 0.1)',
+    borderColor: Colors.navyBorder,
     zIndex: 10,
     ...Shadow.sm,
   },
@@ -657,7 +662,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
   },
   routeText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -677,7 +682,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
   },
   etaValue: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -768,7 +773,7 @@ const styles = StyleSheet.create({
   assigningPillText: {
     fontSize: 10,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   assigningFootnote: {
     fontSize: 10,
@@ -831,7 +836,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   driverRating: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 11,
     fontWeight: FontWeight.bold,
   },
@@ -843,7 +848,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadow.sm,
@@ -893,8 +898,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   milestoneCircleDone: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   milestoneLine: {
     width: 2,
@@ -904,7 +909,7 @@ const styles = StyleSheet.create({
     marginVertical: 3,
   },
   milestoneLineDone: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
   },
   milestoneContent: {
     flex: 1,
@@ -938,7 +943,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     ...Shadow.sm,
@@ -962,7 +967,7 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   supportBtnText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -975,7 +980,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   loadingText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
     marginTop: Spacing.sm,
@@ -994,7 +999,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginTop: Spacing.md,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm + 2,
     borderRadius: BorderRadius.md,

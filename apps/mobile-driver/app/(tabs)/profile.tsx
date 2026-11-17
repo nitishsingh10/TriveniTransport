@@ -28,11 +28,18 @@ import {
   Eye,
   Sparkles,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
+import { showToast } from '@/components/ToastHost';
+import { AppearanceControl } from '@/components/AppearanceControl';
 
 export default function DriverProfileScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
@@ -88,7 +95,7 @@ export default function DriverProfileScreen() {
             {driverKyc.profilePhotoUri ? (
               <Image source={{ uri: driverKyc.profilePhotoUri }} style={styles.avatarImage} />
             ) : (
-              <User size={28} color={Colors.navy} strokeWidth={2.4} />
+              <User size={28} color={Colors.text} strokeWidth={2.4} />
             )}
           </View>
           <View style={styles.profileInfo}>
@@ -130,7 +137,7 @@ export default function DriverProfileScreen() {
       <View style={styles.vehicleCard}>
         <View style={styles.cardHeaderWithAction}>
           <View style={styles.cardTitleRow}>
-            <Truck size={17} color={Colors.navy} />
+            <Truck size={17} color={Colors.text} />
             <Text style={styles.cardTitle}>Registered Vehicle</Text>
           </View>
           <TouchableOpacity
@@ -138,7 +145,7 @@ export default function DriverProfileScreen() {
             onPress={() => router.push('/(auth)/onboarding' as any)}
             activeOpacity={0.8}
           >
-            <Edit3 size={13} color={Colors.navy} />
+            <Edit3 size={13} color={Colors.text} />
             <Text style={styles.editActionText}>Update Vehicle</Text>
           </TouchableOpacity>
         </View>
@@ -197,7 +204,7 @@ export default function DriverProfileScreen() {
         {/* Vehicle Inspection Images Section */}
         <View style={styles.photoSection}>
           <View style={styles.photoSectionHeader}>
-            <Camera size={14} color={Colors.navy} />
+            <Camera size={14} color={Colors.text} />
             <Text style={styles.photoSectionTitle}>Vehicle Inspection Photos</Text>
           </View>
 
@@ -224,7 +231,7 @@ export default function DriverProfileScreen() {
               onPress={() => router.push('/(auth)/onboarding' as any)}
               activeOpacity={0.8}
             >
-              <Camera size={20} color={Colors.navy} />
+              <Camera size={20} color={Colors.text} />
               <Text style={styles.noPhotosText}>No vehicle photos uploaded yet</Text>
               <Text style={styles.noPhotosSubtext}>Tap to upload front, side, cargo & RC photos</Text>
             </TouchableOpacity>
@@ -236,7 +243,7 @@ export default function DriverProfileScreen() {
       <View style={styles.menuCard}>
         <View style={styles.cardHeaderWithAction}>
           <View style={styles.cardTitleRow}>
-            <FileText size={17} color={Colors.navy} />
+            <FileText size={17} color={Colors.text} />
             <Text style={styles.cardTitle}>KYC & Legal Documentation</Text>
           </View>
           <TouchableOpacity
@@ -244,7 +251,7 @@ export default function DriverProfileScreen() {
             onPress={() => router.push('/(auth)/onboarding' as any)}
             activeOpacity={0.8}
           >
-            <Edit3 size={13} color={Colors.navy} />
+            <Edit3 size={13} color={Colors.text} />
             <Text style={styles.editActionText}>Manage Docs</Text>
           </TouchableOpacity>
         </View>
@@ -295,7 +302,7 @@ export default function DriverProfileScreen() {
       {/* Driver Payout Settlement Account Card */}
       <View style={styles.menuCard}>
         <View style={styles.cardTitleRow}>
-          <CreditCard size={17} color={Colors.navy} />
+          <CreditCard size={17} color={Colors.text} />
           <Text style={styles.cardTitle}>Earnings Settlement Bank</Text>
         </View>
 
@@ -349,7 +356,7 @@ export default function DriverProfileScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.menuIconCircle}>
-            <PhoneCall size={16} color={Colors.navy} />
+            <PhoneCall size={16} color={Colors.text} />
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>24/7 Operations Desk Helpline</Text>
@@ -362,11 +369,11 @@ export default function DriverProfileScreen() {
 
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => Alert.alert('Safety Standards', 'Opening Material Handling & Safety Guide.')}
+          onPress={() => showToast({ title: 'Safety guide', message: 'Material handling standards are coming soon.', variant: 'info' })}
           activeOpacity={0.7}
         >
           <View style={styles.menuIconCircle}>
-            <FileText size={16} color={Colors.navy} />
+            <FileText size={16} color={Colors.text} />
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Safety & Packaging Standards</Text>
@@ -375,6 +382,8 @@ export default function DriverProfileScreen() {
           <ChevronRight size={16} color={Colors.textMuted} />
         </TouchableOpacity>
       </View>
+
+      <AppearanceControl />
 
       {/* Sign Out Button */}
       <TouchableOpacity
@@ -403,7 +412,7 @@ export default function DriverProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: {
     padding: Spacing.md,
@@ -549,7 +558,7 @@ const styles = StyleSheet.create({
   editActionText: {
     fontSize: 10,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   // Commercial Number Plate
@@ -660,7 +669,7 @@ const styles = StyleSheet.create({
   photoSectionTitle: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   photoScroll: {
     flexDirection: 'row',
@@ -708,7 +717,7 @@ const styles = StyleSheet.create({
   noPhotosText: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   noPhotosSubtext: {
     fontSize: 9,
@@ -740,7 +749,7 @@ const styles = StyleSheet.create({
   docCode: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   codeFont: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
@@ -797,7 +806,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm + 2,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.xl,
     padding: Spacing.md,
     ...Shadow.sm,
@@ -857,7 +866,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorLight,
   },
   signOutText: {
     color: Colors.error,
@@ -884,7 +893,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
@@ -893,7 +902,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   modalImage: { width: '100%', height: '75%' },
 });

@@ -9,10 +9,14 @@ import {
   User,
   PhoneCall,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
 
 function DriverHeader() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const isOnline = useAuthStore((s) => s.isOnline);
   const toggleOnline = useAuthStore((s) => s.toggleOnline);
 
@@ -64,6 +68,7 @@ function DriverHeader() {
 }
 
 export default function TabLayout() {
+  const { colors: Colors } = useAppTheme();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const insets = useSafeAreaInsets();
@@ -91,7 +96,7 @@ export default function TabLayout() {
           paddingTop: 8,
           ...Shadow.sm,
         },
-        tabBarActiveTintColor: Colors.navy,
+        tabBarActiveTintColor: Colors.text,
         tabBarInactiveTintColor: Colors.tabInactive,
         tabBarLabelStyle: {
           fontSize: 11,
@@ -131,7 +136,7 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     backgroundColor: Colors.headerBackground,
     borderBottomWidth: 1,
@@ -160,7 +165,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 14,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
     letterSpacing: 1.5,
     lineHeight: 15,
   },
@@ -179,7 +184,7 @@ const styles = StyleSheet.create({
   brandSubtitle: {
     fontSize: 7.5,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
     letterSpacing: 1.2,
   },
   driverTag: {
@@ -194,7 +199,7 @@ const styles = StyleSheet.create({
   driverTagText: {
     fontSize: 8.5,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
     letterSpacing: 0.8,
   },
   headerRight: {
@@ -228,7 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success,
   },
   dotGray: {
-    backgroundColor: Colors.textMuted,
+    backgroundColor: Colors.navyMuted,
   },
   dutyText: {
     fontSize: 10,
@@ -245,7 +250,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadow.sm,

@@ -18,11 +18,16 @@ import {
   Search,
   SlidersHorizontal,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { catalogApi } from '@/lib/api';
 import { DEFAULT_CATALOG, mergeServerCatalog, type RoomSection } from '@/constants/inventory';
 
 export default function InventoryScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const params = useLocalSearchParams();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [catalog, setCatalog] = useState<RoomSection[]>(DEFAULT_CATALOG);
@@ -128,7 +133,7 @@ export default function InventoryScreen() {
             </Text>
           </View>
           <View style={styles.catalogCountBadge}>
-            <SlidersHorizontal size={14} color={Colors.navy} />
+            <SlidersHorizontal size={14} color={Colors.text} />
             <Text style={styles.catalogCountText}>{catalog.reduce((n, section) => n + section.items.length, 0)}</Text>
           </View>
         </View>
@@ -175,7 +180,7 @@ export default function InventoryScreen() {
 
       {isCatalogLoading && (
         <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={Colors.navy} />
+          <ActivityIndicator size="small" color={Colors.text} />
           <Text style={styles.loadingText}>Loading current item rates…</Text>
         </View>
       )}
@@ -185,7 +190,7 @@ export default function InventoryScreen() {
         return (
           <View key={section.room} style={styles.section}>
             <View style={styles.sectionHeader}>
-              <SectionIcon size={18} color={Colors.navy} strokeWidth={2.2} />
+              <SectionIcon size={18} color={Colors.text} strokeWidth={2.2} />
               <Text style={styles.roomTitle}>{section.room}</Text>
               <Text style={styles.sectionItemCount}>{section.items.length} goods</Text>
             </View>
@@ -198,7 +203,7 @@ export default function InventoryScreen() {
                   <View style={[styles.itemIconContainer, count > 0 && styles.itemIconContainerActive]}>
                     <ItemIcon
                       size={18}
-                      color={count > 0 ? Colors.navy : Colors.textMuted}
+                      color={count > 0 ? Colors.text : Colors.textMuted}
                       strokeWidth={2}
                     />
                   </View>
@@ -217,7 +222,7 @@ export default function InventoryScreen() {
                     >
                       <Minus
                         size={13}
-                        color={count > 0 ? Colors.navy : Colors.cardBorder}
+                        color={count > 0 ? Colors.text : Colors.cardBorder}
                         strokeWidth={2.4}
                       />
                     </TouchableOpacity>
@@ -274,7 +279,7 @@ export default function InventoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, gap: Spacing.md, paddingBottom: Spacing.xxl },
@@ -301,12 +306,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressCircleDone: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   progressCircleActive: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   progressNum: {
     color: Colors.textMuted,
@@ -324,11 +329,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   progressLabelDone: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   progressLabelActive: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   progressLine: {
@@ -339,7 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   progressLineDone: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
   },
 
   // Title
@@ -359,7 +364,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
   },
-  catalogCountText: { color: Colors.navy, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  catalogCountText: { color: Colors.text, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
   stepBadge: {
     color: Colors.marigoldDark,
     fontSize: FontSize.xxs,
@@ -402,7 +407,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryChipActive: { backgroundColor: Colors.navy, borderColor: Colors.navy },
+  categoryChipActive: { backgroundColor: Colors.brandSurface, borderColor: Colors.brandSurface },
   categoryChipText: { color: Colors.textSecondary, fontSize: FontSize.xxs, fontWeight: FontWeight.semibold },
   categoryChipTextActive: { color: Colors.white },
   selectionSummary: {
@@ -471,7 +476,7 @@ const styles = StyleSheet.create({
   },
   itemInfo: { flex: 1, gap: 2 },
   itemName: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -499,8 +504,8 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   counterBtnAdd: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   counterVal: {
     color: Colors.textMuted,
@@ -540,7 +545,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.md,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,

@@ -11,11 +11,16 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ShieldCheck, ArrowLeft, RotateCcw } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { driverAuthApi } from '@/lib/api';
 
 export default function DriverOtpScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const { identifier, phone: legacyPhone, isSignup, name } = useLocalSearchParams<{
     identifier: string;
     phone?: string;
@@ -134,14 +139,14 @@ export default function DriverOtpScreen() {
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <ArrowLeft size={18} color={Colors.navy} />
+            <ArrowLeft size={18} color={Colors.text} />
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
 
           {/* Form Card */}
           <View style={styles.card}>
             <View style={styles.iconCircle}>
-              <ShieldCheck size={28} color={Colors.navy} />
+              <ShieldCheck size={28} color={Colors.text} />
             </View>
 
             <Text style={styles.title}>Enter OTP Code</Text>
@@ -201,7 +206,7 @@ export default function DriverOtpScreen() {
                   onPress={handleResend}
                   activeOpacity={0.8}
                 >
-                  <RotateCcw size={13} color={Colors.navy} />
+                  <RotateCcw size={13} color={Colors.text} />
                   <Text style={styles.resendBtnText}>Resend Code</Text>
                 </TouchableOpacity>
               )}
@@ -213,7 +218,7 @@ export default function DriverOtpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -234,7 +239,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   backBtnText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
   },
@@ -291,10 +296,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   otpBoxFilled: {
-    borderColor: Colors.navy,
+    borderColor: Colors.brandSurface,
     backgroundColor: Colors.surfaceSubtle,
   },
   errorText: {
@@ -303,7 +308,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
   submitBtn: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md + 2,
     width: '100%',
@@ -335,7 +340,7 @@ const styles = StyleSheet.create({
   },
   resendBtnText: {
     fontSize: FontSize.xs,
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
 });

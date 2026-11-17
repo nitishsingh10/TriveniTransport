@@ -108,7 +108,12 @@ export default function QuotePage() {
 
   // Map modal & route estimate state
   const [mapModalType, setMapModalType] = useState<'pickup' | 'drop' | null>(null);
-  const [routeEstimate, setRouteEstimate] = useState<{ distanceKm: number; durationMins: number } | null>(null);
+  const [routeEstimate, setRouteEstimate] = useState<{
+    distanceKm: number;
+    durationMins: number;
+    origin: string;
+    destination: string;
+  } | null>(null);
 
   // API state
   const [loading, setLoading] = useState(false);
@@ -240,25 +245,31 @@ export default function QuotePage() {
 
   // Automatically calculate route distance & time when pickup & drop are set
   useEffect(() => {
-    if (pickup.trim().length > 3 && drop.trim().length > 3) {
-      const timer = setTimeout(async () => {
-        try {
-          const res = await fetch(`/api/v1/maps/distance?origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}`);
-          if (res.ok) {
-            const data = await res.json();
-            setRouteEstimate(data);
-          } else {
-            setRouteEstimate({ distanceKm: 14.5, durationMins: 38 });
-          }
-        } catch {
-          setRouteEstimate({ distanceKm: 14.5, durationMins: 38 });
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
-      setRouteEstimate(null);
-    }
+    const origin = pickup.trim();
+    const destination = drop.trim();
+    if (origin.length <= 3 || destination.length <= 3) return;
+
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/maps/distance?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`);
+        const data = res.ok ? await res.json() : { distanceKm: 14.5, durationMins: 38 };
+        if (active) setRouteEstimate({ ...data, origin, destination });
+      } catch {
+        if (active) setRouteEstimate({ distanceKm: 14.5, durationMins: 38, origin, destination });
+      }
+    }, 500);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [pickup, drop]);
+
+  const currentRouteEstimate = routeEstimate?.origin === pickup.trim()
+    && routeEstimate.destination === drop.trim()
+    ? routeEstimate
+    : null;
 
   const handleLocationSelected = (loc: { address: string; lat: number; lng: number; city: string; type: 'pickup' | 'drop' }) => {
     if (loc.type === 'pickup') {
@@ -564,12 +575,12 @@ export default function QuotePage() {
               </div>
 
               {/* Route Preview Card */}
-              {routeEstimate && (
+              {currentRouteEstimate && (
                 <WebRouteCard
                   pickupAddress={pickup}
                   dropAddress={drop}
-                  distanceKm={routeEstimate.distanceKm}
-                  durationMins={routeEstimate.durationMins}
+                  distanceKm={currentRouteEstimate.distanceKm}
+                  durationMins={currentRouteEstimate.durationMins}
                   onOpenMapPicker={() => setMapModalType('pickup')}
                 />
               )}
@@ -815,13 +826,15 @@ export default function QuotePage() {
       </main>
 
       {/* Interactive Map Modal */}
-      <WebMapModal
-        isOpen={mapModalType !== null}
-        type={mapModalType || 'pickup'}
-        initialAddress={mapModalType === 'pickup' ? pickup : drop}
-        onClose={() => setMapModalType(null)}
-        onSelectLocation={handleLocationSelected}
-      />
+      {mapModalType !== null && (
+        <WebMapModal
+          isOpen={mapModalType !== null}
+          type={mapModalType}
+          initialAddress={mapModalType === 'pickup' ? pickup : drop}
+          onClose={() => setMapModalType(null)}
+          onSelectLocation={handleLocationSelected}
+        />
+      )}
 
       <Footer />
     </>

@@ -33,10 +33,13 @@ import {
   ArrowRight,
   Check,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useOnboardingStore, VehicleData, DriverKycData, BankData } from '@/store/onboardingStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDriverStore } from '@/store/driverStore';
+import { showToast } from '@/components/ToastHost';
 
 // Preset sample verified images for rapid testing without physical camera
 const SAMPLE_IMAGES = {
@@ -60,6 +63,9 @@ const VEHICLE_TYPES = [
 ];
 
 export default function DriverOnboardingScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const currentStep = useOnboardingStore((s) => s.currentStep);
   const setStep = useOnboardingStore((s) => s.setStep);
   const driverKyc = useOnboardingStore((s) => s.driverKyc);
@@ -93,7 +99,7 @@ export default function DriverOnboardingScreen() {
           onPress: async () => {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission Needed', 'Camera access is required to capture documents.');
+              showToast({ title: 'Camera access needed', message: 'Allow camera access to capture documents.', variant: 'error' });
               return;
             }
             const result = await ImagePicker.launchCameraAsync({
@@ -111,7 +117,7 @@ export default function DriverOnboardingScreen() {
           onPress: async () => {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission Needed', 'Photo gallery access is required.');
+              showToast({ title: 'Photo access needed', message: 'Allow gallery access to upload documents.', variant: 'error' });
               return;
             }
             const result = await ImagePicker.launchImageLibraryAsync({
@@ -142,19 +148,19 @@ export default function DriverOnboardingScreen() {
   const handleNext = () => {
     if (currentStep === 1) {
       if (!driverKyc.fullName.trim() || !driverKyc.phone.trim()) {
-        Alert.alert('Required Fields', 'Please enter your Full Name and Mobile Number.');
+        showToast({ title: 'Required fields', message: 'Enter your full name and mobile number.', variant: 'error' });
         return;
       }
       setStep(2);
     } else if (currentStep === 2) {
       if (!driverKyc.dlNumber.trim() || !driverKyc.aadhaarNumber.trim()) {
-        Alert.alert('Required Fields', 'Please enter your Driving Licence and Aadhaar number.');
+        showToast({ title: 'Required fields', message: 'Enter your driving licence and Aadhaar number.', variant: 'error' });
         return;
       }
       setStep(3);
     } else if (currentStep === 3) {
       if (!vehicle.registrationNumber.trim()) {
-        Alert.alert('Required Fields', 'Please enter your Vehicle Registration Number (Plate).');
+        showToast({ title: 'Required field', message: 'Enter your vehicle registration number.', variant: 'error' });
         return;
       }
       setStep(4);
@@ -162,7 +168,7 @@ export default function DriverOnboardingScreen() {
       setStep(5);
     } else if (currentStep === 5) {
       if (!bank.accountNumber.trim() || !bank.ifscCode.trim()) {
-        Alert.alert('Required Fields', 'Please enter Bank Account and IFSC code for driver payouts.');
+        showToast({ title: 'Required fields', message: 'Enter your bank account and IFSC code.', variant: 'error' });
         return;
       }
       setStep(6);
@@ -171,11 +177,11 @@ export default function DriverOnboardingScreen() {
 
   const handleSubmit = async () => {
     if (!agreementAccepted) {
-      Alert.alert('Agreement Required', 'Please accept the Driver Partner Safety & Compliance Pledge.');
+      showToast({ title: 'Agreement required', message: 'Accept the safety and compliance pledge to continue.', variant: 'error' });
       return;
     }
     if (!authUser) {
-      Alert.alert('Sign in required', 'Please sign in before submitting driver onboarding details.');
+      showToast({ title: 'Sign in required', message: 'Sign in before submitting onboarding details.', variant: 'error' });
       router.replace('/(auth)/login');
       return;
     }
@@ -184,18 +190,10 @@ export default function DriverOnboardingScreen() {
     try {
       await submitOnboarding();
 
-      Alert.alert(
-        '🎉 Onboarding Complete!',
-        `Vehicle ${vehicle.registrationNumber} and documentation registered with Triveni Transports. Your account is approved for commercial shifting orders.`,
-        [
-          {
-            text: 'Go to Duties Dashboard',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
+      showToast({ title: 'Onboarding complete', message: 'Your driver documents have been submitted.', variant: 'success' });
+      router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Notice', 'Onboarding details saved locally. Connecting to dispatch desk.');
+      showToast({ title: 'Submission saved', message: 'We will sync your details when the connection is available.', variant: 'info' });
       router.replace('/(tabs)');
     } finally {
       setLoading(false);
@@ -215,7 +213,7 @@ export default function DriverOnboardingScreen() {
             }}
             activeOpacity={0.7}
           >
-            <ChevronLeft size={20} color={Colors.navy} />
+            <ChevronLeft size={20} color={Colors.text} />
             <Text style={styles.backBtnText}>
               {currentStep > 1 ? `Step ${currentStep - 1}` : 'Back'}
             </Text>
@@ -288,7 +286,7 @@ export default function DriverOnboardingScreen() {
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.iconCircle}>
-                <User size={20} color={Colors.navy} />
+                <User size={20} color={Colors.text} />
               </View>
               <View>
                 <Text style={styles.sectionTitle}>Driver Personal Profile</Text>
@@ -392,7 +390,7 @@ export default function DriverOnboardingScreen() {
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.iconCircle}>
-                <FileText size={20} color={Colors.navy} />
+                <FileText size={20} color={Colors.text} />
               </View>
               <View>
                 <Text style={styles.sectionTitle}>KYC & Legal Documentation</Text>
@@ -470,7 +468,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('dlFrontUri', 'kyc', 'dlFront')}
                     activeOpacity={0.8}
                   >
-                    <Camera size={22} color={Colors.navy} />
+                    <Camera size={22} color={Colors.text} />
                     <Text style={styles.uploadPlaceholderText}>Upload DL Front</Text>
                   </TouchableOpacity>
                 )}
@@ -495,7 +493,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('dlBackUri', 'kyc', 'dlBack')}
                     activeOpacity={0.8}
                   >
-                    <Upload size={22} color={Colors.navy} />
+                    <Upload size={22} color={Colors.text} />
                     <Text style={styles.uploadPlaceholderText}>Upload DL Back</Text>
                   </TouchableOpacity>
                 )}
@@ -520,7 +518,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('aadhaarUri', 'kyc', 'aadhaar')}
                     activeOpacity={0.8}
                   >
-                    <FileText size={22} color={Colors.navy} />
+                    <FileText size={22} color={Colors.text} />
                     <Text style={styles.uploadPlaceholderText}>Upload Aadhaar</Text>
                   </TouchableOpacity>
                 )}
@@ -536,7 +534,7 @@ export default function DriverOnboardingScreen() {
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.iconCircle}>
-                <Truck size={20} color={Colors.navy} />
+                <Truck size={20} color={Colors.text} />
               </View>
               <View>
                 <Text style={styles.sectionTitle}>Commercial Vehicle Details</Text>
@@ -585,7 +583,7 @@ export default function DriverOnboardingScreen() {
                     activeOpacity={0.8}
                   >
                     <View style={styles.vehicleTypeHeader}>
-                      <Truck size={16} color={isSelected ? Colors.white : Colors.navy} />
+                      <Truck size={16} color={isSelected ? Colors.white : Colors.text} />
                       <Text style={[styles.vehicleTypeTitle, isSelected && styles.vehicleTypeTitleActive]}>
                         {v.value}
                       </Text>
@@ -659,7 +657,7 @@ export default function DriverOnboardingScreen() {
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.iconCircle}>
-                <Camera size={20} color={Colors.navy} />
+                <Camera size={20} color={Colors.text} />
               </View>
               <View>
                 <Text style={styles.sectionTitle}>Vehicle Inspection Photos</Text>
@@ -680,11 +678,11 @@ export default function DriverOnboardingScreen() {
                   cargoImageUri: SAMPLE_IMAGES.vehicleCargo,
                   rcDocUri: SAMPLE_IMAGES.rcDoc,
                 });
-                Alert.alert('Samples Applied', 'Verified vehicle inspection photos have been loaded for testing.');
+                showToast({ title: 'Sample photos added', message: 'Verified vehicle inspection photos are ready.', variant: 'success' });
               }}
               activeOpacity={0.8}
             >
-              <Sparkles size={14} color={Colors.navy} />
+              <Sparkles size={14} color={Colors.text} />
               <Text style={styles.presetPillText}>Auto-fill Verified Sample Vehicle Photos</Text>
             </TouchableOpacity>
 
@@ -713,7 +711,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('frontImageUri', 'vehicle', 'vehicleFront')}
                     activeOpacity={0.8}
                   >
-                    <Camera size={16} color={Colors.navy} />
+                    <Camera size={16} color={Colors.text} />
                     <Text style={styles.cameraActionText}>Take / Upload Front</Text>
                   </TouchableOpacity>
                 )}
@@ -741,7 +739,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('sideImageUri', 'vehicle', 'vehicleSide')}
                     activeOpacity={0.8}
                   >
-                    <Upload size={16} color={Colors.navy} />
+                    <Upload size={16} color={Colors.text} />
                     <Text style={styles.cameraActionText}>Upload Side View</Text>
                   </TouchableOpacity>
                 )}
@@ -769,7 +767,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('rearImageUri', 'vehicle', 'vehicleRear')}
                     activeOpacity={0.8}
                   >
-                    <Camera size={16} color={Colors.navy} />
+                    <Camera size={16} color={Colors.text} />
                     <Text style={styles.cameraActionText}>Upload Rear View</Text>
                   </TouchableOpacity>
                 )}
@@ -797,7 +795,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('cargoImageUri', 'vehicle', 'vehicleCargo')}
                     activeOpacity={0.8}
                   >
-                    <Upload size={16} color={Colors.navy} />
+                    <Upload size={16} color={Colors.text} />
                     <Text style={styles.cameraActionText}>Upload Cargo Area</Text>
                   </TouchableOpacity>
                 )}
@@ -825,7 +823,7 @@ export default function DriverOnboardingScreen() {
                     onPress={() => handlePickImage('rcDocUri', 'vehicle', 'rcDoc')}
                     activeOpacity={0.8}
                   >
-                    <FileText size={16} color={Colors.navy} />
+                    <FileText size={16} color={Colors.text} />
                     <Text style={styles.cameraActionText}>Upload RC Document</Text>
                   </TouchableOpacity>
                 )}
@@ -841,7 +839,7 @@ export default function DriverOnboardingScreen() {
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.iconCircle}>
-                <CreditCard size={20} color={Colors.navy} />
+                <CreditCard size={20} color={Colors.text} />
               </View>
               <View>
                 <Text style={styles.sectionTitle}>Driver Payout Settlement Account</Text>
@@ -946,7 +944,7 @@ export default function DriverOnboardingScreen() {
             {/* Vehicle Card Summary */}
             <View style={styles.summaryBox}>
               <View style={styles.summaryTitleRow}>
-                <Truck size={16} color={Colors.navy} />
+                <Truck size={16} color={Colors.text} />
                 <Text style={styles.summaryBoxTitle}>Vehicle Specifications</Text>
               </View>
 
@@ -990,7 +988,7 @@ export default function DriverOnboardingScreen() {
             {/* Driver KYC Summary */}
             <View style={styles.summaryBox}>
               <View style={styles.summaryTitleRow}>
-                <User size={16} color={Colors.navy} />
+                <User size={16} color={Colors.text} />
                 <Text style={styles.summaryBoxTitle}>Driver KYC & Licence</Text>
               </View>
 
@@ -1091,7 +1089,7 @@ export default function DriverOnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
 
   header: {
@@ -1116,7 +1114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   backBtnText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },
@@ -1138,7 +1136,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSubtle,
   },
   skipBtnText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -1162,8 +1160,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stepDotActive: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
     transform: [{ scale: 1.1 }],
   },
   stepDotCompleted: {
@@ -1187,7 +1185,7 @@ const styles = StyleSheet.create({
   stepTitleBarText: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   scrollContent: {
@@ -1237,7 +1235,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   input: {
     borderWidth: 1,
@@ -1246,7 +1244,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
     backgroundColor: Colors.inputBg,
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
   },
@@ -1322,8 +1320,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   vehicleTypeCardActive: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   vehicleTypeHeader: {
     flexDirection: 'row',
@@ -1333,7 +1331,7 @@ const styles = StyleSheet.create({
   vehicleTypeTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   vehicleTypeTitleActive: {
     color: Colors.white,
@@ -1350,7 +1348,7 @@ const styles = StyleSheet.create({
   subHeading: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
     marginTop: Spacing.xs,
   },
 
@@ -1368,7 +1366,7 @@ const styles = StyleSheet.create({
   docBoxTitle: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   uploadPlaceholder: {
     borderWidth: 1.5,
@@ -1379,11 +1377,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
   },
   uploadPlaceholderText: {
     fontSize: 11,
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.semibold,
   },
   thumbnailWrapper: {
@@ -1439,7 +1437,7 @@ const styles = StyleSheet.create({
   photoCardTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   photoCardDesc: {
     fontSize: 10,
@@ -1457,7 +1455,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 3,
     right: 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.full,
     padding: 3,
   },
@@ -1465,7 +1463,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.navyBorder,
     paddingHorizontal: 10,
@@ -1475,7 +1473,7 @@ const styles = StyleSheet.create({
   cameraActionText: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   payoutNoticeBox: {
@@ -1531,7 +1529,7 @@ const styles = StyleSheet.create({
   summaryBoxTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   summaryDetails: {
     flexDirection: 'row',
@@ -1554,7 +1552,7 @@ const styles = StyleSheet.create({
   summaryPlateText: {
     fontSize: FontSize.xs,
     fontWeight: '900',
-    color: Colors.navy,
+    color: Colors.text,
     backgroundColor: '#F7D000',
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -1564,7 +1562,7 @@ const styles = StyleSheet.create({
   summarySectionLabel: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
     marginTop: 4,
   },
   thumbnailRow: {
@@ -1594,8 +1592,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   checkboxLabel: {
     flex: 1,
@@ -1609,7 +1607,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   primaryBtn: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     alignItems: 'center',
@@ -1662,7 +1660,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
@@ -1671,7 +1669,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   modalImage: {
     width: '100%',

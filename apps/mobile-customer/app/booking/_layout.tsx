@@ -1,17 +1,20 @@
 import { Stack } from 'expo-router';
-import { Colors } from '@/constants/theme';
+import { useAppTheme } from '@/components/ThemeProvider';
+
 
 export default function BookingLayout() {
+  const { colors: Colors } = useAppTheme();
+
   return (
     <Stack
       screenOptions={{
         headerStyle: {
           backgroundColor: Colors.headerBackground,
         },
-        headerTintColor: Colors.navy,
+        headerTintColor: Colors.text,
         headerTitleStyle: {
           fontWeight: '700',
-          color: Colors.navy,
+          color: Colors.text,
           fontSize: 16,
         },
         headerShadowVisible: false,

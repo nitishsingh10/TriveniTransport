@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -19,10 +18,16 @@ import {
   ShieldCheck,
   AlertCircle,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, type BookingItem } from '@/lib/api';
+import { showToast } from '@/components/ToastHost';
 
 export default function BookingInvoiceScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const [booking, setBooking] = useState<BookingItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,18 +52,18 @@ export default function BookingInvoiceScreen() {
   }, [id]);
 
   const handleShare = () => {
-    Alert.alert('Tax Invoice', 'Invoice link copied to clipboard.');
+    showToast({ title: 'Invoice sharing is coming soon', variant: 'info' });
   };
 
   const handleDownload = () => {
-    Alert.alert('Download Receipt', 'Invoice PDF saved to device.');
+    showToast({ title: 'Receipt download is coming soon', variant: 'info' });
   };
 
   if (loading) {
     return (
       <View style={[styles.scroll, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={Colors.navy} />
-        <Text style={{ marginTop: 12, color: Colors.navy, fontWeight: '600' }}>Loading invoice...</Text>
+        <ActivityIndicator size="large" color={Colors.text} />
+        <Text style={{ marginTop: 12, color: Colors.text, fontWeight: '600' }}>Loading invoice...</Text>
       </View>
     );
   }
@@ -86,7 +91,7 @@ export default function BookingInvoiceScreen() {
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
-        <ArrowLeft size={16} color={Colors.navy} />
+        <ArrowLeft size={16} color={Colors.text} />
         <Text style={styles.backText}>Back to Move Status</Text>
       </TouchableOpacity>
 
@@ -100,7 +105,7 @@ export default function BookingInvoiceScreen() {
             <Text style={styles.gstText}>MUMBAI & THANE HEADQUARTERS</Text>
           </View>
           <View style={isCompleted ? styles.paidBadge : styles.codBadge}>
-            <CheckCircle2 size={12} color={isCompleted ? Colors.success : Colors.navy} />
+            <CheckCircle2 size={12} color={isCompleted ? Colors.success : Colors.text} />
             <Text style={isCompleted ? styles.paidText : styles.codBadgeText}>
               {isCompleted ? 'PAID IN FULL' : 'CASH ON DELIVERY'}
             </Text>
@@ -138,7 +143,7 @@ export default function BookingInvoiceScreen() {
             <Text style={styles.routeText}>{booking?.pickupAddress || 'Origin Location'}</Text>
           </View>
           <View style={styles.routeRow}>
-            <Home size={14} color={Colors.navy} />
+            <Home size={14} color={Colors.text} />
             <Text style={styles.routeText}>{booking?.dropAddress || 'Destination Location'}</Text>
           </View>
         </View>
@@ -194,7 +199,7 @@ export default function BookingInvoiceScreen() {
 
         {/* Trust Stamp */}
         <View style={styles.stampBox}>
-          <ShieldCheck size={16} color={Colors.navy} />
+          <ShieldCheck size={16} color={Colors.text} />
           <Text style={styles.stampText}>Official Computer Generated Tax Invoice · Triveni Transports</Text>
         </View>
       </View>
@@ -215,7 +220,7 @@ export default function BookingInvoiceScreen() {
           onPress={handleShare}
           activeOpacity={0.85}
         >
-          <Share2 size={16} color={Colors.navy} />
+          <Share2 size={16} color={Colors.text} />
           <Text style={styles.shareBtnText}>Share Invoice</Text>
         </TouchableOpacity>
       </View>
@@ -223,7 +228,7 @@ export default function BookingInvoiceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
 
@@ -234,7 +239,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   backText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },
@@ -300,7 +305,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247, 163, 0, 0.4)',
   },
   codBadgeText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 9,
     fontWeight: FontWeight.bold,
   },
@@ -327,7 +332,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   metaVal: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -346,14 +351,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   routeText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 11,
     fontWeight: FontWeight.semibold,
   },
 
   lines: { gap: 6 },
   sectionHeading: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: 10,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.8,
@@ -439,7 +444,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     ...Shadow.sm,
@@ -463,7 +468,7 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   shareBtnText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },

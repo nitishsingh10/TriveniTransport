@@ -23,7 +23,9 @@ import {
   Layers,
   Flag,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { mapsApi, PlaceLocation } from '@/lib/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
@@ -58,6 +60,8 @@ export function GoogleMapsLocationModal({
   onSelect,
   onClose,
 }: GoogleMapsLocationModalProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [activeType, setActiveType] = useState<'pickup' | 'drop'>(initialType);
   const [query, setQuery] = useState(initialValue);
   const [suggestions, setSuggestions] = useState<PlaceLocation[]>([]);
@@ -153,6 +157,7 @@ export function GoogleMapsLocationModal({
       }
     }, 320);
   }, [findNearestHub]);
+
 
   // Handle messages coming from either Web iframe or Native WebView
   const handleEventData = useCallback((data: any) => {
@@ -313,8 +318,8 @@ export function GoogleMapsLocationModal({
   };
 
   const isPickup = activeType === 'pickup';
-  const pinColor = isPickup ? Colors.marigold : Colors.navy;
-  const pinGradientBg = isPickup ? [Colors.marigold, '#E09200'] : [Colors.navy, '#1A365D'];
+  const pinColor = isPickup ? Colors.marigold : Colors.brandSurface;
+  const pinGradientBg = isPickup ? [Colors.marigold, '#E09200'] : [Colors.brandSurface, '#1A365D'];
 
   // Memoize map HTML so dragging the pin NEVER causes iframe/webview reload loops
   const mapHtml = useMemo(() => {
@@ -503,7 +508,7 @@ export function GoogleMapsLocationModal({
                 styles.groundPulse,
                 {
                   backgroundColor: isPickup ? 'rgba(247, 163, 0, 0.25)' : 'rgba(13, 31, 55, 0.25)',
-                  borderColor: isPickup ? Colors.marigold : Colors.navy,
+                  borderColor: isPickup ? Colors.marigold : Colors.brandSurface,
                 },
               ]}
             />
@@ -513,7 +518,7 @@ export function GoogleMapsLocationModal({
               style={[
                 styles.pinHead,
                 {
-                  backgroundColor: isPickup ? Colors.marigold : Colors.navy,
+                  backgroundColor: isPickup ? Colors.marigold : Colors.brandSurface,
                   transform: [{ translateY: isMapMoving ? -14 : 0 }],
                   shadowColor: isPickup ? Colors.marigold : '#000',
                 },
@@ -546,12 +551,12 @@ export function GoogleMapsLocationModal({
                 { transform: [{ translateY: isMapMoving ? -20 : -4 }] },
               ]}
             >
-              <Text style={styles.pinTooltipText}>
+              <Text style={styles.pinTooltipText} numberOfLines={1}>
                 {isMapMoving
-                  ? 'Release to drop pin here'
+                  ? 'Release to place pin'
                   : isPickup
-                  ? '📍 Pointing to Pickup Spot'
-                  : '🏁 Pointing to Destination'}
+                  ? 'Pickup pin'
+                  : 'Drop-off pin'}
               </Text>
             </View>
           </View>
@@ -584,13 +589,13 @@ export function GoogleMapsLocationModal({
 
             {/* Glass Close Button */}
             <TouchableOpacity style={styles.glassCloseBtn} onPress={onClose} activeOpacity={0.8}>
-              <X size={18} color={Colors.navy} strokeWidth={2.4} />
+              <X size={18} color={Colors.text} strokeWidth={2.4} />
             </TouchableOpacity>
           </View>
 
           {/* Floating Glassmorphic Search Input */}
           <View style={styles.glassSearchWrapper}>
-            <Search size={18} color={Colors.navy} style={styles.searchIcon} />
+            <Search size={18} color={Colors.text} style={styles.searchIcon} />
             <TextInput
               style={styles.glassSearchInput}
               placeholder="Search society, landmark, or street..."
@@ -632,7 +637,7 @@ export function GoogleMapsLocationModal({
                     >
                       <MapPin
                         size={15}
-                        color={isPickup ? Colors.marigoldDark : Colors.navy}
+                        color={isPickup ? Colors.marigoldDark : Colors.text}
                         strokeWidth={2.2}
                       />
                     </View>
@@ -689,7 +694,7 @@ export function GoogleMapsLocationModal({
           onPress={handleUseCurrentLocation}
           activeOpacity={0.85}
         >
-          <Crosshair size={20} color={isPickup ? Colors.marigoldDark : Colors.navy} strokeWidth={2.4} />
+          <Crosshair size={20} color={isPickup ? Colors.marigoldDark : Colors.text} strokeWidth={2.4} />
         </TouchableOpacity>
 
         {/* ── Bottom Glassmorphic Pin Confirmation Sheet ───────────────── */}
@@ -714,13 +719,13 @@ export function GoogleMapsLocationModal({
               <View
                 style={[
                   styles.pinStatusDot,
-                  { backgroundColor: isPickup ? Colors.marigold : Colors.navy },
+                  { backgroundColor: isPickup ? Colors.marigold : Colors.brandSurface },
                 ]}
               />
               <Text
                 style={[
                   styles.pinStatusText,
-                  { color: isPickup ? Colors.marigoldDark : Colors.navy },
+                  { color: isPickup ? Colors.marigoldDark : Colors.text },
                 ]}
               >
                 {isPickup ? 'PICKUP LOCATION PIN' : 'DROP DESTINATION PIN'}
@@ -760,7 +765,7 @@ export function GoogleMapsLocationModal({
           <TouchableOpacity
             style={[
               styles.confirmBtn,
-              { backgroundColor: isPickup ? Colors.marigold : Colors.navy },
+              { backgroundColor: isPickup ? Colors.marigold : Colors.brandSurface },
             ]}
             onPress={handleConfirm}
             activeOpacity={0.88}
@@ -776,7 +781,7 @@ export function GoogleMapsLocationModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#091524',
@@ -857,7 +862,10 @@ const styles = StyleSheet.create({
   },
   pinTooltip: {
     position: 'absolute',
+    left: -68,
     top: -30,
+    width: 176,
+    alignItems: 'center',
     backgroundColor: 'rgba(13, 31, 55, 0.92)',
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
@@ -875,6 +883,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: FontWeight.semibold,
     letterSpacing: 0.2,
+    textAlign: 'center',
   },
 
   // ── Top Glassmorphic Overlay ───────────────────────────────────────
@@ -965,7 +974,7 @@ const styles = StyleSheet.create({
   glassSearchInput: {
     flex: 1,
     fontSize: FontSize.sm,
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.medium,
     height: '100%',
     outlineStyle: 'none' as any,
@@ -1027,7 +1036,7 @@ const styles = StyleSheet.create({
   suggestionTitle: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   suggestionDesc: {
     fontSize: FontSize.xs,
@@ -1163,7 +1172,7 @@ const styles = StyleSheet.create({
   addressHeadline: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   addressSubtext: {
     fontSize: FontSize.xs + 1,

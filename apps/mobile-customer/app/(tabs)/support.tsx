@@ -15,7 +15,9 @@ import {
   HelpCircle,
   CheckCircle2,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 
 const FAQ_ITEMS = [
   {
@@ -41,6 +43,9 @@ const FAQ_ITEMS = [
 ];
 
 export default function SupportScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -62,7 +67,7 @@ export default function SupportScreen() {
           activeOpacity={0.85}
         >
           <View style={styles.iconCircle}>
-            <PhoneCall size={20} color={Colors.navy} strokeWidth={2} />
+            <PhoneCall size={20} color={Colors.text} strokeWidth={2} />
           </View>
           <Text style={styles.contactLabel}>Phone Call</Text>
           <Text style={styles.contactValue}>8828647785</Text>
@@ -75,7 +80,7 @@ export default function SupportScreen() {
           activeOpacity={0.85}
         >
           <View style={styles.iconCircle}>
-            <MessageSquare size={20} color={Colors.navy} strokeWidth={2} />
+            <MessageSquare size={20} color={Colors.text} strokeWidth={2} />
           </View>
           <Text style={styles.contactLabel}>WhatsApp</Text>
           <Text style={styles.contactValue}>Chat Now</Text>
@@ -88,7 +93,7 @@ export default function SupportScreen() {
           activeOpacity={0.85}
         >
           <View style={styles.iconCircle}>
-            <Mail size={20} color={Colors.navy} strokeWidth={2} />
+            <Mail size={20} color={Colors.text} strokeWidth={2} />
           </View>
           <Text style={styles.contactLabel}>Email</Text>
           <Text style={styles.contactValue}>Write to Us</Text>
@@ -120,7 +125,7 @@ export default function SupportScreen() {
 
       {/* FAQ */}
       <View style={styles.sectionHeader}>
-        <HelpCircle size={18} color={Colors.navy} />
+        <HelpCircle size={18} color={Colors.text} />
         <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
       </View>
 
@@ -139,7 +144,7 @@ export default function SupportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: Spacing.md, gap: Spacing.lg, paddingBottom: Spacing.xxl },
 
@@ -178,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   contactLabel: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -207,7 +212,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   coordinatorTitle: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },
@@ -231,7 +236,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   guaranteeText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.medium,
   },
@@ -266,7 +271,7 @@ const styles = StyleSheet.create({
   },
   faqQ: {
     flex: 1,
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     lineHeight: 18,

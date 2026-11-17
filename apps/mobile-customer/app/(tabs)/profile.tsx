@@ -24,11 +24,17 @@ import {
   Edit3,
   AlertCircle,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { bookingApi } from '@/lib/api';
+import { AppearanceControl } from '@/components/AppearanceControl';
 
 export default function ProfileScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [completedCount, setCompletedCount] = useState(0);
@@ -137,7 +143,7 @@ export default function ProfileScreen() {
           onPress={() => router.push('/complete-profile' as any)}
           activeOpacity={0.8}
         >
-          <Edit3 size={13} color={Colors.navy} />
+          <Edit3 size={13} color={Colors.text} />
           <Text style={styles.editProfileText}>Edit</Text>
         </TouchableOpacity>
       </View>
@@ -160,7 +166,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.completePillBtn}>
             <Text style={styles.completePillBtnText}>Complete</Text>
-            <ChevronRight size={13} color={Colors.navy} />
+            <ChevronRight size={13} color={Colors.text} />
           </View>
         </TouchableOpacity>
       )}
@@ -168,7 +174,7 @@ export default function ProfileScreen() {
       {/* Real Stats Row */}
       <View style={styles.statsRow}>
         <View style={styles.statBox}>
-          <PackageCheck size={18} color={Colors.navy} />
+          <PackageCheck size={18} color={Colors.text} />
           <Text style={styles.statValue}>{completedCount}</Text>
           <Text style={styles.statLabel}>Completed Moves</Text>
         </View>
@@ -178,7 +184,7 @@ export default function ProfileScreen() {
           <Text style={styles.statLabel}>Active Moves</Text>
         </View>
         <View style={styles.statBox}>
-          <Award size={18} color={Colors.navy} />
+          <Award size={18} color={Colors.text} />
           <Text style={styles.statValue}>{totalCount}</Text>
           <Text style={styles.statLabel}>Total Bookings</Text>
         </View>
@@ -207,7 +213,7 @@ export default function ProfileScreen() {
                   item.highlight && styles.menuIconHighlight,
                 ]}
               >
-                <ItemIcon size={18} color={item.highlight ? '#B45309' : Colors.navy} strokeWidth={2} />
+                <ItemIcon size={18} color={item.highlight ? '#B45309' : Colors.text} strokeWidth={2} />
               </View>
               <View style={styles.menuTextGroup}>
                 <Text style={[styles.menuLabel, item.highlight && styles.menuLabelHighlight]}>
@@ -220,6 +226,9 @@ export default function ProfileScreen() {
           );
         })}
       </View>
+
+      <Text style={styles.menuSectionHeader}>Display</Text>
+      <AppearanceControl />
 
       {/* Logout */}
       <TouchableOpacity
@@ -236,7 +245,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
 
@@ -263,7 +272,7 @@ const styles = StyleSheet.create({
   avatarInitial: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   profileDetails: { flex: 1, gap: 2 },
   userName: {
@@ -297,7 +306,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     alignSelf: 'flex-start',
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
@@ -323,14 +332,14 @@ const styles = StyleSheet.create({
   editProfileText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.navy,
+    color: Colors.text,
   },
 
   incompleteBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.marigoldSubtle,
     borderWidth: 1.5,
     borderColor: '#FDE68A',
     borderRadius: BorderRadius.lg,
@@ -421,7 +430,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   menuItemHighlight: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.marigoldSubtle,
   },
   menuItemLast: {
     borderBottomWidth: 0,
@@ -435,14 +444,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuIconHighlight: {
-    backgroundColor: '#FDE68A',
+    backgroundColor: Colors.warningBorder,
   },
   menuTextGroup: {
     flex: 1,
     gap: 2,
   },
   menuLabel: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },

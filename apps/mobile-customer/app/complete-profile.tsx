@@ -9,7 +9,6 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -21,11 +20,17 @@ import {
   ArrowRight,
   LogOut,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { customerApi } from '@/lib/api';
+import { showToast } from '@/components/ToastHost';
 
 export default function CompleteProfileScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -68,21 +73,8 @@ export default function CompleteProfileScreen() {
         phone: `+91${res.phone}`,
       });
 
-      if (Platform.OS === 'web') {
-        router.replace('/(tabs)');
-        return;
-      }
-
-      Alert.alert(
-        'Profile Completed',
-        'Your profile has been saved successfully. Welcome to Triveni Transports!',
-        [
-          {
-            text: 'Continue',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
+      showToast({ title: 'Profile completed', message: 'Welcome to Triveni Transports.', variant: 'success' });
+      router.replace('/(tabs)');
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to save profile. Please try again.');
     } finally {
@@ -130,7 +122,7 @@ export default function CompleteProfileScreen() {
             {!!user?.email && (
               <View style={styles.verifiedEmailBox}>
                 <View style={styles.verifiedEmailLeft}>
-                  <Mail size={16} color={Colors.navy} />
+                  <Mail size={16} color={Colors.text} />
                   <View>
                     <Text style={styles.verifiedEmailLabel}>VERIFIED EMAIL</Text>
                     <Text style={styles.verifiedEmailText}>{user.email}</Text>
@@ -148,7 +140,7 @@ export default function CompleteProfileScreen() {
               <Text style={styles.inputLabel}>Full Name</Text>
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIconBox}>
-                  <User size={16} color={Colors.navy} />
+                  <User size={16} color={Colors.text} />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -228,7 +220,7 @@ export default function CompleteProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -243,7 +235,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(13, 31, 55, 0.05)',
+    backgroundColor: Colors.navySubtle,
   },
   bgBlobMarigold: {
     position: 'absolute',
@@ -301,7 +293,7 @@ const styles = StyleSheet.create({
   },
 
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: Colors.errorLight,
     borderWidth: 1,
     borderColor: '#FECACA',
     borderRadius: BorderRadius.md,
@@ -339,7 +331,7 @@ const styles = StyleSheet.create({
   verifiedEmailText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   verifiedPill: {
     flexDirection: 'row',
@@ -364,7 +356,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.navy,
+    color: Colors.text,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -390,7 +382,7 @@ const styles = StyleSheet.create({
     borderRightColor: Colors.cardBorder,
   },
   countryCode: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },
@@ -398,7 +390,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.medium,
   },

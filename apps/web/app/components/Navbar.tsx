@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronDown,
   MapPin,
-  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
 import styles from './Navbar.module.css';
@@ -145,7 +144,7 @@ export default function Navbar() {
             {/* Fleet portal link when logged in as Vendor */}
             {isLoggedIn && role === 'vendor' && (
               <li>
-                <Link href="/admin/fleet" onClick={closeMenu} style={{ color: 'var(--brand-900)', fontWeight: 700 }}>
+                <Link href="/vendor/portal" onClick={closeMenu} style={{ color: 'var(--brand-900)', fontWeight: 700 }}>
                   Fleet Portal
                 </Link>
               </li>
@@ -263,7 +262,7 @@ export default function Navbar() {
                 )}
 
                 {role === 'vendor' && (
-                  <Link href="/admin/fleet" className={styles.bookingsLinkBtn}>
+                  <Link href="/vendor/portal" className={styles.bookingsLinkBtn}>
                     <Truck size={15} />
                     <span>Fleet Portal</span>
                   </Link>
@@ -320,7 +319,7 @@ export default function Navbar() {
 
                       {role === 'vendor' && (
                         <Link
-                          href="/admin/fleet"
+                          href="/vendor/portal"
                           className={styles.dropdownItem}
                           onClick={() => setUserDropdownOpen(false)}
                         >

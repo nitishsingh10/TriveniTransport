@@ -22,7 +22,9 @@ import {
   FileCheck,
   Banknote,
 } from 'lucide-react-native';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
+import type { ThemeColors } from '@/constants/theme';
+import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
+import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi } from '@/lib/api';
 import { DEFAULT_CATALOG } from '@/constants/inventory';
 
@@ -43,6 +45,9 @@ const ZONE_RATE = 3500;
 const LABOUR_RATE = 1200;
 
 export default function SummaryScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+
   const params = useLocalSearchParams<{
     pickup: string;
     drop: string;
@@ -200,7 +205,7 @@ export default function SummaryScreen() {
           <ArrowDown size={14} color={Colors.textMuted} />
         </View>
         <View style={styles.routeItem}>
-          <Home size={16} color={Colors.navy} />
+          <Home size={16} color={Colors.text} />
           <View style={styles.routeTextBlock}>
             <Text style={styles.routeLabel}>DELIVERY</Text>
             <Text style={styles.routeVal}>{params.drop || 'Drop destination'}</Text>
@@ -211,7 +216,7 @@ export default function SummaryScreen() {
       {/* Itemized Receipt Card (White Card) */}
       <View style={styles.linesCard}>
         <View style={styles.receiptHeader}>
-          <FileCheck size={16} color={Colors.navy} />
+          <FileCheck size={16} color={Colors.text} />
           <Text style={styles.receiptTitle}>ITEMIZED CHARGES</Text>
         </View>
 
@@ -257,7 +262,7 @@ export default function SummaryScreen() {
 
       {/* Deposit Card (Deep Navy Banner Card) */}
       <LinearGradient
-        colors={[Colors.navy, '#162C4E']}
+        colors={[Colors.brandSurface, '#162C4E']}
         style={styles.depositCard}
       >
         <View style={styles.depositHeader}>
@@ -276,11 +281,11 @@ export default function SummaryScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.navy} />
+            <ActivityIndicator color={Colors.text} />
           ) : (
             <>
               <Text style={styles.bookCtaText}>Confirm & Book Move (COD)</Text>
-              <ArrowRight size={17} color={Colors.navy} strokeWidth={2.4} />
+              <ArrowRight size={17} color={Colors.text} strokeWidth={2.4} />
             </>
           )}
         </TouchableOpacity>
@@ -299,7 +304,7 @@ export default function SummaryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
 
@@ -325,12 +330,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressCircleDone: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   progressCircleActive: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
+    borderColor: Colors.brandSurface,
   },
   progressNumActive: {
     color: Colors.white,
@@ -343,11 +348,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   progressLabelDone: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   progressLabelActive: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   progressLine: {
@@ -358,7 +363,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   progressLineDone: {
-    backgroundColor: Colors.navy,
+    backgroundColor: Colors.brandSurface,
   },
 
   // Title
@@ -411,7 +416,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   routeVal: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -435,7 +440,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.cardBorder,
   },
   receiptTitle: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.8,
@@ -451,7 +456,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   qtyBadge: {
-    color: Colors.navy,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   lineAmount: {
@@ -489,7 +494,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: Colors.marigoldSubtle,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: '#FDE68A',
@@ -549,7 +554,7 @@ const styles = StyleSheet.create({
     ...Shadow.glowSm,
   },
   bookCtaText: {
-    color: Colors.navy,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },

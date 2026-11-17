@@ -13,25 +13,35 @@ import {
   Menu,
   X,
   ExternalLink,
-  Bell,
   RefreshCw,
 } from 'lucide-react';
 import { token } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 import styles from './admin.module.css';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isLoggedIn, role, loading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const isLoginRoute = pathname === '/admin/login';
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (isLoginRoute || authLoading) return;
+    if (!isLoggedIn || role !== 'admin') router.replace('/admin/login');
+  }, [authLoading, isLoggedIn, isLoginRoute, role, router]);
 
   // For the dedicated login page, render clean full viewport without sidebar
-  if (pathname === '/admin/login') {
+  if (isLoginRoute) {
     return <>{children}</>;
+  }
+
+  if (authLoading || !isLoggedIn || role !== 'admin') {
+    return (
+      <main className={styles.adminRoot} role="status" aria-live="polite">
+        <div style={{ margin: 'auto', color: '#CBD5E1', fontSize: 14 }}>Checking administrator access…</div>
+      </main>
+    );
   }
 
   const handleLogout = () => {

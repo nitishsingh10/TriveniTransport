@@ -6,25 +6,30 @@ import { useRouter } from 'next/navigation';
 import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, UserCircle, AlertCircle } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/useAuth';
+import { getRoleSafeDestination } from '../../lib/authNavigation';
+import { useOtpResendCooldown } from '../../lib/useOtpResendCooldown';
 import styles from './page.module.css';
 
 type Method = 'phone' | 'email';
 
 export default function VendorSignupPage() {
   const router = useRouter();
-  const { isLoggedIn, role, user, logout } = useAuth();
+  const { isLoggedIn, role, user, logout, loading: authLoading } = useAuth();
   const [method, setMethod] = useState<Method>('phone');
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { secondsRemaining, start: startResendCooldown, reset: resetResendCooldown } = useOtpResendCooldown();
 
-  const isPhoneValid = method === 'phone' && identifier.replace(/\D/g, '').length === 10;
+  const phoneDigits = identifier.replace(/\D/g, '');
+  const isPhoneValid = method === 'phone' && /^[6-9]\d{9}$/.test(phoneDigits);
   const isEmailValid = method === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim());
-  const canSubmit = (method === 'phone' ? isPhoneValid : isEmailValid) && name.length >= 2;
-  const resolvedIdentifier = method === 'phone' ? identifier.replace(/\D/g, '') : identifier.trim().toLowerCase();
+  const canSubmit = (method === 'phone' ? isPhoneValid : isEmailValid) && name.trim().length >= 2 && name.trim().length <= 150 && termsAccepted;
+  const resolvedIdentifier = method === 'phone' ? phoneDigits : identifier.trim().toLowerCase();
 
   const switchMethod = (m: Method) => {
     setMethod(m);
@@ -32,6 +37,7 @@ export default function VendorSignupPage() {
     setError('');
     setOtpSent(false);
     setOtp('');
+    resetResendCooldown();
   };
 
   const handleIdentifierChange = (val: string) => {
@@ -55,6 +61,8 @@ export default function VendorSignupPage() {
     try {
       await auth.requestOtp(resolvedIdentifier, 'vendor', true);
       setOtpSent(true);
+      setOtp('');
+      startResendCooldown();
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -66,18 +74,32 @@ export default function VendorSignupPage() {
     }
   };
 
+  const resendOtp = async () => {
+    if (loading || secondsRemaining > 0) return;
+    setError('');
+    setLoading(true);
+    try {
+      await auth.requestOtp(resolvedIdentifier, 'vendor', true);
+      setOtp('');
+      startResendCooldown();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not resend OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 6) return;
     setError('');
     setLoading(true);
     try {
-      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor', name, true);
+      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor', name.trim(), true);
       token.set(res.accessToken, res.refreshToken);
       token.setRole('vendor');
       if (res.user) token.setUser(res.user);
-      const next = new URLSearchParams(window.location.search).get('next') ?? '/admin/fleet';
-      router.push(next);
+      router.replace(getRoleSafeDestination('vendor'));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -89,7 +111,12 @@ export default function VendorSignupPage() {
     }
   };
 
+  if (authLoading) {
+    return <main className={styles.main} aria-busy="true"><div className={styles.container}><div className={styles.glassCard} role="status">Checking your session…</div></div></main>;
+  }
+
   if (isLoggedIn) {
+    const destination = getRoleSafeDestination(role);
     return (
       <main className={styles.main}>
         <div className={styles.bgMesh}>
@@ -116,7 +143,7 @@ export default function VendorSignupPage() {
               </div>
 
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-                <Link href={role === 'vendor' ? '/admin/fleet' : role === 'admin' ? '/admin' : '/bookings'} className={styles.submitBtn}>
+                <Link href={destination} className={styles.submitBtn}>
                   Continue to {role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →
                 </Link>
                 <button
@@ -169,12 +196,15 @@ export default function VendorSignupPage() {
               {!otpSent ? (
                 <form className={styles.form} onSubmit={requestOtp}>
                   <div className={styles.inputGroup}>
-                    <label>Full Name / Company Name</label>
+                    <label htmlFor="vendor-signup-name">Full Name / Company Name</label>
                     <div className={styles.inputWrapper}>
                       <input
                         className={`${styles.input} ${styles.inputName}`}
+                        id="vendor-signup-name"
                         type="text"
                         placeholder="John Doe Logistics"
+                        autoComplete="name"
+                        maxLength={150}
                         value={name}
                         onChange={e => setName(e.target.value)}
                         required
@@ -206,15 +236,17 @@ export default function VendorSignupPage() {
 
                   {method === 'phone' ? (
                     <div className={styles.inputGroup}>
-                      <label>Mobile Number</label>
+                      <label htmlFor="vendor-signup-phone">Mobile Number</label>
                       <div className={styles.inputWrapper}>
                         <span className={styles.countryCode}>+91</span>
                         <input
                           className={styles.input}
-                          type="text"
+                          id="vendor-signup-phone"
+                          type="tel"
                           inputMode="numeric"
                           placeholder="99999 99999"
                           maxLength={10}
+                          pattern="[6-9][0-9]{9}"
                           value={identifier}
                           onChange={e => handleIdentifierChange(e.target.value)}
                           required
@@ -240,12 +272,14 @@ export default function VendorSignupPage() {
                     </div>
                   ) : (
                     <div className={styles.inputGroup}>
-                      <label>Business Email Address</label>
+                      <label htmlFor="vendor-signup-email">Business Email Address</label>
                       <div className={styles.inputWrapper}>
                         <input
                           className={`${styles.input} ${styles.inputEmail}`}
+                          id="vendor-signup-email"
                           type="email"
                           placeholder="business@example.com"
+                          autoComplete="email"
                           value={identifier}
                           onChange={e => handleIdentifierChange(e.target.value)}
                           required
@@ -273,8 +307,8 @@ export default function VendorSignupPage() {
                   
                   <div className={styles.formOptions}>
                     <label className={styles.checkboxLabel}>
-                      <input type="checkbox" required />
-                      <span>I agree to the Vendor Terms &amp; Conditions</span>
+                      <input type="checkbox" required checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
+                      <span>I agree to the Vendor <Link href="/terms" target="_blank" rel="noreferrer">Terms &amp; Conditions</Link></span>
                     </label>
                   </div>
 
@@ -289,11 +323,14 @@ export default function VendorSignupPage() {
               ) : (
                 <form className={styles.form} onSubmit={verifyOtp}>
                   <div className={styles.inputGroup}>
-                    <label>Enter OTP</label>
+                    <label htmlFor="vendor-signup-otp">Enter OTP</label>
                     <div className={styles.inputWrapper}>
                       <input
                         className={`${styles.input} ${styles.otpInput}`}
+                        id="vendor-signup-otp"
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
                         placeholder="• • • • • •"
                         maxLength={6}
                         value={otp}
@@ -308,9 +345,12 @@ export default function VendorSignupPage() {
                     </span>
                     {process.env.NODE_ENV !== 'production' && (
                       <span className={styles.hint} style={{ color: 'var(--accent-500)', fontWeight: 600 }}>
-                        Dev mode: use OTP <strong>123456</strong>
+                        Local development: check the backend terminal for the current OTP.
                       </span>
                     )}
+                    <button type="button" className={styles.resendButton} onClick={resendOtp} disabled={loading || secondsRemaining > 0}>
+                      {loading ? 'Sending…' : secondsRemaining > 0 ? `Resend code in ${secondsRemaining}s` : 'Resend code'}
+                    </button>
                   </div>
 
                   <button 
@@ -324,7 +364,7 @@ export default function VendorSignupPage() {
                   <button 
                     type="button"
                     className={styles.backBtn} 
-                    onClick={() => setOtpSent(false)}
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); resetResendCooldown(); }}
                   >
                     <ArrowLeft size={16} /> Edit details
                   </button>
