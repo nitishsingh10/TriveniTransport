@@ -276,10 +276,14 @@ export interface BackendJob {
   dropAddress: string;
   scheduledDate: string;
   scheduledSlot: string;
-  distanceKm?: number;
-  finalAmount: number;
+  distanceKm?: number | string;
+  finalAmount: number | string;
+  configurationType?: string;
+  floorNumber?: number;
+  liftAvailable?: boolean;
   customer?: { name: string; phone: string } | null;
   vehicle?: { type: string; registrationNumber: string } | null;
+  items?: Array<{ quantity: number }>;
   pricingSnapshot?: any;
 }
 
@@ -321,6 +325,12 @@ export const driverVendorApi = {
     return request<{ success: boolean; message: string; vehicle: BackendVehicle }>('/vendor/onboarding', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+  async updatePushToken(pushToken: string | null): Promise<void> {
+    await request<void>('/vendor/push-token', {
+      method: 'PATCH',
+      body: JSON.stringify({ pushToken }),
     });
   },
 };

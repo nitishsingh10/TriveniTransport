@@ -88,6 +88,20 @@ export class VendorController {
     }
   }
 
+  static async updatePushToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const schema = z.object({ pushToken: z.string().max(500).nullable() });
+      const { pushToken } = schema.parse(req.body);
+      await VendorService.updatePushToken(req.user!.id, pushToken);
+      res.status(204).send();
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid push token', details: e.errors });
+      }
+      next(e);
+    }
+  }
+
   static async saveOnboarding(req: Request, res: Response, next: NextFunction) {
     try {
       const vendorId = req.user!.id;

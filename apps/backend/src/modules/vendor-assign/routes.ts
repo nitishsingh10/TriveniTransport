@@ -11,6 +11,7 @@ router.use(authGuard);
 router.get('/profile', requireRole('vendor'), VendorController.getProfile);
 router.get('/vehicles', requireRole('vendor'), VendorController.getVehicles);
 router.post('/onboarding', requireRole('vendor'), VendorController.saveOnboarding);
+router.patch('/push-token', requireRole('vendor'), VendorController.updatePushToken);
 router.get('/jobs', requireRole('vendor'), VendorController.getJobs);
 router.post('/jobs/:id/accept', requireRole('vendor'), VendorController.acceptJob);
 router.patch('/jobs/:id/status', requireRole('vendor'), VendorController.updateStatus);

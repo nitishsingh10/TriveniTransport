@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import type { BookingStatus } from '@triveni/shared-types';
 import { driverJobsApi, type BackendJob } from '@/lib/api';
 
+let latestJobsFetch = 0;
+
+function numeric(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export interface DriverJob {
   id: string;
   trackingCode: string;
@@ -48,23 +55,35 @@ interface DriverState {
   completedJobs: DriverJob[];
   gps: GpsState;
   isLoading: boolean;
+  isRefreshing: boolean;
+  loadError: string | null;
+  acceptingJobIds: string[];
+  dismissedJobIds: string[];
+  vendorId: string | null;
   lastFetchedAt: string | null;
   
   // Actions
   setActiveJob: (job: DriverJob | null) => void;
-  acceptJob: (jobId: string) => void;
+  acceptJob: (jobId: string) => Promise<void>;
   declineJob: (jobId: string) => void;
-  updateJobStatus: (jobId: string, status: BookingStatus) => void;
-  completeJob: (jobId: string, pod: DriverJob['proofOfDelivery']) => void;
+  updateJobStatus: (jobId: string, status: BookingStatus) => Promise<void>;
+  completeJob: (jobId: string, pod: DriverJob['proofOfDelivery']) => Promise<void>;
   toggleGpsBroadcast: (enabled?: boolean) => void;
   updateGpsLocation: (lat: number, lng: number, speed: number) => void;
-  fetchJobsFromBackend: () => Promise<void>;
+  fetchJobsFromBackend: (manual?: boolean, vendorId?: string) => Promise<void>;
 }
 
 /**
  * Convert backend job response to DriverJob interface
  */
 function mapBackendJob(job: BackendJob): DriverJob {
+  const snapshot = job.pricingSnapshot || {};
+  const snapshotItems = Array.isArray(snapshot.items) ? snapshot.items : [];
+  const finalAmount = numeric(job.finalAmount);
+  const isCod = snapshot.paymentMethod === 'cash_on_delivery';
+  const itemCount = Array.isArray(job.items)
+    ? job.items.reduce((sum, item) => sum + numeric(item.quantity), 0)
+    : snapshotItems.reduce((sum: number, item: any) => sum + numeric(item.quantity), 0);
   return {
     id: job.id,
     trackingCode: `TRV-${job.id.slice(-8).toUpperCase()}`,
@@ -72,9 +91,9 @@ function mapBackendJob(job: BackendJob): DriverJob {
     customerPhone: job.customer?.phone || '',
     pickupAddress: job.pickupAddress,
     dropAddress: job.dropAddress,
-    distanceKm: job.distanceKm || 0,
-    totalCft: 480,
-    configuration: 'Household Move',
+    distanceKm: numeric(job.distanceKm),
+    totalCft: numeric(snapshot.totalCft, snapshotItems.reduce((sum: number, item: any) => sum + numeric(item.cft, 20) * numeric(item.quantity), 0)),
+    configuration: job.configurationType || 'Household Move',
     vehicleType: job.vehicle?.type || 'Tata 407',
     vehicleReg: job.vehicle?.registrationNumber || '',
     scheduledDate: new Date(job.scheduledDate).toLocaleDateString('en-IN', {
@@ -83,13 +102,13 @@ function mapBackendJob(job: BackendJob): DriverJob {
       year: 'numeric',
     }),
     scheduledSlot: job.scheduledSlot || '09:00 AM – 12:00 PM',
-    payoutAmount: Math.round((job.finalAmount || 0) * 0.65),
-    advanceCollected: Math.round((job.finalAmount || 0) * 0.2),
-    collectAtDelivery: Math.round((job.finalAmount || 0) * 0.8),
+    payoutAmount: Math.round(finalAmount * 0.65),
+    advanceCollected: isCod ? 0 : Math.round(finalAmount * 0.2),
+    collectAtDelivery: isCod ? finalAmount : Math.max(0, finalAmount - Math.round(finalAmount * 0.2)),
     status: job.status,
-    itemsCount: 0,
-    floorNumber: 0,
-    liftAvailable: false,
+    itemsCount: itemCount,
+    floorNumber: job.floorNumber ?? 0,
+    liftAvailable: job.liftAvailable ?? false,
     notes: '',
   };
 }
@@ -100,6 +119,11 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   pendingJobs: [],
   completedJobs: [],
   isLoading: false,
+  isRefreshing: false,
+  loadError: null,
+  acceptingJobIds: [],
+  dismissedJobIds: [],
+  vendorId: null,
   lastFetchedAt: null,
   gps: {
     latitude: 0,
@@ -114,10 +138,32 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   /**
    * Fetch real jobs from backend API
    */
-  fetchJobsFromBackend: async () => {
-    set({ isLoading: true });
+  fetchJobsFromBackend: async (manual = false, vendorId) => {
+    const current = get();
+    const requestedVendorId = vendorId || current.vendorId;
+    if (!requestedVendorId) {
+      set({ loadError: 'Your driver session is missing. Sign in again to load jobs.' });
+      return;
+    }
+
+    const switchingDrivers = current.vendorId !== requestedVendorId;
+    if (!switchingDrivers && (current.isLoading || current.isRefreshing)) return;
+    if (switchingDrivers) {
+      set({
+        vendorId: requestedVendorId,
+        activeJob: null,
+        pendingJobs: [],
+        completedJobs: [],
+        dismissedJobIds: [],
+        lastFetchedAt: null,
+        loadError: null,
+      });
+    }
+    const fetchId = ++latestJobsFetch;
+    set({ isLoading: !get().lastFetchedAt, isRefreshing: manual, loadError: null });
     try {
       const jobs = await driverJobsApi.getJobs();
+      if (fetchId !== latestJobsFetch) return;
       
       const active: DriverJob[] = [];
       const pending: DriverJob[] = [];
@@ -129,7 +175,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
           completed.push(mapped);
         } else if (job.status === 'ASSIGNED' || job.status === 'EN_ROUTE' || job.status === 'ARRIVED' || job.status === 'IN_PROGRESS') {
           active.push(mapped);
-        } else {
+        } else if (!get().dismissedJobIds.includes(job.id)) {
           pending.push(mapped);
         }
       }
@@ -139,70 +185,77 @@ export const useDriverStore = create<DriverState>((set, get) => ({
         pendingJobs: pending,
         completedJobs: completed,
         isLoading: false,
+        isRefreshing: false,
+        loadError: null,
         lastFetchedAt: new Date().toISOString(),
       });
     } catch (error) {
+      if (fetchId !== latestJobsFetch) return;
       console.warn('Failed to fetch jobs from backend:', error);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        isRefreshing: false,
+        loadError: error instanceof Error ? error.message : 'Could not load assignments.',
+      });
     }
   },
 
   setActiveJob: (job) => set({ activeJob: job }),
 
-  acceptJob: (jobId) => {
-    // Call backend accept endpoint to link driver and vehicle to booking
-    driverJobsApi.acceptJob(jobId).catch((err) => {
-      console.warn('Driver acceptJob error:', err);
-      driverJobsApi.updateJobStatus(jobId, 'ASSIGNED').catch(() => {});
-    });
-
-    set((state) => {
-      const job = state.pendingJobs.find((j) => j.id === jobId);
-      if (!job) return state;
-
-      const updatedJob: DriverJob = { ...job, status: 'ASSIGNED' };
-      return {
+  acceptJob: async (jobId) => {
+    if (get().acceptingJobIds.includes(jobId)) return;
+    set((state) => ({ acceptingJobIds: [...state.acceptingJobIds, jobId] }));
+    try {
+      const accepted = await driverJobsApi.acceptJob(jobId);
+      const updatedJob = mapBackendJob(accepted);
+      set((state) => ({
         activeJob: state.activeJob || updatedJob,
-        pendingJobs: state.pendingJobs.filter((j) => j.id !== jobId),
-      };
-    });
+        pendingJobs: state.pendingJobs.filter((job) => job.id !== jobId),
+        dismissedJobIds: state.dismissedJobIds.filter((id) => id !== jobId),
+      }));
+    } catch (error) {
+      await get().fetchJobsFromBackend();
+      // The server may have accepted the move even if the response was lost.
+      // Reconcile before showing a failure so a network timeout isn't reported
+      // as a rejected assignment after a successful claim.
+      if (get().activeJob?.id === jobId) return;
+      throw error;
+    } finally {
+      set((state) => ({ acceptingJobIds: state.acceptingJobIds.filter((id) => id !== jobId) }));
+    }
   },
 
   declineJob: (jobId) =>
     set((state) => ({
       pendingJobs: state.pendingJobs.filter((j) => j.id !== jobId),
+      dismissedJobIds: state.dismissedJobIds.includes(jobId)
+        ? state.dismissedJobIds
+        : [...state.dismissedJobIds, jobId],
     })),
 
-  updateJobStatus: (jobId, status) =>
-    set((state) => {
-      // Call backend to sync status
-      driverJobsApi.updateJobStatus(jobId, status).catch(() => {});
-      
-      if (state.activeJob && state.activeJob.id === jobId) {
-        return {
-          activeJob: { ...state.activeJob, status },
-        };
-      }
-      return state;
-    }),
+  updateJobStatus: async (jobId, status) => {
+    await driverJobsApi.updateJobStatus(jobId, status);
+    set((state) => state.activeJob?.id === jobId
+      ? { activeJob: { ...state.activeJob, status } }
+      : state);
+  },
 
-  completeJob: (jobId, pod) =>
-    set((state) => {
-      if (!state.activeJob || state.activeJob.id !== jobId) return state;
-      
-      // Call backend to mark completed
-      driverJobsApi.updateJobStatus(jobId, 'COMPLETED').catch(() => {});
-      
-      const finished: DriverJob = {
-        ...state.activeJob,
-        status: 'COMPLETED',
-        proofOfDelivery: pod,
-      };
-      return {
-        activeJob: null,
-        completedJobs: [finished, ...state.completedJobs],
-      };
-    }),
+  completeJob: async (jobId, pod) => {
+    const current = get().activeJob;
+    if (!current || current.id !== jobId) throw new Error('This move is no longer your active assignment.');
+
+    await driverJobsApi.updateJobStatus(jobId, 'COMPLETED');
+
+    const finished: DriverJob = {
+      ...current,
+      status: 'COMPLETED',
+      proofOfDelivery: pod,
+    };
+    set((state) => ({
+      activeJob: state.activeJob?.id === jobId ? null : state.activeJob,
+      completedJobs: [finished, ...state.completedJobs.filter((job) => job.id !== jobId)],
+    }));
+  },
 
   toggleGpsBroadcast: (enabled) =>
     set((state) => ({

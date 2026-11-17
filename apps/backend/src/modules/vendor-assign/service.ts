@@ -70,6 +70,7 @@ export class VendorService {
           bookingId,
           vehicleType: selectedVehicle.type,
           registrationNumber: selectedVehicle.registrationNumber,
+          date: booking.scheduledDate.toISOString().split('T')[0],
           scheduledDate: booking.scheduledDate.toISOString().split('T')[0],
           scheduledSlot: booking.scheduledSlot,
           pickupAddress: booking.pickupAddress,
@@ -105,6 +106,7 @@ export class VendorService {
         customer: { select: { name: true, phone: true } },
         vendor: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { type: true, registrationNumber: true } },
+        items: { select: { quantity: true } },
       },
     });
   }
@@ -115,89 +117,100 @@ export class VendorService {
    * transitions status from CONFIRMED to ASSIGNED, and alerts the customer with real driver info.
    */
   static async acceptJob(vendorId: string, bookingId: string) {
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { customer: true },
-    });
-    if (!booking) throw { statusCode: 404, message: 'Booking not found' };
-
-    // If already assigned to another driver
-    if (booking.status === 'ASSIGNED' && booking.vendorId && booking.vendorId !== vendorId) {
-      throw { statusCode: 409, message: 'This move has already been accepted by another driver' };
-    }
-
-    // Idempotent if already accepted by this driver
-    if (booking.status === 'ASSIGNED' && booking.vendorId === vendorId) {
-      return booking;
-    }
-
-    const vendor = await prisma.vendor.findUnique({
-      where: { id: vendorId },
-      include: { vehicles: { where: { active: true } } },
-    });
-    if (!vendor) throw { statusCode: 404, message: 'Driver partner account not found' };
-
-    // Find driver's active vehicle or allocate their commercial vehicle
-    let vehicle = vendor.vehicles[0];
-    if (!vehicle) {
-      const regSuffix = vendor.phone ? vendor.phone.replace(/\D/g, '').slice(-4) : '7785';
-      vehicle = await prisma.vehicle.create({
-        data: {
-          vendorId: vendor.id,
-          type: 'Tata 407 (Commercial Carrier)',
-          capacityCft: 600,
-          registrationNumber: `MH12CD${regSuffix}`,
-          permitExpiry: new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000),
-          fitnessCertExpiry: new Date(Date.now() + 2 * 365 * 24 * 3600 * 1000),
-          active: true,
+    const { booking, newlyAssigned } = await prisma.$transaction(async (tx) => {
+      const current = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          customer: { select: { id: true, name: true, phone: true } },
+          vendor: { select: { id: true, name: true, phone: true } },
+          vehicle: { select: { id: true, type: true, registrationNumber: true } },
         },
       });
-    }
+      if (!current) throw { statusCode: 404, message: 'Booking not found' };
 
-    const updated = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: 'ASSIGNED',
-        vendorId: vendor.id,
-        vehicleId: vehicle.id,
-      },
-      include: {
-        customer: { select: { name: true, phone: true } },
-        vendor: { select: { id: true, name: true, phone: true } },
-        vehicle: { select: { id: true, type: true, registrationNumber: true } },
-      },
-    });
+      if (current.status === 'ASSIGNED' && current.vendorId === vendorId) {
+        return { booking: current, newlyAssigned: false };
+      }
+      if (current.status !== 'CONFIRMED' || current.vendorId !== null) {
+        throw { statusCode: 409, message: 'This move is no longer available to accept' };
+      }
 
-    await prisma.bookingStatusHistory.create({
-      data: {
-        bookingId,
-        fromState: booking.status,
-        toState: 'ASSIGNED',
-        actorId: vendorId,
-        actorRole: 'vendor',
-      },
+      const vendor = await tx.vendor.findUnique({
+        where: { id: vendorId },
+        include: { vehicles: { where: { active: true }, take: 1 } },
+      });
+      if (!vendor || vendor.status !== 'active') {
+        throw { statusCode: 403, message: 'Driver partner account is not active' };
+      }
+
+      const vehicle = vendor.vehicles[0];
+      if (!vehicle) {
+        throw { statusCode: 409, message: 'Complete vehicle onboarding before accepting a move' };
+      }
+
+      // Conditional update makes acceptance single-winner when several drivers
+      // tap Accept at the same time.
+      const claim = await tx.booking.updateMany({
+        where: { id: bookingId, status: 'CONFIRMED', vendorId: null },
+        data: { status: 'ASSIGNED', vendorId: vendor.id, vehicleId: vehicle.id },
+      });
+      if (claim.count !== 1) {
+        throw { statusCode: 409, message: 'This move has already been accepted by another driver' };
+      }
+
+      const updated = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          customer: { select: { name: true, phone: true } },
+          vendor: { select: { id: true, name: true, phone: true } },
+          vehicle: { select: { id: true, type: true, registrationNumber: true } },
+        },
+      });
+      if (!updated) throw { statusCode: 404, message: 'Booking not found' };
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          fromState: current.status,
+          toState: 'ASSIGNED',
+          actorId: vendorId,
+          actorRole: 'vendor',
+        },
+      });
+      return { booking: updated, newlyAssigned: true };
     });
 
     // Notify customer about driver acceptance
-    try {
-      const { enqueueNotification } = await import('../../jobs/queue');
-      await enqueueNotification('job_assigned', {
-        userId: booking.customerId,
-        userRole: 'customer',
-        bookingId,
-        payload: {
+    if (newlyAssigned) {
+      try {
+        const { enqueueNotification } = await import('../../jobs/queue');
+        await enqueueNotification('driver_assigned', {
+          userId: booking.customerId,
+          userRole: 'customer',
           bookingId,
-          driverName: vendor.name,
-          driverPhone: vendor.phone,
-          vehicleType: vehicle.type,
-          registrationNumber: vehicle.registrationNumber,
-        },
-      });
-    } catch (e) {
-      console.warn('Could not enqueue notification:', e);
+          payload: {
+            bookingId,
+            scheduledDate: booking.scheduledDate.toISOString().split('T')[0],
+            driverName: booking.vendor?.name,
+            driverPhone: booking.vendor?.phone,
+            vehicleType: booking.vehicle?.type,
+            registrationNumber: booking.vehicle?.registrationNumber,
+          },
+        });
+      } catch (e) {
+        console.warn('Could not enqueue notification:', e);
+      }
     }
 
-    return updated;
+    return booking;
+  }
+
+  static async updatePushToken(vendorId: string, pushToken: string | null) {
+    return prisma.vendor.update({
+      where: { id: vendorId },
+      data: { pushToken },
+      select: { id: true },
+    });
   }
 
   static async updateJobStatus(vendorId: string, bookingId: string, status: BookingStatus) {
@@ -205,39 +218,44 @@ export class VendorService {
       return this.acceptJob(vendorId, bookingId);
     }
 
-    const booking = await prisma.booking.findFirst({ where: { id: bookingId, vendorId } });
-    if (!booking) throw { statusCode: 404, message: 'Assigned booking not found' };
+    return prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({ where: { id: bookingId, vendorId } });
+      if (!booking) throw { statusCode: 404, message: 'Assigned booking not found' };
 
-    // Vendors can transition: ASSIGNED -> EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED
-    const allowedTransitions: Record<BookingStatus, BookingStatus[]> = {
-      ASSIGNED: ['EN_ROUTE'],
-      EN_ROUTE: ['ARRIVED'],
-      ARRIVED: ['IN_PROGRESS'],
-      IN_PROGRESS: ['COMPLETED'],
-      REQUESTED: [], QUOTED: [], CONFIRMED: [], REVISION_PENDING: [], CANCELLED: [], DISPUTED: [], COMPLETED: []
-    };
+      // Vendors can transition: ASSIGNED -> EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED
+      const allowedTransitions: Record<BookingStatus, BookingStatus[]> = {
+        ASSIGNED: ['EN_ROUTE'],
+        EN_ROUTE: ['ARRIVED'],
+        ARRIVED: ['IN_PROGRESS'],
+        IN_PROGRESS: ['COMPLETED'],
+        REQUESTED: [], QUOTED: [], CONFIRMED: [], REVISION_PENDING: [], CANCELLED: [], DISPUTED: [], COMPLETED: []
+      };
 
-    const allowed = allowedTransitions[booking.status as BookingStatus] || [];
-    if (!allowed.includes(status)) {
-      throw { statusCode: 400, message: `Invalid transition from ${booking.status} to ${status}` };
-    }
-
-    const updated = await prisma.booking.update({
-      where: { id: bookingId },
-      data: { status },
-    });
-
-    await prisma.bookingStatusHistory.create({
-      data: {
-        bookingId,
-        fromState: booking.status,
-        toState: status,
-        actorId: vendorId,
-        actorRole: 'vendor',
+      const allowed = allowedTransitions[booking.status as BookingStatus] || [];
+      if (!allowed.includes(status)) {
+        throw { statusCode: 400, message: `Invalid transition from ${booking.status} to ${status}` };
       }
-    });
 
-    return updated;
+      const changed = await tx.booking.updateMany({
+        where: { id: bookingId, vendorId, status: booking.status },
+        data: { status },
+      });
+      if (changed.count !== 1) {
+        throw { statusCode: 409, message: 'Move status changed. Refresh the assignment and try again.' };
+      }
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          fromState: booking.status,
+          toState: status,
+          actorId: vendorId,
+          actorRole: 'vendor',
+        }
+      });
+
+      return tx.booking.findUnique({ where: { id: bookingId } });
+    });
   }
 
   static async recordTelemetry(

@@ -67,6 +67,8 @@ export const notificationWorker = new Worker('notifications', async job => {
       const subjectMap: Record<string, string> = {
         'booking_confirmed': 'Your Booking is Confirmed',
         'job_assigned': 'New Job Assignment',
+        'job_available': 'New Move Request Available',
+        'driver_assigned': 'Your Driver Is Assigned',
       };
       const subject = subjectMap[type] || 'Update from Triveni Transports';
       const html = `<p>Hello ${user.name || 'Valued Customer'},</p><p>You have a new update regarding your booking (#${bookingId || 'N/A'}).</p>`;

@@ -3,10 +3,23 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
+import { registerDriverPushToken } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const triveniDriverTheme = {
   ...DefaultTheme,
@@ -23,6 +36,7 @@ const triveniDriverTheme = {
 
 export default function RootLayout() {
   const hydrateAuth = useAuthStore((s) => s.hydrateAuth);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     // Hydrate auth session from storage before hiding splash screen
@@ -35,6 +49,28 @@ export default function RootLayout() {
         } catch {}
       });
   }, [hydrateAuth]);
+
+  useEffect(() => {
+    if (!isAuthenticated || Platform.OS === 'web') return;
+
+    void registerDriverPushToken().catch((error) => {
+      console.warn('Driver push registration failed; foreground polling remains available:', error);
+    });
+
+    const tokenSubscription = Notifications.addPushTokenListener(() => {
+      void registerDriverPushToken().catch((error) => {
+        console.warn('Could not refresh driver push token:', error);
+      });
+    });
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(() => {
+      router.replace('/(tabs)');
+    });
+
+    return () => {
+      tokenSubscription.remove();
+      responseSubscription.remove();
+    };
+  }, [isAuthenticated]);
 
   return (
     <ThemeProvider value={triveniDriverTheme}>

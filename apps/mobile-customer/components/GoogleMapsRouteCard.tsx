@@ -198,6 +198,7 @@ export function GoogleMapsRouteCard({
         ) : (
           <WebView
             source={{ html: routeMapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
+            applicationNameForUserAgent="TriveniTransports/1.0.0"
             style={{
               width: '100%',
               height: 160,

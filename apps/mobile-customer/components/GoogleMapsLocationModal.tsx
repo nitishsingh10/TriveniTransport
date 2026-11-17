@@ -480,6 +480,7 @@ export function GoogleMapsLocationModal({
             <WebView
               ref={webViewRef}
               source={{ html: mapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
+              applicationNameForUserAgent="TriveniTransports/1.0.0"
               onMessage={handleNativeMessage}
               style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#091524' }}
               javaScriptEnabled={true}

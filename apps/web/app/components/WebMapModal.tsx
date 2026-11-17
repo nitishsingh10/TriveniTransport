@@ -92,6 +92,8 @@ export default function WebMapModal({
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const reverseGeocodeTimer = useRef<NodeJS.Timeout | null>(null);
   const bottomSheetRef = useRef<HTMLDivElement>(null);
+  const mapIsReadyRef = useRef(false);
+  const pendingMapLocationRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const initialMapCoords = useRef({ lat: 18.5679, lng: 73.9143 });
 
@@ -111,6 +113,7 @@ export default function WebMapModal({
   // Sync state when modal opens
   useEffect(() => {
     if (isOpen) {
+      mapIsReadyRef.current = false;
       setActiveType(initialType);
       setQuery(initialAddress);
       setSelectedAddress(initialAddress);
@@ -166,7 +169,17 @@ export default function WebMapModal({
     if (!isOpen) return;
 
     const onMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'PIN_COORDS') {
+      const iframe = document.getElementById('web-triveni-map-iframe') as HTMLIFrameElement | null;
+      if (!iframe?.contentWindow || event.source !== iframe.contentWindow) return;
+
+      if (event.data?.type === 'MAP_READY') {
+        mapIsReadyRef.current = true;
+        const pendingLocation = pendingMapLocationRef.current;
+        if (pendingLocation) {
+          iframe.contentWindow.postMessage({ type: 'FLY_TO', ...pendingLocation }, '*');
+          pendingMapLocationRef.current = null;
+        }
+      } else if (event.data && event.data.type === 'PIN_COORDS') {
         const { lat, lng } = event.data;
         setSelectedCoords({ lat, lng });
         handleCoordsChanged(lat, lng);
@@ -180,10 +193,12 @@ export default function WebMapModal({
   }, [isOpen, handleCoordsChanged]);
 
   const panMapTo = (lat: number, lng: number) => {
-    const iframe = document.getElementById('web-triveni-map-iframe') as HTMLIFrameElement;
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({ type: 'FLY_TO', lat, lng }, '*');
+    const iframe = document.getElementById('web-triveni-map-iframe') as HTMLIFrameElement | null;
+    if (!mapIsReadyRef.current || !iframe?.contentWindow) {
+      pendingMapLocationRef.current = { lat, lng };
+      return;
     }
+    iframe.contentWindow.postMessage({ type: 'FLY_TO', lat, lng }, '*');
   };
 
   const handleQueryChange = (val: string) => {

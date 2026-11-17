@@ -51,20 +51,24 @@ export default function DeliveryConfirmScreen() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    completeJob(id as string, {
-      photoUri: 'mock-pod-photo-uri',
-      signedBy: customerName,
-      customerSignature: 'Digital Verification Verified',
-      completedAt: 'Today, Just Now',
-    });
-
+    try {
+      await completeJob(id as string, {
+        signedBy: customerName,
+        completedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      setLoading(false);
+      Alert.alert(
+        'Delivery not recorded',
+        error instanceof Error ? error.message : 'Check your connection and try again.'
+      );
+      return;
+    }
     setLoading(false);
 
     Alert.alert(
-      'Move Completed Successfully! 🎉',
-      `Trip payout of ₹${activeJob?.payoutAmount ?? 3200} has been credited to your Triveni driver wallet.`,
+      'Move Marked Complete',
+      `The completion status was saved. Estimated payout ₹${activeJob?.payoutAmount ?? 0} will be reconciled by operations.`,
       [
         {
           text: 'View Earnings',

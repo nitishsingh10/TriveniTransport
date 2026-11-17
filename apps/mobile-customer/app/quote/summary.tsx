@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -134,11 +135,14 @@ export default function SummaryScreen() {
       if (res?.booking?.id) {
         router.push(`/booking/${res.booking.id}/pay`);
       } else {
-        router.push('/(tabs)/bookings');
+        throw new Error('The server did not return a booking confirmation.');
       }
     } catch (e: any) {
-      console.log('Backend createBooking error or fallback:', e.message);
-      router.push('/(tabs)/bookings');
+      console.warn('Backend createBooking failed:', e?.message || e);
+      Alert.alert(
+        'Booking not placed',
+        e?.message || 'We could not place your booking. Please check your connection and try again.'
+      );
     } finally {
       setLoading(false);
     }

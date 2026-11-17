@@ -49,6 +49,13 @@
           "resizeMode": "contain"
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "driver-orders",
+          "color": "#F5A000"
+        }
+      ],
       "expo-font",
       "expo-status-bar"
     ],

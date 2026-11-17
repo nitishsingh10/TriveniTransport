@@ -317,6 +317,7 @@ export default function BookingTrackScreen() {
         ) : (
           <WebView
             source={{ html: liveMapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
+            applicationNameForUserAgent="TriveniTransports/1.0.0"
             style={{
               width: '100%',
               height: 200,

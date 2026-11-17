@@ -19,6 +19,14 @@ export const NotificationTemplates = {
       title: compile('New Job Assigned'),
       body: compile('You have a new trip on {{date}} for booking {{bookingId}}.'),
     },
+    job_available: {
+      title: compile('New Move Request'),
+      body: compile('A customer needs a move on {{date}} ({{scheduledSlot}}). Open the app to review and accept.'),
+    },
+    driver_assigned: {
+      title: compile('Your Driver Is Assigned'),
+      body: compile('{{driverName}} will handle your move on {{scheduledDate}}.'),
+    },
     revision_pending: {
       title: compile('Revision Action Required'),
       body: compile('Your vendor has requested an on-site revision. Please review in the app.'),
@@ -33,6 +41,8 @@ export const NotificationTemplates = {
   whatsapp: {
     booking_confirmed: compile('Hi {{name}}, your booking {{bookingId}} is confirmed! Our vendor will arrive on {{date}}.'),
     job_assigned: compile('Vendor Alert: New job {{bookingId}} scheduled for {{date}}. Pickup: {{pickupAddress}}.'),
+    job_available: compile('Triveni: New move request {{bookingId}} for {{date}} ({{scheduledSlot}}). Open the driver app to review.'),
+    driver_assigned: compile('Hi {{name}}, {{driverName}} is assigned to booking {{bookingId}} on {{scheduledDate}}. Contact: {{driverPhone}}.'),
     revision_pending: compile('Hi {{name}}, the vendor has requested an extra charge for booking {{bookingId}}. Review it immediately.'),
   },
 
@@ -40,6 +50,8 @@ export const NotificationTemplates = {
   sms: {
     booking_confirmed: compile('Triveni: Booking {{bookingId}} confirmed for {{date}}.'),
     job_assigned: compile('Triveni Vendor: New job {{bookingId}} assigned for {{date}}.'),
+    job_available: compile('Triveni: New move request {{bookingId}} on {{date}} ({{scheduledSlot}}). Open the driver app to review.'),
+    driver_assigned: compile('Triveni: {{driverName}} is assigned to your move {{bookingId}} on {{scheduledDate}}.'),
     revision_pending: compile('Triveni: Revision requested for {{bookingId}}. Check app to approve/decline.'),
   }
 };

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -25,7 +26,7 @@ import {
   FileCheck2,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
-import { useDriverStore } from '@/store/driverStore';
+import { useDriverStore, type DriverJob } from '@/store/driverStore';
 import type { BookingStatus } from '@triveni/shared-types';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
@@ -69,9 +70,6 @@ function resolveAddress(addr: string, fallback: { lat: number; lng: number }) {
 
 export default function ActiveMoveConsole() {
   const activeJob = useDriverStore((s) => s.activeJob);
-  const gps = useDriverStore((s) => s.gps);
-  const updateJobStatus = useDriverStore((s) => s.updateJobStatus);
-  const toggleGpsBroadcast = useDriverStore((s) => s.toggleGpsBroadcast);
 
   if (!activeJob) {
     return (
@@ -94,19 +92,38 @@ export default function ActiveMoveConsole() {
     );
   }
 
-  const handleNextStatus = () => {
-    if (activeJob.status === 'ASSIGNED') {
-      updateJobStatus(activeJob.id, 'EN_ROUTE');
-      Alert.alert('Status Updated', 'Vehicle is now EN ROUTE to pickup location.');
-    } else if (activeJob.status === 'EN_ROUTE') {
-      updateJobStatus(activeJob.id, 'ARRIVED');
-      Alert.alert('Status Updated', 'Arrived at pickup point. Begin goods inspection and inventory loading.');
-    } else if (activeJob.status === 'ARRIVED') {
-      updateJobStatus(activeJob.id, 'IN_PROGRESS');
-      Alert.alert('Status Updated', 'Goods loaded securely. Move is now IN PROGRESS towards destination.');
-    } else if (activeJob.status === 'IN_PROGRESS') {
-      // Proceed to delivery confirmation
+  return <ActiveMoveScreen activeJob={activeJob} />;
+}
+
+function ActiveMoveScreen({ activeJob }: { activeJob: DriverJob }) {
+  const gps = useDriverStore((s) => s.gps);
+  const updateJobStatus = useDriverStore((s) => s.updateJobStatus);
+  const toggleGpsBroadcast = useDriverStore((s) => s.toggleGpsBroadcast);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  const handleNextStatus = async () => {
+    if (statusUpdating) return;
+    if (activeJob.status === 'IN_PROGRESS') {
       router.push({ pathname: '/delivery/[id]/confirm', params: { id: activeJob.id } });
+      return;
+    }
+
+    const nextStatus: Partial<Record<BookingStatus, { status: BookingStatus; message: string }>> = {
+      ASSIGNED: { status: 'EN_ROUTE', message: 'Vehicle is now en route to the pickup location.' },
+      EN_ROUTE: { status: 'ARRIVED', message: 'Arrival at pickup was recorded. Begin goods inspection and loading.' },
+      ARRIVED: { status: 'IN_PROGRESS', message: 'Transit has started.' },
+    };
+    const transition = nextStatus[activeJob.status];
+    if (!transition) return;
+
+    setStatusUpdating(true);
+    try {
+      await updateJobStatus(activeJob.id, transition.status);
+      Alert.alert('Status Updated', transition.message);
+    } catch (error) {
+      Alert.alert('Status not updated', error instanceof Error ? error.message : 'Check your connection and try again.');
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -304,27 +321,33 @@ export default function ActiveMoveConsole() {
         <TouchableOpacity
           style={styles.primaryStatusBtn}
           onPress={handleNextStatus}
+          disabled={statusUpdating}
           activeOpacity={0.88}
         >
-          {activeJob.status === 'ASSIGNED' && (
+          {statusUpdating ? (
+            <View style={styles.btnContent}>
+              <ActivityIndicator size="small" color={Colors.white} />
+              <Text style={styles.primaryStatusBtnText}>Saving status…</Text>
+            </View>
+          ) : !statusUpdating && activeJob.status === 'ASSIGNED' && (
             <View style={styles.btnContent}>
               <Truck size={17} color={Colors.white} />
               <Text style={styles.primaryStatusBtnText}>Start Trip · Mark En Route</Text>
             </View>
           )}
-          {activeJob.status === 'EN_ROUTE' && (
+          {!statusUpdating && activeJob.status === 'EN_ROUTE' && (
             <View style={styles.btnContent}>
               <MapPin size={17} color={Colors.white} />
               <Text style={styles.primaryStatusBtnText}>Arrived at Pickup Location</Text>
             </View>
           )}
-          {activeJob.status === 'ARRIVED' && (
+          {!statusUpdating && activeJob.status === 'ARRIVED' && (
             <View style={styles.btnContent}>
               <CheckCircle2 size={17} color={Colors.white} />
               <Text style={styles.primaryStatusBtnText}>Goods Loaded · Start Transit</Text>
             </View>
           )}
-          {activeJob.status === 'IN_PROGRESS' && (
+          {!statusUpdating && activeJob.status === 'IN_PROGRESS' && (
             <View style={styles.btnContent}>
               <FileCheck2 size={17} color={Colors.white} />
               <Text style={styles.primaryStatusBtnText}>Complete Move & Sign POD</Text>
@@ -395,6 +418,7 @@ export default function ActiveMoveConsole() {
             <WebViewComponent
               originWhitelist={['*']}
               source={{ html: liveMapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
+              applicationNameForUserAgent="TriveniTransports/1.0.0"
               style={{ width: '100%', height: 180, backgroundColor: '#091524' }}
               mixedContentMode="always"
               allowFileAccess={true}

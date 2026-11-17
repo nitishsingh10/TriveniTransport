@@ -9,6 +9,43 @@ import { BookingStatus } from '@triveni/shared-types';
 import { EmailService } from '../../services/resend';
 
 export class BookingService {
+  private static async notifyAvailableDrivers(booking: {
+    id: string;
+    scheduledDate: Date;
+    scheduledSlot: string;
+  }) {
+    try {
+      const vendors = await prisma.vendor.findMany({
+        where: { status: 'active' },
+        select: { id: true },
+      });
+      if (vendors.length === 0) return;
+
+      const { enqueueNotification } = await import('../../jobs/queue');
+      const payload = {
+        bookingId: booking.id,
+        date: booking.scheduledDate.toISOString().split('T')[0],
+        scheduledSlot: booking.scheduledSlot,
+      };
+      const results = await Promise.allSettled(
+        vendors.map((vendor) =>
+          enqueueNotification('job_available', {
+            userId: vendor.id,
+            userRole: 'vendor',
+            bookingId: booking.id,
+            payload,
+          })
+        )
+      );
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      if (failed > 0) console.warn(`Could not queue ${failed} driver job notifications for ${booking.id}`);
+    } catch (err) {
+      // The driver's job feed also polls the confirmed-booking endpoint, so a
+      // notification queue outage must not make an otherwise valid booking fail.
+      console.warn('Could not dispatch new booking notifications to drivers:', err);
+    }
+  }
+
   /**
    * Generates a new quote and creates a booking.
    * Defaults to Cash on Delivery (COD) / Pay on Move Day so customers can book without online payment gates.
@@ -32,78 +69,79 @@ export class BookingService {
     const isCod = paymentMethod === 'cash_on_delivery';
     const initialStatus: BookingStatus = isCod ? 'CONFIRMED' : 'REQUESTED';
 
-    const booking = await prisma.booking.create({
-      data: {
-        customerId,
-        status: initialStatus,
-        pickupAddress: input.pickupAddress,
-        dropAddress: input.dropAddress,
-        pickupZoneId: pickupZone.id,
-        dropZoneId: dropZone.id,
-        distanceKm,
-        configurationType: input.configurationType,
-        floorNumber: input.floorNumber,
-        liftAvailable: input.liftAvailable,
-        scheduledDate: new Date(input.scheduledDate),
-        scheduledSlot: input.scheduledSlot,
-        baseQuoteAmount: quote.quoteAmount,
-        finalAmount: quote.quoteAmount,
-        pricingSnapshot: {
-          ...(quote.snapshot as any),
-          paymentMethod,
+    // Persist the booking and its required child records atomically. A failed
+    // item/history/payment insert must not leave a confirmed but partial order.
+    const booking = await prisma.$transaction(async (tx) => {
+      const created = await tx.booking.create({
+        data: {
+          customerId,
+          status: initialStatus,
+          pickupAddress: input.pickupAddress,
+          dropAddress: input.dropAddress,
+          pickupZoneId: pickupZone.id,
+          dropZoneId: dropZone.id,
           distanceKm,
-          durationMins: route.durationMins,
+          configurationType: input.configurationType,
+          floorNumber: input.floorNumber,
+          liftAvailable: input.liftAvailable,
+          scheduledDate: new Date(input.scheduledDate),
+          scheduledSlot: input.scheduledSlot,
+          baseQuoteAmount: quote.quoteAmount,
+          finalAmount: quote.quoteAmount,
+          pricingSnapshot: {
+            ...(quote.snapshot as any),
+            paymentMethod,
+            distanceKm,
+            durationMins: route.durationMins,
+          },
         },
-      },
-    });
+      });
 
-    // 4. Persist individual checklist items into booking_items
-    if (input.items && input.items.length > 0) {
       const snapshotItems = (quote.snapshot?.items as any[]) || [];
-      await Promise.all(
-        input.items.map((item, idx) => {
-          const snap = snapshotItems[idx] || {};
-          const lineTotal = snap.appliedRate || 0;
-          const unitPriceApplied = snap.baseRate || 0;
-          return prisma.bookingItem.create({
-            data: {
-              bookingId: booking.id,
+      if (input.items?.length) {
+        await tx.bookingItem.createMany({
+          data: input.items.map((item, idx) => {
+            const snap = snapshotItems[idx] || {};
+            return {
+              bookingId: created.id,
               itemId: item.itemId || null,
               customName: item.customName || item.itemId || `Item ${idx + 1}`,
               quantity: item.quantity,
               packingTier: item.packingTier,
-              unitPriceApplied,
-              lineTotal,
-            },
-          });
-        })
-      );
-    }
+              unitPriceApplied: snap.baseRate || 0,
+              lineTotal: snap.appliedRate || 0,
+            };
+          }),
+        });
+      }
 
-    // 5. Write initial history entry
-    await prisma.bookingStatusHistory.create({
-      data: {
-        bookingId: booking.id,
-        toState: initialStatus,
-        actorId: customerId,
-        actorRole: 'customer',
-      },
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: created.id,
+          toState: initialStatus,
+          actorId: customerId,
+          actorRole: 'customer',
+        },
+      });
+
+      if (isCod) {
+        await tx.payment.create({
+          data: {
+            bookingId: created.id,
+            amount: created.finalAmount,
+            status: 'created',
+            type: 'final',
+            razorpayOrderId: `cod_${created.id}`,
+            razorpayPaymentId: null,
+            idempotencyKey: `cod_${created.id}`,
+          },
+        });
+      }
+      return created;
     });
 
     // 6. Handle COD post-creation flow: Payment record, auto-assign, notifications
     if (isCod) {
-      await prisma.payment.create({
-        data: {
-          bookingId: booking.id,
-          amount: booking.finalAmount,
-          status: 'created',
-          type: 'final',
-          razorpayOrderId: `cod_${booking.id}`,
-          razorpayPaymentId: null,
-          idempotencyKey: `cod_${booking.id}`,
-        },
-      });
-
       // Booking is now CONFIRMED and broadcast to available driver partners.
       // Driver details will be linked once an active driver accepts the duty.
 
@@ -138,6 +176,8 @@ export class BookingService {
       } catch (qErr) {
         console.warn('Notification queue error:', qErr);
       }
+
+      await this.notifyAvailableDrivers(booking);
     }
 
     return { booking, quote };
@@ -280,6 +320,8 @@ export class BookingService {
     } catch (qErr) {
       console.warn('Could not enqueue booking_confirmed notification:', qErr);
     }
+
+    await this.notifyAvailableDrivers(booking);
 
     return updated;
   }

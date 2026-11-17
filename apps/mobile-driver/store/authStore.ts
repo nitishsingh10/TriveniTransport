@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AuthUser } from '@triveni/shared-types';
-import { setSessionExpiredHandler, tokenStorage } from '@/lib/api';
+import { driverVendorApi, setSessionExpiredHandler, tokenStorage } from '@/lib/api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -9,7 +9,7 @@ interface AuthState {
   isHydrated: boolean;
   isOnline: boolean;
   setAuth: (user: AuthUser, accessToken: string, refreshToken?: string) => Promise<void>;
-  clearAuth: () => Promise<void>;
+  clearAuth: (clearRemotePushToken?: boolean) => Promise<void>;
   hydrateAuth: () => Promise<boolean>;
   setHydrated: (hydrated?: boolean) => void;
   toggleOnline: (status?: boolean) => void;
@@ -34,7 +34,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, accessToken, isAuthenticated: true, isHydrated: true });
   },
 
-  clearAuth: async () => {
+  clearAuth: async (clearRemotePushToken = true) => {
+    if (clearRemotePushToken) {
+      await driverVendorApi.updatePushToken(null).catch(() => {});
+    }
     try {
       await tokenStorage.clear();
     } catch (e) {
@@ -81,5 +84,5 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 setSessionExpiredHandler(() => {
-  void useAuthStore.getState().clearAuth();
+  void useAuthStore.getState().clearAuth(false);
 });

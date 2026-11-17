@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import {
+  AppState,
   View,
   Text,
   ScrollView,
@@ -8,8 +9,10 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import {
   Truck,
   MapPin,
@@ -31,35 +34,61 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 
 export default function DutiesScreen() {
   const isOnline = useAuthStore((s) => s.isOnline);
+  const vendorId = useAuthStore((s) => s.user?.id);
   const activeJob = useDriverStore((s) => s.activeJob);
   const pendingJobs = useDriverStore((s) => s.pendingJobs);
   const completedJobs = useDriverStore((s) => s.completedJobs);
   const isLoading = useDriverStore((s) => s.isLoading);
+  const isRefreshing = useDriverStore((s) => s.isRefreshing);
+  const loadError = useDriverStore((s) => s.loadError);
+  const acceptingJobIds = useDriverStore((s) => s.acceptingJobIds);
   const fetchJobsFromBackend = useDriverStore((s) => s.fetchJobsFromBackend);
   const acceptJob = useDriverStore((s) => s.acceptJob);
   const declineJob = useDriverStore((s) => s.declineJob);
   const vehicle = useOnboardingStore((s) => s.vehicle);
   const loadSavedOnboarding = useOnboardingStore((s) => s.loadSavedOnboarding);
 
-  // Fetch real jobs from backend on mount
+  // Keep the open job feed current while the driver is online. Push wakes the
+  // app when backgrounded; polling is the foreground/reconnect fallback.
   useEffect(() => {
-    fetchJobsFromBackend();
     loadSavedOnboarding();
-  }, []);
+    const refreshIfActive = () => {
+      if (AppState.currentState === 'active' && useAuthStore.getState().isOnline && vendorId) {
+        void fetchJobsFromBackend(false, vendorId);
+      }
+    };
+    refreshIfActive();
+    const interval = setInterval(refreshIfActive, 15_000);
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshIfActive();
+    });
+    const notification = Notifications.addNotificationReceivedListener(refreshIfActive);
+
+    return () => {
+      clearInterval(interval);
+      appState.remove();
+      notification.remove();
+    };
+  }, [fetchJobsFromBackend, isOnline, loadSavedOnboarding, vendorId]);
 
   // Computed stats from real data
   const todaysMoves = completedJobs.length;
   const todaysPayout = completedJobs.reduce((sum, j) => sum + j.payoutAmount, 0) + (activeJob?.payoutAmount || 0);
 
-  const handleAccept = (job: DriverJob) => {
-    acceptJob(job.id);
-    Alert.alert('Job Accepted!', `Assignment ${job.trackingCode} is now your active duty.`);
+  const handleAccept = async (job: DriverJob) => {
+    try {
+      await acceptJob(job.id);
+      Alert.alert('Job Accepted', `Assignment ${job.trackingCode} is now your active duty.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Please refresh and try again.';
+      Alert.alert('Could not accept this job', message);
+    }
   };
 
   const handleDecline = (job: DriverJob) => {
-    Alert.alert('Decline Assignment', `Are you sure you want to decline ${job.trackingCode}?`, [
+    Alert.alert('Hide Job Request', `Hide ${job.trackingCode} from your list? Other drivers can still accept it.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Decline', style: 'destructive', onPress: () => declineJob(job.id) },
+      { text: 'Hide', style: 'destructive', onPress: () => declineJob(job.id) },
     ]);
   };
 
@@ -68,6 +97,13 @@ export default function DutiesScreen() {
       style={styles.scroll}
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={() => void fetchJobsFromBackend(true, vendorId)}
+          tintColor={Colors.navy}
+        />
+      }
     >
       {/* Offline Alert Banner */}
       {!isOnline && (
@@ -84,6 +120,15 @@ export default function DutiesScreen() {
         <View style={styles.loadingRow}>
           <ActivityIndicator size="small" color={Colors.navy} />
           <Text style={styles.loadingText}>Fetching assignments...</Text>
+        </View>
+      )}
+
+      {loadError && (
+        <View style={styles.loadErrorCard}>
+          <Text style={styles.loadErrorText}>Could not sync job requests. Check your connection and pull down to retry.</Text>
+          <TouchableOpacity onPress={() => void fetchJobsFromBackend(true, vendorId)} activeOpacity={0.8}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -257,7 +302,9 @@ export default function DutiesScreen() {
 
       {pendingJobs.length === 0 ? (
         <View style={styles.emptyPendingCard}>
-          <Text style={styles.emptyPendingText}>No pending requests right now. System is dispatching...</Text>
+          <Text style={styles.emptyPendingText}>
+            {loadError ? 'Job requests are unavailable until the connection recovers.' : 'No pending requests right now. New requests refresh automatically while you are online.'}
+          </Text>
         </View>
       ) : (
         pendingJobs.map((job) => (
@@ -303,16 +350,19 @@ export default function DutiesScreen() {
                 activeOpacity={0.8}
               >
                 <XCircle size={15} color={Colors.error} />
-                <Text style={styles.declineBtnText}>Decline</Text>
+                <Text style={styles.declineBtnText}>Hide</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.acceptBtn}
-                onPress={() => handleAccept(job)}
+                style={[styles.acceptBtn, (!isOnline || Boolean(activeJob) || acceptingJobIds.includes(job.id)) && styles.acceptBtnDisabled]}
+                onPress={() => void handleAccept(job)}
+                disabled={!isOnline || Boolean(activeJob) || acceptingJobIds.includes(job.id)}
                 activeOpacity={0.88}
               >
-                <CheckCircle2 size={15} color={Colors.white} />
-                <Text style={styles.acceptBtnText}>Accept Assignment</Text>
+                {acceptingJobIds.includes(job.id)
+                  ? <ActivityIndicator size="small" color={Colors.white} />
+                  : <CheckCircle2 size={15} color={Colors.white} />}
+                <Text style={styles.acceptBtnText}>{acceptingJobIds.includes(job.id) ? 'Accepting…' : activeJob ? 'Finish current move first' : 'Accept Assignment'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -351,6 +401,18 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
   },
+  loadErrorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.errorLight,
+    borderWidth: 1,
+    borderColor: Colors.errorBorder,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+  },
+  loadErrorText: { flex: 1, color: Colors.error, fontSize: FontSize.xs, lineHeight: 18 },
+  retryText: { color: Colors.navy, fontWeight: FontWeight.bold, fontSize: FontSize.sm },
   offlineBannerText: {
     flex: 1,
     color: Colors.navyDark,
@@ -849,6 +911,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.navy,
     ...Shadow.sm,
   },
+  acceptBtnDisabled: { opacity: 0.55 },
   acceptBtnText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
