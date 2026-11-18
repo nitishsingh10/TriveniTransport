@@ -87,6 +87,7 @@ export default function WebMapModal({
   const bottomSheetRef = useRef<HTMLDivElement>(null);
   const mapIsReadyRef = useRef(false);
   const pendingMapLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const pendingPlaceSearchRef = useRef<{ query: string; bias: LocationBias | null } | null>(null);
 
   const initialMapCoords = useRef({ lat: 18.5679, lng: 73.9143 });
 
@@ -177,12 +178,19 @@ export default function WebMapModal({
           iframe.contentWindow.postMessage({ type: 'FLY_TO', ...pendingLocation }, '*');
           pendingMapLocationRef.current = null;
         }
+        if (pendingPlaceSearchRef.current) {
+          iframe.contentWindow.postMessage({ type: 'SEARCH_PLACES', ...pendingPlaceSearchRef.current }, '*');
+          pendingPlaceSearchRef.current = null;
+        }
       } else if (event.data && event.data.type === 'PIN_COORDS') {
         const { lat, lng } = event.data;
         setSelectedCoords({ lat, lng });
         handleCoordsChanged(lat, lng);
       } else if (event.data && event.data.type === 'MAP_DRAGGING') {
         setIsMapMoving(true);
+      } else if (event.data?.type === 'PLACES_RESULTS' && Array.isArray(event.data.suggestions)) {
+        setSuggestions(event.data.suggestions);
+        setLoading(false);
       }
     };
 
@@ -219,10 +227,21 @@ export default function WebMapModal({
         const res = await fetch(`/api/v1/maps/places?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
-          setSuggestions(data);
+          if (Array.isArray(data) && data.length) {
+            setSuggestions(data);
+            setLoading(false);
+            return;
+          }
         }
+        // Fall back to the Places library loaded in the active map iframe so
+        // autocomplete still works when the backend Places endpoint is down.
+        const iframe = document.getElementById('web-triveni-map-iframe') as HTMLIFrameElement | null;
+        if (!mapIsReadyRef.current) pendingPlaceSearchRef.current = { query: val.trim(), bias };
+        else iframe?.contentWindow?.postMessage({ type: 'SEARCH_PLACES', query: val.trim(), bias }, '*');
       } catch {
-        setSuggestions([]);
+        const iframe = document.getElementById('web-triveni-map-iframe') as HTMLIFrameElement | null;
+        if (!mapIsReadyRef.current) pendingPlaceSearchRef.current = { query: val.trim(), bias: locationBias };
+        else iframe?.contentWindow?.postMessage({ type: 'SEARCH_PLACES', query: val.trim(), bias: locationBias }, '*');
       } finally {
         setLoading(false);
       }
@@ -287,7 +306,7 @@ export default function WebMapModal({
     const startLat = initialMapCoords.current.lat || 18.5679;
     const startLng = initialMapCoords.current.lng || 73.9143;
     const mapsScript = GMAPS_KEY
-      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&loading=async&callback=initMap"></script>`
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GMAPS_KEY)}&libraries=places&loading=async&callback=initMap"></script>`
       : '';
     return `
     <!DOCTYPE html>
@@ -375,8 +394,30 @@ export default function WebMapModal({
                   window.map.panTo({ lat: ev.data.lat, lng: ev.data.lng });
                   window.map.setZoom(16);
                 }
+              } else if (ev.data && ev.data.type === 'SEARCH_PLACES') {
+                window.searchPlaces(ev.data.query, ev.data.bias);
               }
             });
+
+            var placeSearchRequestId = 0;
+            window.searchPlaces = async function(query, bias) {
+              if (!query || !google.maps) return;
+              var requestId = ++placeSearchRequestId;
+              try {
+                var places = await google.maps.importLibrary('places');
+                var request = { input: query, includedRegionCodes: ['in'] };
+                if (bias) request.locationBias = { center: { lat: bias.lat, lng: bias.lng }, radius: 50000 };
+                var response = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+                if (requestId !== placeSearchRequestId) return;
+                var results = (response.suggestions || []).map(function(item) { return item.placePrediction; }).filter(Boolean).slice(0, 6).map(function(item) {
+                  var description = item.text.toString();
+                  return { placeId: item.placeId, description: description, mainText: item.mainText ? item.mainText.toString() : description, secondaryText: item.secondaryText ? item.secondaryText.toString() : '', city: '' };
+                });
+                postToParent({ type: 'PLACES_RESULTS', suggestions: results });
+              } catch (error) {
+                if (requestId === placeSearchRequestId) postToParent({ type: 'PLACES_RESULTS', suggestions: [] });
+              }
+            };
 
             postToParent({ type: 'MAP_READY' });
           }

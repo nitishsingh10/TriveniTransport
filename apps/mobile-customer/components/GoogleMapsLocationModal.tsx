@@ -75,6 +75,7 @@ export function GoogleMapsLocationModal({
   const initialMapCoords = useRef({ lat: 18.5679, lng: 73.9143 });
   const isMapReadyRef = useRef(false);
   const pendingFlyTo = useRef<{ lat: number; lng: number } | null>(null);
+  const pendingPlaceSearch = useRef<{ query: string; bias?: { lat: number; lng: number } } | null>(null);
 
   // Sync state on open
   useEffect(() => {
@@ -156,12 +157,24 @@ export function GoogleMapsLocationModal({
         panMapTo(pendingFlyTo.current.lat, pendingFlyTo.current.lng);
         pendingFlyTo.current = null;
       }
+      if (pendingPlaceSearch.current) {
+        const search = pendingPlaceSearch.current;
+        pendingPlaceSearch.current = null;
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          (document.getElementById('triveni-map-iframe') as HTMLIFrameElement | null)?.contentWindow?.postMessage({ type: 'SEARCH_PLACES', ...search }, '*');
+        } else {
+          webViewRef.current?.injectJavaScript(`window.searchPlaces && window.searchPlaces(${JSON.stringify(search.query)}, ${JSON.stringify(search.bias || null)}); true;`);
+        }
+      }
     } else if (data.type === 'PIN_COORDS') {
       const { lat, lng } = data;
       setSelectedCoords({ lat, lng });
       handleCoordsChanged(lat, lng);
     } else if (data.type === 'MAP_DRAGGING') {
       setIsMapMoving(true);
+    } else if (data.type === 'PLACES_RESULTS' && Array.isArray(data.suggestions)) {
+      setSuggestions(data.suggestions);
+      setLoading(false);
     }
   }, [handleCoordsChanged]);
 
@@ -226,9 +239,30 @@ export function GoogleMapsLocationModal({
     debounceTimer.current = setTimeout(async () => {
       try {
         const bias = locationBias || await loadLocationBias(true);
-        setSuggestions(await mapsApi.searchPlaces(text, bias));
+        const results = await mapsApi.searchPlaces(text, bias);
+        if (results.length) {
+          setSuggestions(results);
+          setLoading(false);
+        } else {
+          // The embedded map's Places library is a direct fallback when the API
+          // server-side autocomplete endpoint is unavailable.
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const iframe = document.getElementById('triveni-map-iframe') as HTMLIFrameElement;
+            if (!isMapReadyRef.current) pendingPlaceSearch.current = { query: text.trim(), bias };
+            else iframe?.contentWindow?.postMessage({ type: 'SEARCH_PLACES', query: text.trim(), bias }, '*');
+          } else {
+            if (!isMapReadyRef.current) pendingPlaceSearch.current = { query: text.trim(), bias };
+            else webViewRef.current?.injectJavaScript(`window.searchPlaces && window.searchPlaces(${JSON.stringify(text.trim())}, ${JSON.stringify(bias || null)}); true;`);
+          }
+        }
       } catch {
-        setSuggestions([]);
+        const bias = locationBias;
+        if (!isMapReadyRef.current) pendingPlaceSearch.current = { query: text.trim(), bias };
+        else if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          (document.getElementById('triveni-map-iframe') as HTMLIFrameElement | null)?.contentWindow?.postMessage({ type: 'SEARCH_PLACES', query: text.trim(), bias }, '*');
+        } else {
+          webViewRef.current?.injectJavaScript(`window.searchPlaces && window.searchPlaces(${JSON.stringify(text.trim())}, ${JSON.stringify(bias || null)}); true;`);
+        }
       } finally {
         setLoading(false);
       }
@@ -290,7 +324,7 @@ export function GoogleMapsLocationModal({
     const startLat = initialMapCoords.current.lat || 18.5679;
     const startLng = initialMapCoords.current.lng || 73.9143;
     const mapsScript = GOOGLE_MAPS_API_KEY
-      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&loading=async&callback=initMap"></script>`
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=places&loading=async&callback=initMap"></script>`
       : '';
     return `<!DOCTYPE html>
 <html>
@@ -397,11 +431,33 @@ export function GoogleMapsLocationModal({
           }
         };
 
+        var placeSearchRequestId = 0;
+        window.searchPlaces = async function(query, bias) {
+          if (!query || !google.maps) return;
+          var requestId = ++placeSearchRequestId;
+          try {
+            var places = await google.maps.importLibrary('places');
+            var request = { input: query, includedRegionCodes: ['in'] };
+            if (bias) request.locationBias = { center: { lat: bias.lat, lng: bias.lng }, radius: 50000 };
+            var response = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+            if (requestId !== placeSearchRequestId) return;
+            var results = (response.suggestions || []).map(function(item) { return item.placePrediction; }).filter(Boolean).slice(0, 6).map(function(item) {
+              var description = item.text.toString();
+              return { placeId: item.placeId, description: description, mainText: item.mainText ? item.mainText.toString() : description, secondaryText: item.secondaryText ? item.secondaryText.toString() : '', city: '' };
+            });
+            postToApp({ type: 'PLACES_RESULTS', suggestions: results });
+          } catch (error) {
+            if (requestId === placeSearchRequestId) postToApp({ type: 'PLACES_RESULTS', suggestions: [] });
+          }
+        };
+
         postToApp({ type: 'MAP_READY' });
 
         window.addEventListener('message', function(ev) {
           if (ev.data && ev.data.type === 'FLY_TO') {
             window.flyToSpot(ev.data.lat, ev.data.lng);
+          } else if (ev.data && ev.data.type === 'SEARCH_PLACES') {
+            window.searchPlaces(ev.data.query, ev.data.bias);
           }
         });
       }
