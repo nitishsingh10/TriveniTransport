@@ -19,7 +19,11 @@ const ITEM_CATALOG = [
     { name: 'Center Table', cft: 8 },
     { name: 'TV Unit', cft: 15 },
     { name: 'Bookshelf', cft: 12 },
-    { name: 'Shoe Rack', cft: 6 },
+    { name: 'Shoe Rack (Small)', cft: 6 },
+    { name: 'Shoe Rack (Large)', cft: 12 },
+    { name: 'Mandir / Pooja Unit (Small)', cft: 12 },
+    { name: 'Mandir / Pooja Unit (Medium)', cft: 24 },
+    { name: 'Mandir / Pooja Unit (Large)', cft: 40 },
   ]},
   { category: 'Bedroom', items: [
     { name: 'Double Bed (with mattress)', cft: 40 },
@@ -27,29 +31,50 @@ const ITEM_CATALOG = [
     { name: 'Wardrobe (Large)', cft: 35 },
     { name: 'Wardrobe (Small)', cft: 20 },
     { name: 'Dressing Table', cft: 12 },
-    { name: 'Side Table', cft: 4 },
+    { name: 'Side Table (Small)', cft: 4 },
+    { name: 'Side Table (Large)', cft: 8 },
+    { name: 'Wardrobe (3-door)', cft: 45 },
+    { name: 'Mattress (King)', cft: 18 },
+    { name: 'Mattress (Queen)', cft: 15 },
+    { name: 'Mattress (Single)', cft: 10 },
   ]},
   { category: 'Kitchen', items: [
-    { name: 'Refrigerator', cft: 20 },
-    { name: 'Washing Machine', cft: 15 },
+    { name: 'Refrigerator (Single Door)', cft: 20 },
+    { name: 'Refrigerator (Double Door)', cft: 30 },
+    { name: 'Washing Machine (Front Load)', cft: 20 },
+    { name: 'Washing Machine (Top Load)', cft: 18 },
     { name: 'Microwave Oven', cft: 3 },
     { name: 'Kitchen Boxes (per box)', cft: 3 },
     { name: 'Gas Cylinder', cft: 4 },
     { name: 'Water Purifier', cft: 3 },
+    { name: 'Dishwasher', cft: 15 },
+    { name: 'Kitchen Cabinet / Island', cft: 45 },
   ]},
   { category: 'Others', items: [
     { name: 'Dining Table (4 Seater)', cft: 20 },
     { name: 'AC (Split)', cft: 10 },
     { name: 'AC (Window)', cft: 8 },
     { name: 'Bicycle', cft: 12 },
-    { name: 'Carton Box (Large)', cft: 5 },
+    { name: 'Office Carton Box (Large)', cft: 5 },
     { name: 'Carton Box (Small)', cft: 3 },
+    { name: 'Plant (Small, under 2 ft)', cft: 5 },
+    { name: 'Plant (Medium, 2–4 ft)', cft: 12 },
+    { name: 'Plant (Large, over 4 ft)', cft: 25 },
+    { name: 'Dining Table (6 Seater)', cft: 30 },
+    { name: 'LED TV (32–43 inch)', cft: 8 },
+    { name: 'LED TV (50+ inch)', cft: 15 },
   ]},
   { category: 'Office Furniture', items: [
     { name: 'Office Desk / Workstation', cft: 45 },
     { name: 'Office Chair', cft: 18 },
     { name: 'Filing Cabinet', cft: 25 },
-    { name: 'Conference Table', cft: 55 },
+    { name: 'Conference Table (Standard)', cft: 55 },
+    { name: 'Office Desk (Small)', cft: 25 },
+    { name: 'Office Desk (Large)', cft: 55 },
+    { name: 'Conference Table (Small)', cft: 35 },
+    { name: 'Conference Table (Large)', cft: 70 },
+    { name: 'Storage / Filing Cabinet (Small)', cft: 15 },
+    { name: 'Storage / Filing Cabinet (Large)', cft: 35 },
   ]},
   { category: 'Office IT & Electronics', items: [
     { name: 'Desktop Computer / Monitor', cft: 8 },
@@ -557,6 +582,42 @@ export default function QuotePage() {
                 />
               )}
 
+              <button className="btn btn-primary btn-lg" style={{ marginTop: 'var(--space-6)', width: '100%' }} onClick={() => setStep(2)} disabled={!pickup || !drop}>
+                Next: Select Items →
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: Inventory */}
+          {step === 2 && (
+            <div className={`card ${styles.stepCard} animate-in`}>
+              <h2 className={styles.stepTitle}>📦 What are you moving?</h2>
+              <p className={styles.stepSubtitle}>Select quantities below. All home and office items are available, with {configType === 'office' ? 'office' : 'home'} goods shown first.</p>
+
+              {[...ITEM_CATALOG].sort((a, b) => { const rank = (category: string) => { const value = category.toLowerCase(); const office = ['office', 'electronics', 'records', 'living room', 'bedroom', 'kitchen', 'others']; const home = ['living room', 'bedroom', 'kitchen', 'others', 'electronics', 'office', 'records']; const order = configType === 'office' ? office : home; const index = order.findIndex((name) => value.includes(name)); return index < 0 ? order.length : index; }; return rank(a.category) - rank(b.category); }).map(cat => (
+                <div key={cat.category} className={styles.catSection}>
+                  <h3 className={styles.catTitle}>{cat.category}</h3>
+                  <div className={styles.itemGrid}>
+                    {cat.items.map(item => (
+                      <div key={item.name} className={`${styles.itemCard} ${(selectedItems[item.name] || 0) > 0 ? styles.itemSelected : ''}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>{item.name}</span>
+                          <span className={styles.itemRate}>Select quantity</span>
+                        </div>
+                        <div className={styles.itemControls}>
+                          <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, -1)}>−</button>
+                          <span className={styles.qtyVal}>{selectedItems[item.name] || 0}</span>
+                          <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, 1)}>+</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--gray-200)' }}>
+                <h3 className={styles.catTitle}>Complete your addresses</h3>
+                <p className={styles.stepSubtitle}>Add entry details and access information after choosing your items.</p>
               <div className={styles.formGrid} style={{ marginTop: 'var(--space-4)' }}>
                 <div className="input-group">
                   <label>Pickup flat / house number *</label>
@@ -601,42 +662,11 @@ export default function QuotePage() {
                   </div>
                 </div>
               </div>
-              <button className="btn btn-primary btn-lg" style={{ marginTop: 'var(--space-6)', width: '100%' }} onClick={() => setStep(2)} disabled={!pickup || !drop || !pickupUnit.trim() || !pickupLandmark.trim() || !dropUnit.trim() || !dropLandmark.trim() || !alternatePhoneValid}>
-                Next: Select Items →
-              </button>
-            </div>
-          )}
-
-          {/* Step 2: Inventory */}
-          {step === 2 && (
-            <div className={`card ${styles.stepCard} animate-in`}>
-              <h2 className={styles.stepTitle}>📦 What are you moving?</h2>
-              <p className={styles.stepSubtitle}>Select items and quantities from the catalog below</p>
-
-              {ITEM_CATALOG.filter(cat => configType === 'office' ? cat.category.startsWith('Office') : !cat.category.startsWith('Office')).map(cat => (
-                <div key={cat.category} className={styles.catSection}>
-                  <h3 className={styles.catTitle}>{cat.category}</h3>
-                  <div className={styles.itemGrid}>
-                    {cat.items.map(item => (
-                      <div key={item.name} className={`${styles.itemCard} ${(selectedItems[item.name] || 0) > 0 ? styles.itemSelected : ''}`}>
-                        <div className={styles.itemInfo}>
-                          <span className={styles.itemName}>{item.name}</span>
-                          <span className={styles.itemRate}>Select quantity</span>
-                        </div>
-                        <div className={styles.itemControls}>
-                          <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, -1)}>−</button>
-                          <span className={styles.qtyVal}>{selectedItems[item.name] || 0}</span>
-                          <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, 1)}>+</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              </div>
 
               <div className={styles.stepActions}>
                 <button type="button" className="btn btn-outline" onClick={() => setStep(1)}>← Back</button>
-                <button type="button" className="btn btn-primary btn-lg" onClick={() => setStep(3)} disabled={totalItems === 0}>
+                <button type="button" className="btn btn-primary btn-lg" onClick={() => setStep(3)} disabled={totalItems === 0 || !pickupUnit.trim() || !pickupLandmark.trim() || !dropUnit.trim() || !dropLandmark.trim() || !alternatePhoneValid}>
                   Next: Schedule ({totalItems} items) →
                 </button>
               </div>

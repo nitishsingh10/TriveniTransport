@@ -225,8 +225,15 @@ export default function SummaryScreen() {
         </View>
         <View style={[styles.progressLine, styles.progressLineDone]} />
         <View style={styles.progressItem}>
+          <View style={[styles.progressCircle, styles.progressCircleDone]}>
+            <Check size={13} color={Colors.white} strokeWidth={3} />
+          </View>
+          <Text style={[styles.progressLabel, styles.progressLabelDone]}>Details</Text>
+        </View>
+        <View style={[styles.progressLine, styles.progressLineDone]} />
+        <View style={styles.progressItem}>
           <View style={[styles.progressCircle, styles.progressCircleActive]}>
-            <Text style={styles.progressNumActive}>3</Text>
+            <Text style={styles.progressNumActive}>4</Text>
           </View>
           <Text style={[styles.progressLabel, styles.progressLabelActive]}>Schedule</Text>
         </View>

@@ -56,6 +56,9 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'showcase', name: 'Display Cabinet / Showcase', icon: DoorClosed, defaultCft: 50, baseRate: 650 },
       { id: 'shoe_rack', name: 'Shoe Rack', icon: Package, defaultCft: 12, baseRate: 200 },
       { id: 'floor_lamp', name: 'Floor Lamp', icon: LampFloor, defaultCft: 8, baseRate: 120 },
+      { id: 'mandir_small', name: 'Mandir / Pooja Unit (Small)', icon: DoorClosed, defaultCft: 12, baseRate: 300 },
+      { id: 'mandir_medium', name: 'Mandir / Pooja Unit (Medium)', icon: DoorClosed, defaultCft: 24, baseRate: 500 },
+      { id: 'mandir_large', name: 'Mandir / Pooja Unit (Large)', icon: DoorClosed, defaultCft: 40, baseRate: 800 },
     ],
   },
   {
@@ -70,6 +73,7 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'chest_drawers', name: 'Chest of Drawers', icon: Package, defaultCft: 30, baseRate: 450 },
       { id: 'study_desk', name: 'Study Desk', icon: BookOpen, defaultCft: 35, baseRate: 450 },
       { id: 'baby_crib', name: 'Baby Crib / Cot', icon: Baby, defaultCft: 30, baseRate: 400 },
+      { id: 'mandir_wall', name: 'Mandir / Pooja Shelf (Wall Mounted)', icon: DoorClosed, defaultCft: 8, baseRate: 220 },
     ],
   },
   {
@@ -131,6 +135,9 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'scooter', name: 'Scooter / Motorcycle', icon: Bike, defaultCft: 45, baseRate: 1200 },
       { id: 'treadmill', name: 'Treadmill / Exercise Machine', icon: Dumbbell, defaultCft: 40, baseRate: 700 },
       { id: 'garden_set', name: 'Garden Chair / Outdoor Set', icon: Armchair, defaultCft: 18, baseRate: 250 },
+      { id: 'plant_small', name: 'Plant (Small, under 2 ft)', icon: Package, defaultCft: 5, baseRate: 100 },
+      { id: 'plant_medium', name: 'Plant (Medium, 2–4 ft)', icon: Package, defaultCft: 12, baseRate: 180 },
+      { id: 'plant_large', name: 'Plant (Large, over 4 ft)', icon: Package, defaultCft: 25, baseRate: 300 },
     ],
   },
 ];

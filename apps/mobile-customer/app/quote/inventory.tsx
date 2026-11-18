@@ -82,12 +82,19 @@ export default function InventoryScreen() {
     [catalog, quantities]
   );
   const estimatedGoodsCost = selectedLines.reduce((total, item) => total + item.baseRate * item.quantity, 0);
-  const moveCatalog = useMemo(() => catalog.filter((section) => {
-    const category = section.room.toLowerCase();
-    return isOfficeMove
-      ? category.includes('office') || category.includes('electronic') || category.includes('carton') || category.includes('storage')
-      : !category.includes('office');
-  }), [catalog, isOfficeMove]);
+  const moveCatalog = useMemo(() => {
+    const preferred = isOfficeMove
+      ? ['office', 'electronics', 'carton', 'storage', 'living room', 'bedroom', 'kitchen', 'dining', 'vehicles']
+      : ['living room', 'bedroom', 'kitchen', 'dining', 'electronics', 'carton', 'storage', 'vehicles', 'office'];
+    return [...catalog].sort((a, b) => {
+      const rank = (room: string) => {
+        const value = room.toLowerCase();
+        const index = preferred.findIndex((item) => value.includes(item));
+        return index < 0 ? preferred.length : index;
+      };
+      return rank(a.room) - rank(b.room);
+    });
+  }, [catalog, isOfficeMove]);
   const categories = ['All', ...moveCatalog.map((section) => section.room)];
   const visibleCatalog = useMemo(() => moveCatalog
     .filter((section) => selectedCategory === 'All' || section.room === selectedCategory)
@@ -107,35 +114,26 @@ export default function InventoryScreen() {
       >
       {/* Progress */}
       <View style={styles.progressContainer}>
-        <View style={styles.progressItem}>
-          <View style={[styles.progressCircle, styles.progressCircleDone]}>
-            <Check size={13} color={Colors.white} strokeWidth={3} />
-          </View>
-          <Text style={[styles.progressLabel, styles.progressLabelDone]}>Locations</Text>
-        </View>
-        <View style={[styles.progressLine, styles.progressLineDone]} />
-        <View style={styles.progressItem}>
-          <View style={[styles.progressCircle, styles.progressCircleActive]}>
-            <Text style={styles.progressNumActive}>2</Text>
-          </View>
-          <Text style={[styles.progressLabel, styles.progressLabelActive]}>Items</Text>
-        </View>
-        <View style={styles.progressLine} />
-        <View style={styles.progressItem}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressNum}>3</Text>
-          </View>
-          <Text style={styles.progressLabel}>Summary</Text>
-        </View>
+        {['Locations', 'Items', 'Details', 'Schedule'].map((label, index) => (
+          <React.Fragment key={label}>
+            {index > 0 && <View style={[styles.progressLine, index <= 1 && styles.progressLineDone]} />}
+            <View style={styles.progressItem}>
+              <View style={[styles.progressCircle, index === 0 && styles.progressCircleDone, index === 1 && styles.progressCircleActive]}>
+                {index === 0 ? <Check size={13} color={Colors.white} strokeWidth={3} /> : <Text style={index === 1 ? styles.progressNumActive : styles.progressNum}>{index + 1}</Text>}
+              </View>
+              <Text style={[styles.progressLabel, index <= 1 && styles.progressLabelDone, index === 1 && styles.progressLabelActive]}>{label}</Text>
+            </View>
+          </React.Fragment>
+        ))}
       </View>
 
       <View style={styles.titleGroup}>
-        <Text style={styles.stepBadge}>STEP 2 OF 3</Text>
+        <Text style={styles.stepBadge}>STEP 3 OF 4 · INVENTORY</Text>
         <View style={styles.headingRow}>
           <View style={styles.headingCopy}>
             <Text style={styles.title}>Build your inventory</Text>
             <Text style={styles.subtitle}>
-              Choose the goods you’re moving. You can adjust quantities at any time.
+              Choose the goods you’re moving. All home and office items are available, with {isOfficeMove ? 'office' : 'home'} items shown first.
             </Text>
           </View>
           <View style={styles.catalogCountBadge}>
@@ -263,7 +261,7 @@ export default function InventoryScreen() {
           style={[styles.cta, totalItems === 0 && styles.ctaDisabled]}
           disabled={totalItems === 0}
           onPress={() => router.push({
-            pathname: '/quote/summary',
+            pathname: '/quote/address-details',
             params: {
               ...params,
               quantities: JSON.stringify(quantities),

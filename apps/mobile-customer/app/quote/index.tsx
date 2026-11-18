@@ -15,7 +15,6 @@ import {
   MapPin,
   Home,
   Briefcase,
-  Layers,
   ArrowRight,
   Compass,
   Crosshair,
@@ -24,7 +23,6 @@ import {
   CheckCircle2,
   Sparkles,
   X,
-  Truck,
 } from 'lucide-react-native';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
@@ -33,8 +31,6 @@ import type { ConfigurationType } from '@triveni/shared-types';
 import { GoogleMapsLocationModal } from '@/components/GoogleMapsLocationModal';
 import { GoogleMapsRouteCard } from '@/components/GoogleMapsRouteCard';
 import { mapsApi, RouteEstimate, PlaceLocation } from '@/lib/api';
-
-const FLOORS = ['Ground', '1st', '2nd', '3rd', '4th', '5th+'];
 
 export default function QuoteIndexScreen() {
   const { colors: Colors } = useAppTheme();
@@ -53,14 +49,6 @@ export default function QuoteIndexScreen() {
   const [drop, setDrop] = useState(params.drop || '');
   const [config, setConfig] = useState<ConfigurationType>((params.config as ConfigurationType) || '2bhk');
   const [shiftSelected, setShiftSelected] = useState(false);
-  const [floor, setFloor] = useState(0);
-  const [lift, setLift] = useState(true);
-  const [parkingClose, setParkingClose] = useState(true);
-  const [pickupUnit, setPickupUnit] = useState('');
-  const [pickupLandmark, setPickupLandmark] = useState('');
-  const [dropUnit, setDropUnit] = useState('');
-  const [dropLandmark, setDropLandmark] = useState('');
-  const [alternateContactPhone, setAlternateContactPhone] = useState('');
   const [locationBias, setLocationBias] = useState<{ lat: number; lng: number }>();
 
   // Address suggestions state (Google Maps style)
@@ -103,8 +91,7 @@ export default function QuoteIndexScreen() {
     }
   }, [pickup, drop]);
 
-  const isAlternatePhoneValid = !alternateContactPhone || /^[6-9]\d{9}$/.test(alternateContactPhone);
-  const canProceed = pickup.trim().length > 2 && drop.trim().length > 2 && pickupUnit.trim().length > 0 && pickupLandmark.trim().length > 0 && dropUnit.trim().length > 0 && dropLandmark.trim().length > 0 && isAlternatePhoneValid;
+  const canProceed = pickup.trim().length > 2 && drop.trim().length > 2;
 
   const getLocationBias = async () => {
     try {
@@ -173,8 +160,6 @@ export default function QuoteIndexScreen() {
 
   const handleSelectPickupSuggestion = async (item: PlaceLocation) => {
     setPickup(item.description);
-    setPickupUnit('');
-    setPickupLandmark('');
     const geo = await mapsApi.geocode(item.description);
     setPickupCoords({ lat: geo.lat, lng: geo.lng });
     setShowPickupSuggestions(false);
@@ -183,8 +168,6 @@ export default function QuoteIndexScreen() {
 
   const handleSelectDropSuggestion = async (item: PlaceLocation) => {
     setDrop(item.description);
-    setDropUnit('');
-    setDropLandmark('');
     const geo = await mapsApi.geocode(item.description);
     setDropCoords({ lat: geo.lat, lng: geo.lng });
     setShowDropSuggestions(false);
@@ -195,14 +178,10 @@ export default function QuoteIndexScreen() {
     const targetType = loc.type || mapModalType;
     if (targetType === 'pickup') {
       setPickup(loc.address);
-      setPickupUnit('');
-      setPickupLandmark('');
       setPickupCoords({ lat: loc.lat, lng: loc.lng });
       setShowPickupSuggestions(false);
     } else if (targetType === 'drop') {
       setDrop(loc.address);
-      setDropUnit('');
-      setDropLandmark('');
       setDropCoords({ lat: loc.lat, lng: loc.lng });
       setShowDropSuggestions(false);
     }
@@ -214,8 +193,6 @@ export default function QuoteIndexScreen() {
     const bias = await getLocationBias();
     if (!bias) return;
     setPickupCoords(bias);
-    setPickupUnit('');
-    setPickupLandmark('');
     const rev = await mapsApi.reverseGeocode(bias.lat, bias.lng);
     setPickup(rev.address);
   };
@@ -246,37 +223,24 @@ export default function QuoteIndexScreen() {
       ) : <>
       {/* ── Modern Step Progress Bar ─────────────────────────────── */}
       <View style={styles.progressCard}>
-        <View style={styles.progressItem}>
-          <View style={[styles.progressCircle, styles.progressCircleActive]}>
-            <Text style={styles.progressNumActive}>1</Text>
-          </View>
-          <Text style={[styles.progressLabel, styles.progressLabelActive]}>Locations</Text>
-        </View>
-
-        <View style={styles.progressLineActive} />
-
-        <View style={styles.progressItem}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressNum}>2</Text>
-          </View>
-          <Text style={styles.progressLabel}>Inventory</Text>
-        </View>
-
-        <View style={styles.progressLine} />
-
-        <View style={styles.progressItem}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressNum}>3</Text>
-          </View>
-          <Text style={styles.progressLabel}>Quote</Text>
-        </View>
+        {['Locations', 'Items', 'Details', 'Schedule'].map((label, index) => (
+          <React.Fragment key={label}>
+            {index > 0 && <View style={[styles.progressLine, index === 1 && styles.progressLineActive]} />}
+            <View style={styles.progressItem}>
+              <View style={[styles.progressCircle, index === 0 && styles.progressCircleActive]}>
+                <Text style={index === 0 ? styles.progressNumActive : styles.progressNum}>{index + 1}</Text>
+              </View>
+              <Text style={[styles.progressLabel, index === 0 && styles.progressLabelActive]}>{label}</Text>
+            </View>
+          </React.Fragment>
+        ))}
       </View>
 
       {/* ── Screen Title Group ────────────────────────────────────── */}
       <View style={styles.titleGroup}>
         <View style={styles.stepBadgePill}>
           <Sparkles size={11} color={Colors.marigoldDark} />
-          <Text style={styles.stepBadgeText}>STEP 1 OF 3 · RELOCATION ROUTE</Text>
+          <Text style={styles.stepBadgeText}>STEP 2 OF 4 · RELOCATION ROUTE</Text>
         </View>
         <Text style={styles.title}>Where are you moving?</Text>
         <Text style={styles.subtitle}>
@@ -469,16 +433,6 @@ export default function QuoteIndexScreen() {
           )}
         </View>
 
-        {/* Quick Location Shortcuts */}
-        <View style={styles.addressDetailsCard}>
-          <Text style={styles.addressDetailsTitle}>Complete pickup and delivery details</Text>
-          <TextInput style={styles.detailInput} value={pickupUnit} onChangeText={setPickupUnit} maxLength={100} placeholder="Pickup flat / house / unit number *" placeholderTextColor={Colors.inputPlaceholder} />
-          <TextInput style={styles.detailInput} value={pickupLandmark} onChangeText={setPickupLandmark} maxLength={100} placeholder="Pickup landmark *" placeholderTextColor={Colors.inputPlaceholder} />
-          <TextInput style={styles.detailInput} value={dropUnit} onChangeText={setDropUnit} maxLength={100} placeholder="Delivery flat / house / unit number *" placeholderTextColor={Colors.inputPlaceholder} />
-          <TextInput style={styles.detailInput} value={dropLandmark} onChangeText={setDropLandmark} maxLength={100} placeholder="Delivery landmark *" placeholderTextColor={Colors.inputPlaceholder} />
-          <TextInput style={styles.detailInput} value={alternateContactPhone} onChangeText={(value) => setAlternateContactPhone(value.replace(/\D/g, '').slice(0, 10))} keyboardType="phone-pad" maxLength={10} placeholder="Alternative contact number (optional)" placeholderTextColor={Colors.inputPlaceholder} />
-          {!isAlternatePhoneValid && <Text style={styles.detailError}>Enter a valid 10-digit Indian mobile number.</Text>}
-        </View>
       </View>
 
       {/* Google Maps Route Preview Card */}
@@ -494,74 +448,6 @@ export default function QuoteIndexScreen() {
         />
       )}
 
-      {/* ── Floor Number Level ───────────────────────────────────────── */}
-      <View style={styles.sectionBlock}>
-        <Text style={styles.sectionTitle}>Pickup Floor Level</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.floorRow}>
-            {FLOORS.map((f, i) => {
-              const isSelected = floor === i;
-              return (
-                <TouchableOpacity
-                  key={f}
-                  style={[styles.floorChip, isSelected && styles.floorChipActive]}
-                  onPress={() => setFloor(i)}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.floorText,
-                      isSelected && styles.floorTextActive,
-                    ]}
-                  >
-                    {f}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* ── Lift Available Toggle Card ──────────────────────────────── */}
-      <TouchableOpacity
-        style={styles.liftToggleCard}
-        onPress={() => setLift(!lift)}
-        activeOpacity={0.85}
-      >
-        <View style={styles.liftInfo}>
-          <View style={styles.liftIconCircle}>
-            <Layers size={18} color={Colors.text} strokeWidth={2.2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.liftTitle}>Service Lift / Elevator Available</Text>
-            <Text style={styles.liftSub}>
-              {lift
-                ? 'Elevator available · Standard loading rates apply'
-                : 'Staircase manual carry charges apply'}
-            </Text>
-          </View>
-        </View>
-        <View style={[styles.toggle, lift && styles.toggleActive]}>
-          <View style={[styles.toggleThumb, lift && styles.toggleThumbActive]} />
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.liftToggleCard}
-        onPress={() => setParkingClose(!parkingClose)}
-        activeOpacity={0.85}
-      >
-        <View style={styles.liftInfo}>
-          <View style={[styles.liftIconCircle, { backgroundColor: Colors.marigoldSubtle }]}><Truck size={18} color={Colors.marigoldDark} /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.liftTitle}>Can the truck park near the entrance?</Text>
-            <Text style={styles.liftSub}>{parkingClose ? 'Short carry distance for the moving crew' : 'Crew may need to carry items farther'}</Text>
-          </View>
-        </View>
-        <View style={[styles.toggle, parkingClose && styles.toggleActive]}><View style={[styles.toggleThumb, parkingClose && styles.toggleThumbActive]} /></View>
-      </TouchableOpacity>
-
       {/* ── Primary CTA Button ───────────────────────────────────────── */}
       <TouchableOpacity
         style={[styles.cta, !canProceed && styles.ctaDisabled]}
@@ -572,13 +458,9 @@ export default function QuoteIndexScreen() {
             params: {
               pickup,
               drop,
-              pickupAddress: `${pickup}, ${pickupUnit.trim()}, Landmark: ${pickupLandmark.trim()}`,
-              dropAddress: `${drop}, ${dropUnit.trim()}, Landmark: ${dropLandmark.trim()}`,
-              alternateContactPhone,
+              pickupAddress: pickup,
+              dropAddress: drop,
               config,
-              floor: floor.toString(),
-              lift: lift ? '1' : '0',
-              parkingClose: parkingClose ? '1' : '0',
               distance: (routeEstimate?.distanceKm || 14.5).toString(),
             },
           })

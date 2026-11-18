@@ -64,13 +64,13 @@ export class BookingService {
     // 2. Generate itemized quote using resolved zones
     const quote = await PricingService.calculateItemizedQuote(input, customerId);
 
-    // 3. Determine payment mode & status (COD confirmed immediately)
+    // Creating a booking only prepares a draft. The customer confirms the move
+    // explicitly from the payment step, regardless of payment method.
     const paymentMethod = input.paymentMethod || 'cash_on_delivery';
-    const isCod = paymentMethod === 'cash_on_delivery';
-    const initialStatus: BookingStatus = isCod ? 'CONFIRMED' : 'REQUESTED';
+    const initialStatus: BookingStatus = 'REQUESTED';
 
-    // Persist the booking and its required child records atomically. A failed
-    // item/history/payment insert must not leave a confirmed but partial order.
+    // Persist the booking and its required child records atomically so a failed
+    // item/history insert cannot leave a partial draft.
     const booking = await prisma.$transaction(async (tx) => {
       const created = await tx.booking.create({
         data: {
@@ -125,61 +125,8 @@ export class BookingService {
         },
       });
 
-      if (isCod) {
-        await tx.payment.create({
-          data: {
-            bookingId: created.id,
-            amount: created.finalAmount,
-            status: 'created',
-            type: 'final',
-            razorpayOrderId: `cod_${created.id}`,
-            razorpayPaymentId: null,
-            idempotencyKey: `cod_${created.id}`,
-          },
-        });
-      }
       return created;
     });
-
-    // 6. Handle COD post-creation flow: Payment record, auto-assign, notifications
-    if (isCod) {
-      // Booking is now CONFIRMED and broadcast to available driver partners.
-      // Driver details will be linked once an active driver accepts the duty.
-
-      // Send confirmation email
-      const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-      if (customer?.email) {
-        EmailService.sendBookingConfirmationEmail(customer.email, {
-          bookingId: booking.id,
-          pickupAddress: booking.pickupAddress,
-          dropAddress: booking.dropAddress,
-          scheduledDate: booking.scheduledDate,
-          amount: Number(booking.finalAmount),
-        }).catch((err) => console.error('Failed to send confirmation email:', err));
-      }
-
-      // Enqueue notification job (Push / WhatsApp / SMS)
-      try {
-        const { enqueueNotification } = await import('../../jobs/queue');
-        await enqueueNotification('booking_confirmed', {
-          userId: customerId,
-          userRole: 'customer',
-          bookingId: booking.id,
-          payload: {
-            bookingId: booking.id,
-            pickupAddress: booking.pickupAddress,
-            dropAddress: booking.dropAddress,
-            scheduledDate: booking.scheduledDate.toISOString().split('T')[0],
-            amount: Number(booking.finalAmount),
-            paymentMethod: 'Cash on Delivery (Pay on Move Day)',
-          },
-        });
-      } catch (qErr) {
-        console.warn('Notification queue error:', qErr);
-      }
-
-      await this.notifyAvailableDrivers(booking);
-    }
 
     return { booking, quote };
   }

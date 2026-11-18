@@ -62,11 +62,7 @@ export default function BookingPayScreen() {
     setProcessing(true);
     try {
       if (id) {
-        if (bookingApi.confirmCod) {
-          await bookingApi.confirmCod(id).catch(() => bookingApi.confirm(id));
-        } else {
-          await bookingApi.confirm(id);
-        }
+        await bookingApi.confirmCod(id);
       }
       await new Promise((r) => setTimeout(r, 600));
       setProcessing(false);
@@ -109,7 +105,7 @@ export default function BookingPayScreen() {
       <View style={styles.noticeBanner}>
         <Info size={16} color={Colors.marigoldDark} />
         <Text style={styles.noticeText}>
-          Online payment gateway is temporarily disabled. All bookings are confirmed with <Text style={{ fontWeight: 'bold' }}>Cash on Delivery</Text> at zero advance fee.
+          Online payment is temporarily unavailable. Your move will be confirmed only after you tap the confirmation button below. No advance is required with <Text style={{ fontWeight: 'bold' }}>Cash on Delivery</Text>.
         </Text>
       </View>
 
