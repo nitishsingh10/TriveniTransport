@@ -103,6 +103,56 @@ function refreshTokenLifetimeMs(raw: string): number {
 }
 
 export class AuthService {
+  static async requestPhoneChangeOtp(rawPhone: string) {
+    const { OTP_EXPIRY_MINUTES } = getEnv();
+    const target = resolveAuthTarget(rawPhone);
+    if (target.type !== 'phone') throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Enter a valid mobile number.' };
+    await checkIdentifierOtpLimit(target.value);
+    const existing = await prisma.customer.findFirst({ where: { OR: phoneVariants(target.value) }, select: { id: true } });
+    if (existing) throw { statusCode: 409, code: 'PHONE_IN_USE', message: 'This mobile number is already linked to another account.' };
+
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const challenge = await prisma.otpChallenge.create({
+      data: { phone: target.value, otpHash: hashOtp(code), role: 'customer', purpose: 'login', expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000) },
+    });
+    try {
+      await sendSmsOtp(target.value, code);
+      if (process.env.NODE_ENV === 'development') console.log(`[DEV OTP SMS] Phone change OTP sent to ${target.value}: ${code}`);
+    } catch (error) {
+      await prisma.otpChallenge.updateMany({ where: { id: challenge.id, verifiedAt: null }, data: { expiresAt: new Date(0) } });
+      throw error;
+    }
+    return { message: 'Verification code sent via SMS.', destination: target.value };
+  }
+
+  static async verifyPhoneChangeOtp(customerId: string, rawPhone: string, code: string) {
+    const { OTP_MAX_ATTEMPTS } = getEnv();
+    const target = resolveAuthTarget(rawPhone);
+    if (target.type !== 'phone') throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Enter a valid mobile number.' };
+    const challenge = await prisma.otpChallenge.findFirst({
+      where: { OR: phoneVariants(target.value), role: 'customer', purpose: 'login', verifiedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!challenge || challenge.expiresAt <= new Date()) throw { statusCode: 400, code: 'EXPIRED_OTP', message: 'Verification code is missing or expired. Request a new code.' };
+    if (challenge.attempts >= OTP_MAX_ATTEMPTS) throw { statusCode: 400, code: 'MAX_ATTEMPTS', message: 'Too many failed attempts. Request a new code.' };
+    const inputHash = Buffer.from(hashOtp(code), 'hex');
+    const storedHash = Buffer.from(challenge.otpHash, 'hex');
+    if (storedHash.length !== inputHash.length || !crypto.timingSafeEqual(storedHash, inputHash)) {
+      await prisma.otpChallenge.updateMany({ where: { id: challenge.id, verifiedAt: null }, data: { attempts: { increment: 1 } } });
+      throw { statusCode: 400, code: 'INVALID_OTP', message: 'Incorrect verification code. Please try again.' };
+    }
+    return prisma.$transaction(async (tx) => {
+      const consumed = await tx.otpChallenge.updateMany({
+        where: { id: challenge.id, verifiedAt: null, attempts: { lt: OTP_MAX_ATTEMPTS }, expiresAt: { gt: new Date() } },
+        data: { verifiedAt: new Date() },
+      });
+      if (consumed.count !== 1) throw { statusCode: 400, code: 'INVALID_OTP', message: 'Verification code has already been used. Request a new code.' };
+      const existing = await tx.customer.findFirst({ where: { OR: phoneVariants(target.value), NOT: { id: customerId } }, select: { id: true } });
+      if (existing) throw { statusCode: 409, code: 'PHONE_IN_USE', message: 'This mobile number is already linked to another account.' };
+      return tx.customer.update({ where: { id: customerId }, data: { phone: target.value }, select: { id: true, name: true, phone: true, email: true } });
+    });
+  }
+
   /**
    * Generates a single-use OTP challenge bound to its account role and login/signup intent.
    */

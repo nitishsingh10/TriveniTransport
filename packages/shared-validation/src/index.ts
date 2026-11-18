@@ -76,8 +76,9 @@ export const ChecklistItemSchema = z.object({
 );
 
 export const ItemizedQuoteSchema = z.object({
-  pickupAddress: z.string().min(5).max(500),
-  dropAddress: z.string().min(5).max(500),
+  pickupAddress: z.string().min(5).max(1000),
+  dropAddress: z.string().min(5).max(1000),
+  alternateContactPhone: PhoneSchema.optional().nullable(),
   configurationType: ConfigurationTypeSchema,
   floorNumber: z.number().int().min(0).max(50),
   liftAvailable: z.boolean(),

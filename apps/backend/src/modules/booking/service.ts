@@ -78,6 +78,7 @@ export class BookingService {
           status: initialStatus,
           pickupAddress: input.pickupAddress,
           dropAddress: input.dropAddress,
+          alternateContactPhone: input.alternateContactPhone || null,
           pickupZoneId: pickupZone.id,
           dropZoneId: dropZone.id,
           distanceKm,

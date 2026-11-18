@@ -193,13 +193,14 @@ export class GeocodingService {
   /**
    * Autocomplete search for places / localities
    */
-  static async autocompletePlaces(input: string): Promise<PlaceSuggestion[]> {
+  static async autocompletePlaces(input: string, locationBias?: { lat: number; lng: number }): Promise<PlaceSuggestion[]> {
     const trimmed = input.trim().toLowerCase();
     if (!trimmed) return [];
 
     const { GOOGLE_MAPS_API_KEY } = getEnv();
     const redis = getRedis();
-    const cacheKey = `maps:autocomplete:${trimmed}`;
+    const biasKey = locationBias ? `:${locationBias.lat.toFixed(2)},${locationBias.lng.toFixed(2)}` : '';
+    const cacheKey = `maps:autocomplete:v2:${trimmed}${biasKey}`;
 
     try {
       const cached = await redis.get(cacheKey);
@@ -215,6 +216,7 @@ export class GeocodingService {
           params: {
             input: trimmed,
             components: ['country:in'],
+            ...(locationBias ? { location: locationBias, radius: 50000 } : {}),
             key: GOOGLE_MAPS_API_KEY,
           },
         });
@@ -236,37 +238,12 @@ export class GeocodingService {
           return suggestions;
         }
       } catch (err: any) {
-        console.warn('Google Places API call failed, falling back to local dataset:', err?.message);
+        console.warn('Google Places API call failed; no autocomplete suggestions are available:', err?.message);
       }
     }
 
-    // Fallback search in curated dataset
-    const matched = KNOWN_LOCATIONS.filter(
-      (loc) =>
-        loc.description.toLowerCase().includes(trimmed) ||
-        loc.mainText.toLowerCase().includes(trimmed) ||
-        loc.city.toLowerCase().includes(trimmed)
-    );
-
-    // If no direct substring match, return matching city or top suggestions
-    const results = matched.length > 0 ? matched : [
-      {
-        placeId: `custom_${Date.now()}`,
-        description: `${input.trim()}, India`,
-        mainText: input.trim(),
-        secondaryText: 'India',
-        lat: 18.5204 + (Math.random() - 0.5) * 0.05,
-        lng: 73.8567 + (Math.random() - 0.5) * 0.05,
-        city: 'Pune',
-      },
-      ...KNOWN_LOCATIONS.slice(0, 4),
-    ];
-
-    try {
-      await redis.set(cacheKey, JSON.stringify(results), 'EX', 86400 * 7);
-    } catch {}
-
-    return results;
+    // Never substitute preset or fabricated places for a real nearby search.
+    return [];
   }
 
   /**

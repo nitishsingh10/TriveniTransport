@@ -271,27 +271,14 @@ export const CURATED_LOCATIONS: PlaceLocation[] = [
 
 export const mapsApi = {
   /**
-   * Fast synchronous match against curated cities and hubs (0ms latency)
-   */
-  getLocalMatches(query: string): PlaceLocation[] {
-    const q = (query || '').trim().toLowerCase();
-    if (q.length < 2) return [];
-    return CURATED_LOCATIONS.filter(
-      (loc) =>
-        loc.description.toLowerCase().includes(q) ||
-        loc.mainText.toLowerCase().includes(q) ||
-        loc.city.toLowerCase().includes(q)
-    );
-  },
-
-  /**
    * Search places using Google Places Autocomplete API via backend
    */
-  async searchPlaces(query: string): Promise<PlaceLocation[]> {
+  async searchPlaces(query: string, locationBias?: { lat: number; lng: number }): Promise<PlaceLocation[]> {
     if (!query || query.trim().length === 0) return [];
     try {
+      const bias = locationBias ? `&lat=${locationBias.lat}&lng=${locationBias.lng}` : '';
       return await request<PlaceLocation[]>(
-        `/maps/places?input=${encodeURIComponent(query.trim())}`
+        `/maps/places?input=${encodeURIComponent(query.trim())}${bias}`
       );
     } catch {
       return [];
@@ -451,6 +438,7 @@ export const bookingApi = {
   async createBooking(body: {
     pickupAddress: string;
     dropAddress: string;
+    alternateContactPhone?: string;
     configurationType: string;
     floorNumber: number;
     liftAvailable: boolean;
@@ -501,6 +489,30 @@ export const bookingApi = {
 };
 
 export const customerApi = {
+  async requestPhoneChangeOtp(phone: string) {
+    return request<{ message: string; destination: string }>('/customer/me/phone/otp/request', {
+      method: 'POST', body: JSON.stringify({ phone }),
+    });
+  },
+
+  async verifyPhoneChangeOtp(phone: string, code: string) {
+    return request<{ id: string; name: string; phone?: string | null; email?: string | null; profileCompleted?: boolean }>(
+      '/customer/me/phone/otp/verify', { method: 'POST', body: JSON.stringify({ phone, code }) },
+    );
+  },
+
+  async getAddresses(): Promise<SavedAddress[]> {
+    return request<SavedAddress[]>('/customer/me/addresses');
+  },
+
+  async saveAddress(address: Omit<SavedAddress, 'id'> & { id?: string }): Promise<SavedAddress[]> {
+    return request<SavedAddress[]>('/customer/me/addresses', { method: 'POST', body: JSON.stringify(address) });
+  },
+
+  async deleteAddress(id: string): Promise<SavedAddress[]> {
+    return request<SavedAddress[]>(`/customer/me/addresses/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
   async getProfile() {
     return request<{
       id: string;
@@ -535,3 +547,13 @@ export const customerApi = {
     });
   },
 };
+
+export interface SavedAddress {
+  id: string;
+  label: string;
+  address: string;
+  city: string;
+  lat?: number | null;
+  lng?: number | null;
+  isDefault: boolean;
+}

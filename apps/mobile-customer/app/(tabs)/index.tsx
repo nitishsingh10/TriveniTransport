@@ -10,6 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import {
   Truck,
@@ -24,7 +25,6 @@ import {
   Building2,
   Car,
   Briefcase,
-  Crosshair,
   Flag,
   Calendar,
   ChevronRight,
@@ -112,6 +112,7 @@ export default function HomeScreen() {
   const [showDropSug, setShowDropSug] = useState(false);
   const [isPickupLoading, setIsPickupLoading] = useState(false);
   const [isDropLoading, setIsDropLoading] = useState(false);
+  const [locationBias, setLocationBias] = useState<{ lat: number; lng: number }>();
 
   // Map Picker Modal State
   const [mapModalType, setMapModalType] = useState<'pickup' | 'drop' | null>(null);
@@ -152,21 +153,14 @@ export default function HomeScreen() {
       setIsPickupLoading(false);
       return;
     }
-    const local = mapsApi.getLocalMatches(text);
-    setPickupSuggestions(local);
+    setPickupSuggestions([]);
     setShowPickupSug(true);
     setIsPickupLoading(true);
     pickupDebounce.current = setTimeout(async () => {
       try {
-        const res = await mapsApi.searchPlaces(text);
-        if (res && res.length > 0) {
-          setPickupSuggestions((prev) => {
-            const seen = new Set(res.map((r) => r.placeId || r.description));
-            return [...res, ...prev.filter((p) => !seen.has(p.placeId || p.description))].slice(0, 5);
-          });
-        }
+        setPickupSuggestions(await mapsApi.searchPlaces(text, locationBias || await loadLocationBias()));
       } catch {
-        // keep local matches
+        setPickupSuggestions([]);
       } finally {
         setIsPickupLoading(false);
       }
@@ -182,41 +176,44 @@ export default function HomeScreen() {
       setIsDropLoading(false);
       return;
     }
-    const local = mapsApi.getLocalMatches(text);
-    setDropSuggestions(local);
+    setDropSuggestions([]);
     setShowDropSug(true);
     setIsDropLoading(true);
     dropDebounce.current = setTimeout(async () => {
       try {
-        const res = await mapsApi.searchPlaces(text);
-        if (res && res.length > 0) {
-          setDropSuggestions((prev) => {
-            const seen = new Set(res.map((r) => r.placeId || r.description));
-            return [...res, ...prev.filter((p) => !seen.has(p.placeId || p.description))].slice(0, 5);
-          });
-        }
+        setDropSuggestions(await mapsApi.searchPlaces(text, locationBias || await loadLocationBias()));
       } catch {
-        // keep local matches
+        setDropSuggestions([]);
       } finally {
         setIsDropLoading(false);
       }
     }, 250);
   };
 
-  const selectPickup = (item: PlaceLocation) => {
+  const loadLocationBias = async () => {
+    try {
+      let permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted') permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') return undefined;
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const bias = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setLocationBias(bias);
+      return bias;
+    } catch { return undefined; }
+  };
+
+  const selectPickup = async (item: PlaceLocation) => {
     setPickup(item.description);
-    if (item.lat && item.lng) {
-      setPickupCoords({ lat: item.lat, lng: item.lng });
-    }
+    const coordinates = await mapsApi.geocode(item.description);
+    setPickupCoords({ lat: coordinates.lat, lng: coordinates.lng });
     setShowPickupSug(false);
     setPickupSuggestions([]);
   };
 
-  const selectDrop = (item: PlaceLocation) => {
+  const selectDrop = async (item: PlaceLocation) => {
     setDrop(item.description);
-    if (item.lat && item.lng) {
-      setDropCoords({ lat: item.lat, lng: item.lng });
-    }
+    const coordinates = await mapsApi.geocode(item.description);
+    setDropCoords({ lat: coordinates.lat, lng: coordinates.lng });
     setShowDropSug(false);
     setDropSuggestions([]);
   };
@@ -492,38 +489,6 @@ export default function HomeScreen() {
             <ArrowRight size={16} color={Colors.text} strokeWidth={2.4} />
           </TouchableOpacity>
 
-          {/* Quick Zone Suggestions */}
-          <View style={styles.zoneShortcutsRow}>
-            <TouchableOpacity
-              style={styles.zonePill}
-              onPress={() => { setPickup('Viman Nagar, Pune, Maharashtra, India'); setShowPickupSug(false); }}
-              activeOpacity={0.75}
-            >
-              <Crosshair size={11} color={Colors.marigold} />
-              <Text style={styles.zonePillText}>Viman Nagar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.zonePill}
-              onPress={() => { setDrop('Thane West, Thane, Maharashtra, India'); setShowDropSug(false); }}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.zonePillText}>Thane West</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.zonePill}
-              onPress={() => { setDrop('Bandra Kurla Complex (BKC), Mumbai, Maharashtra'); setShowDropSug(false); }}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.zonePillText}>Bandra BKC</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.zonePill}
-              onPress={() => { setDrop('Hinjewadi Phase 1, Pune, Maharashtra, India'); setShowDropSug(false); }}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.zonePillText}>Hinjewadi</Text>
-            </TouchableOpacity>
-          </View>
         </LinearGradient>
       </View>
 

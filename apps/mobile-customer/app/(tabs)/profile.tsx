@@ -73,14 +73,14 @@ export default function ProfileScreen() {
       icon: UserIcon,
       label: 'Personal & Contact Details',
       subtitle: user?.phone ? `${user.name} · ${user.phone}` : 'Complete your name and mobile number',
-      onPress: () => router.push('/complete-profile' as any),
+      onPress: () => router.push({ pathname: '/complete-profile', params: { mode: 'edit' } } as any),
       highlight: isProfileIncomplete,
     },
     {
       icon: MapPin,
       label: 'Saved Addresses',
       subtitle: 'Home, office, and frequent destinations',
-      onPress: () => {},
+      onPress: () => router.push('/saved-addresses' as any),
     },
     {
       icon: Bell,
@@ -141,7 +141,7 @@ export default function ProfileScreen() {
         </View>
         <TouchableOpacity
           style={styles.editProfilePill}
-          onPress={() => router.push('/complete-profile' as any)}
+          onPress={() => router.push({ pathname: '/complete-profile', params: { mode: 'edit' } } as any)}
           activeOpacity={0.8}
         >
           <Edit3 size={13} color={Colors.text} />

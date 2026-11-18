@@ -8,7 +8,14 @@ export class MapsController {
       if (!input.trim()) {
         return res.status(200).json([]);
       }
-      const suggestions = await GeocodingService.autocompletePlaces(input);
+      const lat = req.query.lat === undefined ? undefined : Number(req.query.lat);
+      const lng = req.query.lng === undefined ? undefined : Number(req.query.lng);
+      if ((lat !== undefined && (!Number.isFinite(lat) || lat < -90 || lat > 90)) ||
+          (lng !== undefined && (!Number.isFinite(lng) || lng < -180 || lng > 180))) {
+        return res.status(400).json({ error: 'Location bias must contain valid latitude and longitude values.' });
+      }
+      const locationBias = lat !== undefined && lng !== undefined ? { lat, lng } : undefined;
+      const suggestions = await GeocodingService.autocompletePlaces(input, locationBias);
       res.status(200).json(suggestions);
     } catch (e) {
       next(e);

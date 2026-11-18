@@ -11,8 +11,10 @@ import {
   Flag,
 } from 'lucide-react';
 import styles from './WebMapModal.module.css';
+import { getBrowserLocation, type LocationBias } from '../lib/location';
 
 const GMAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+type PlaceSuggestion = { placeId: string; description: string; mainText: string; secondaryText: string; lat: number; lng: number; city: string };
 
 // Triveni dark map style — navy/slate roads with gold highway labels
 const DARK_MAP_STYLES = [
@@ -54,17 +56,7 @@ interface WebMapModalProps {
   }) => void;
 }
 
-const POPULAR_HUBS = [
-  { name: 'Viman Nagar', city: 'Pune', lat: 18.5679, lng: 73.9143, landmark: 'Near Airport Rd' },
-  { name: 'Baner', city: 'Pune', lat: 18.559, lng: 73.7868, landmark: 'High Street' },
-  { name: 'Kothrud', city: 'Pune', lat: 18.5074, lng: 73.8077, landmark: 'Near Karve Statue' },
-  { name: 'Hinjewadi Phase 1', city: 'Pune', lat: 18.5913, lng: 73.7389, landmark: 'IT Park' },
-  { name: 'Kharadi', city: 'Pune', lat: 18.5516, lng: 73.9348, landmark: 'World Trade Center' },
-  { name: 'Bandra West', city: 'Mumbai', lat: 19.0596, lng: 72.8295, landmark: 'Hill Road' },
-  { name: 'Powai', city: 'Mumbai', lat: 19.1176, lng: 72.906, landmark: 'Hiranandani Gardens' },
-  { name: 'Thane West', city: 'Thane', lat: 19.2183, lng: 72.9781, landmark: 'Gokhale Road' },
-  { name: 'BKC', city: 'Mumbai', lat: 19.0657, lng: 72.8687, landmark: 'G Block' },
-];
+
 
 export default function WebMapModal({
   isOpen,
@@ -75,19 +67,20 @@ export default function WebMapModal({
 }: WebMapModalProps) {
   const [activeType, setActiveType] = useState<'pickup' | 'drop'>(initialType);
   const [query, setQuery] = useState(initialAddress);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isMapMoving, setIsMapMoving] = useState(false);
   const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
+  const [locationBias, setLocationBias] = useState<LocationBias | null>(null);
 
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
     lat: 18.5679,
     lng: 73.9143,
   });
   const [selectedAddress, setSelectedAddress] = useState(initialAddress);
-  const [selectedCity, setSelectedCity] = useState('Pune');
-  const [areaHeadline, setAreaHeadline] = useState(initialAddress ? initialAddress.split(',')[0] : 'Viman Nagar');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [areaHeadline, setAreaHeadline] = useState(initialAddress ? initialAddress.split(',')[0] : '');
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const reverseGeocodeTimer = useRef<NodeJS.Timeout | null>(null);
@@ -118,6 +111,11 @@ export default function WebMapModal({
       setQuery(initialAddress);
       setSelectedAddress(initialAddress);
       initialMapCoords.current = { lat: selectedCoords.lat, lng: selectedCoords.lng };
+      void getBrowserLocation().then((location) => {
+        if (!location) return;
+        setLocationBias(location);
+        initialMapCoords.current = location;
+      });
       if (initialAddress.trim()) {
         geocodeAddress(initialAddress);
       }
@@ -214,7 +212,11 @@ export default function WebMapModal({
     setLoading(true);
     debounceTimer.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        const bias = locationBias || await getBrowserLocation();
+        if (bias) setLocationBias(bias);
+        const params = new URLSearchParams({ input: val.trim() });
+        if (bias) { params.set('lat', String(bias.lat)); params.set('lng', String(bias.lng)); }
+        const res = await fetch(`/api/v1/maps/places?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data);
@@ -227,67 +229,41 @@ export default function WebMapModal({
     }, 280);
   };
 
-  const handleSelectSuggestion = (place: any) => {
+  const handleSelectSuggestion = async (place: PlaceSuggestion) => {
     setQuery(place.description);
     setSelectedAddress(place.description);
-    setSelectedCoords({ lat: place.lat, lng: place.lng });
+    const geocode = await fetch(`/api/v1/maps/geocode?address=${encodeURIComponent(place.description)}`);
+    if (geocode.ok) {
+      const coordinates = await geocode.json();
+      setSelectedCoords({ lat: coordinates.lat, lng: coordinates.lng });
+      panMapTo(coordinates.lat, coordinates.lng);
+    }
     setSelectedCity(place.city);
     setAreaHeadline(place.mainText);
     setSuggestions([]);
-    panMapTo(place.lat, place.lng);
   };
 
-  const handleSelectQuickHub = (hub: (typeof POPULAR_HUBS)[0]) => {
-    const fullAddress = `${hub.name}, ${hub.landmark}, ${hub.city}, Maharashtra`;
-    setQuery(fullAddress);
-    setSelectedAddress(fullAddress);
-    setSelectedCoords({ lat: hub.lat, lng: hub.lng });
-    setSelectedCity(hub.city);
-    setAreaHeadline(hub.name);
-    setSuggestions([]);
-    panMapTo(hub.lat, hub.lng);
-  };
-
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setLoading(true);
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async pos => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setSelectedCoords({ lat, lng });
-          panMapTo(lat, lng);
-          // Reverse-geocode to show real address, not raw coordinates
-          try {
-            const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
-            if (res.ok) {
-              const data = await res.json();
-              const addr = data.address || '';
-              setSelectedAddress(addr);
-              setSelectedCity(data.city || 'Pune');
-              setAreaHeadline(addr.split(',')[0] || 'Current Location');
-              setQuery(addr);
-            } else {
-              handleCoordsChanged(lat, lng);
-            }
-          } catch {
-            handleCoordsChanged(lat, lng);
-          } finally {
-            setLoading(false);
-          }
-        },
-        () => {
-          const fallback = POPULAR_HUBS[0];
-          handleSelectQuickHub(fallback);
-          setLoading(false);
-        },
-        { timeout: 6000 }
-      );
-    } else {
-      const fallback = POPULAR_HUBS[0];
-      handleSelectQuickHub(fallback);
+    const location = await getBrowserLocation();
+    if (!location) {
       setLoading(false);
+      return;
     }
+    setLocationBias(location);
+    setSelectedCoords(location);
+    panMapTo(location.lat, location.lng);
+    try {
+      const response = await fetch(`/api/v1/maps/reverse?lat=${location.lat}&lng=${location.lng}`);
+      if (response.ok) {
+        const data = await response.json();
+        const address = data.address || '';
+        setSelectedAddress(address);
+        setSelectedCity(data.city || '');
+        setAreaHeadline(address.split(',')[0] || 'Current location');
+        setQuery(address);
+      }
+    } finally { setLoading(false); }
   };
 
   const handleConfirm = () => {
@@ -541,21 +517,6 @@ export default function WebMapModal({
             </div>
           )}
 
-          {/* Quick Hubs Horizontal Carousel */}
-          {suggestions.length === 0 && (
-            <div className={styles.quickHubsRow}>
-              {POPULAR_HUBS.map(hub => (
-                <button
-                  key={hub.name}
-                  type="button"
-                  className={`${styles.quickHubPill} ${selectedAddress.includes(hub.name) ? styles.quickHubActive : ''}`}
-                  onClick={() => handleSelectQuickHub(hub)}
-                >
-                  <span>{hub.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* ── Floating Locate Me GPS Button ────────────────────────────── */}

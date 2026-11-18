@@ -261,6 +261,7 @@ model Booking {
   status            BookingStatus @default(REQUESTED)
   pickupAddress     String        @map("pickup_address") @db.Text
   dropAddress       String        @map("drop_address") @db.Text
+  alternateContactPhone String?   @map("alternate_contact_phone") @db.VarChar(15)
   pickupZoneId      String        @map("pickup_zone_id") @db.Uuid
   dropZoneId        String        @map("drop_zone_id") @db.Uuid
   distanceKm        Decimal       @map("distance_km") @db.Decimal(8, 2)

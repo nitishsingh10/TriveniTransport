@@ -6,9 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -71,6 +71,12 @@ export default function QuoteIndexScreen() {
   const [config, setConfig] = useState<ConfigurationType>((params.config as ConfigurationType) || '2bhk');
   const [floor, setFloor] = useState(0);
   const [lift, setLift] = useState(true);
+  const [pickupUnit, setPickupUnit] = useState('');
+  const [pickupLandmark, setPickupLandmark] = useState('');
+  const [dropUnit, setDropUnit] = useState('');
+  const [dropLandmark, setDropLandmark] = useState('');
+  const [alternateContactPhone, setAlternateContactPhone] = useState('');
+  const [locationBias, setLocationBias] = useState<{ lat: number; lng: number }>();
 
   // Address suggestions state (Google Maps style)
   const [pickupSuggestions, setPickupSuggestions] = useState<PlaceLocation[]>([]);
@@ -114,7 +120,20 @@ export default function QuoteIndexScreen() {
     }
   }, [pickup, drop]);
 
-  const canProceed = pickup.trim().length > 2 && drop.trim().length > 2;
+  const isAlternatePhoneValid = !alternateContactPhone || /^[6-9]\d{9}$/.test(alternateContactPhone);
+  const canProceed = pickup.trim().length > 2 && drop.trim().length > 2 && pickupUnit.trim().length > 0 && pickupLandmark.trim().length > 0 && dropUnit.trim().length > 0 && dropLandmark.trim().length > 0 && isAlternatePhoneValid;
+
+  const getLocationBias = async () => {
+    try {
+      let permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted') permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') return undefined;
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const bias = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setLocationBias(bias);
+      return bias;
+    } catch { return undefined; }
+  };
 
   // Handle address input typing with instant local matching + debounced Google Places suggestions
   const handlePickupChange = (text: string) => {
@@ -128,24 +147,15 @@ export default function QuoteIndexScreen() {
       return;
     }
 
-    // Instant local match (0ms latency, exactly like Google Maps cache)
-    const localMatches = mapsApi.getLocalMatches(text);
-    setPickupSuggestions(localMatches);
+    setPickupSuggestions([]);
     setShowPickupSuggestions(true);
     setIsPickupLoading(true);
 
     pickupDebounce.current = setTimeout(async () => {
       try {
-        const results = await mapsApi.searchPlaces(text);
-        if (results && results.length > 0) {
-          setPickupSuggestions((prev) => {
-            const seen = new Set(results.map((r) => r.placeId || r.description));
-            const merged = [...results, ...prev.filter((p) => !seen.has(p.placeId || p.description))];
-            return merged.slice(0, 6);
-          });
-        }
+        setPickupSuggestions(await mapsApi.searchPlaces(text, locationBias || await getLocationBias()));
       } catch {
-        // Keep local matches
+        setPickupSuggestions([]);
       } finally {
         setIsPickupLoading(false);
       }
@@ -163,44 +173,37 @@ export default function QuoteIndexScreen() {
       return;
     }
 
-    // Instant local match (0ms latency)
-    const localMatches = mapsApi.getLocalMatches(text);
-    setDropSuggestions(localMatches);
+    setDropSuggestions([]);
     setShowDropSuggestions(true);
     setIsDropLoading(true);
 
     dropDebounce.current = setTimeout(async () => {
       try {
-        const results = await mapsApi.searchPlaces(text);
-        if (results && results.length > 0) {
-          setDropSuggestions((prev) => {
-            const seen = new Set(results.map((r) => r.placeId || r.description));
-            const merged = [...results, ...prev.filter((p) => !seen.has(p.placeId || p.description))];
-            return merged.slice(0, 6);
-          });
-        }
+        setDropSuggestions(await mapsApi.searchPlaces(text, locationBias || await getLocationBias()));
       } catch {
-        // Keep local matches
+        setDropSuggestions([]);
       } finally {
         setIsDropLoading(false);
       }
     }, 250);
   };
 
-  const handleSelectPickupSuggestion = (item: PlaceLocation) => {
+  const handleSelectPickupSuggestion = async (item: PlaceLocation) => {
     setPickup(item.description);
-    if (item.lat && item.lng) {
-      setPickupCoords({ lat: item.lat, lng: item.lng });
-    }
+    setPickupUnit('');
+    setPickupLandmark('');
+    const geo = await mapsApi.geocode(item.description);
+    setPickupCoords({ lat: geo.lat, lng: geo.lng });
     setShowPickupSuggestions(false);
     setPickupSuggestions([]);
   };
 
-  const handleSelectDropSuggestion = (item: PlaceLocation) => {
+  const handleSelectDropSuggestion = async (item: PlaceLocation) => {
     setDrop(item.description);
-    if (item.lat && item.lng) {
-      setDropCoords({ lat: item.lat, lng: item.lng });
-    }
+    setDropUnit('');
+    setDropLandmark('');
+    const geo = await mapsApi.geocode(item.description);
+    setDropCoords({ lat: geo.lat, lng: geo.lng });
     setShowDropSuggestions(false);
     setDropSuggestions([]);
   };
@@ -209,39 +212,29 @@ export default function QuoteIndexScreen() {
     const targetType = loc.type || mapModalType;
     if (targetType === 'pickup') {
       setPickup(loc.address);
+      setPickupUnit('');
+      setPickupLandmark('');
       setPickupCoords({ lat: loc.lat, lng: loc.lng });
       setShowPickupSuggestions(false);
     } else if (targetType === 'drop') {
       setDrop(loc.address);
+      setDropUnit('');
+      setDropLandmark('');
       setDropCoords({ lat: loc.lat, lng: loc.lng });
       setShowDropSuggestions(false);
     }
     setMapModalType(null);
   };
 
-  const handleUseCurrentLocationForPickup = () => {
+  const handleUseCurrentLocationForPickup = async () => {
     setShowPickupSuggestions(false);
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            setPickupCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-            const rev = await mapsApi.reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-            setPickup(rev.address);
-          } catch {
-            setPickup('Viman Nagar, Pune, Maharashtra');
-            setPickupCoords({ lat: 18.5679, lng: 73.9143 });
-          }
-        },
-        () => {
-          setPickup('Viman Nagar, Pune, Maharashtra');
-          setPickupCoords({ lat: 18.5679, lng: 73.9143 });
-        }
-      );
-    } else {
-      setPickup('Viman Nagar, Pune, Maharashtra');
-      setPickupCoords({ lat: 18.5679, lng: 73.9143 });
-    }
+    const bias = await getLocationBias();
+    if (!bias) return;
+    setPickupCoords(bias);
+    setPickupUnit('');
+    setPickupLandmark('');
+    const rev = await mapsApi.reverseGeocode(bias.lat, bias.lng);
+    setPickup(rev.address);
   };
 
   return (
@@ -477,48 +470,14 @@ export default function QuoteIndexScreen() {
         </View>
 
         {/* Quick Location Shortcuts */}
-        <View style={styles.quickShortcutsRow}>
-          <TouchableOpacity
-            style={styles.quickGpsChip}
-            onPress={handleUseCurrentLocationForPickup}
-            activeOpacity={0.75}
-          >
-            <Crosshair size={12} color={Colors.text} strokeWidth={2.2} />
-            <Text style={styles.quickGpsText}>My GPS Location</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAreaChip}
-            onPress={() => {
-              setDrop('Thane West, Maharashtra');
-              setShowDropSuggestions(false);
-            }}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.quickAreaText}>+ Thane West</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAreaChip}
-            onPress={() => {
-              setDrop('Bandra BKC, Mumbai');
-              setShowDropSuggestions(false);
-            }}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.quickAreaText}>+ Bandra BKC</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAreaChip}
-            onPress={() => {
-              setDrop('Hinjewadi Phase 1, Pune');
-              setShowDropSuggestions(false);
-            }}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.quickAreaText}>+ Hinjewadi</Text>
-          </TouchableOpacity>
+        <View style={styles.addressDetailsCard}>
+          <Text style={styles.addressDetailsTitle}>Complete pickup and delivery details</Text>
+          <TextInput style={styles.detailInput} value={pickupUnit} onChangeText={setPickupUnit} maxLength={100} placeholder="Pickup flat / house / unit number *" placeholderTextColor={Colors.inputPlaceholder} />
+          <TextInput style={styles.detailInput} value={pickupLandmark} onChangeText={setPickupLandmark} maxLength={100} placeholder="Pickup landmark *" placeholderTextColor={Colors.inputPlaceholder} />
+          <TextInput style={styles.detailInput} value={dropUnit} onChangeText={setDropUnit} maxLength={100} placeholder="Delivery flat / house / unit number *" placeholderTextColor={Colors.inputPlaceholder} />
+          <TextInput style={styles.detailInput} value={dropLandmark} onChangeText={setDropLandmark} maxLength={100} placeholder="Delivery landmark *" placeholderTextColor={Colors.inputPlaceholder} />
+          <TextInput style={styles.detailInput} value={alternateContactPhone} onChangeText={(value) => setAlternateContactPhone(value.replace(/\D/g, '').slice(0, 10))} keyboardType="phone-pad" maxLength={10} placeholder="Alternative contact number (optional)" placeholderTextColor={Colors.inputPlaceholder} />
+          {!isAlternatePhoneValid && <Text style={styles.detailError}>Enter a valid 10-digit Indian mobile number.</Text>}
         </View>
       </View>
 
@@ -636,6 +595,9 @@ export default function QuoteIndexScreen() {
             params: {
               pickup,
               drop,
+              pickupAddress: `${pickup}, ${pickupUnit.trim()}, Landmark: ${pickupLandmark.trim()}`,
+              dropAddress: `${drop}, ${dropUnit.trim()}, Landmark: ${dropLandmark.trim()}`,
+              alternateContactPhone,
               config,
               floor: floor.toString(),
               lift: lift ? '1' : '0',
@@ -1014,6 +976,31 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontSize: 10,
     fontWeight: FontWeight.bold,
   },
+
+  addressDetailsCard: {
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  addressDetailsTitle: {
+    color: Colors.text,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+  },
+  detailInput: {
+    minHeight: 44,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    backgroundColor: Colors.inputBg,
+    color: Colors.text,
+    fontSize: FontSize.xs,
+  },
+  detailError: { color: Colors.error, fontSize: FontSize.xxs },
 
   // ── Sections & Grids ─────────────────────────────────────────
   sectionBlock: {

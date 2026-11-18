@@ -10,7 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   User,
   Phone,
@@ -36,6 +36,8 @@ export default function CompleteProfileScreen() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const syncCustomerProfile = useAuthStore((s) => s.syncCustomerProfile);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isEditMode = mode === 'edit';
 
   const [name, setName] = useState(
     user?.name && user.name !== 'Valued Customer' && user.name !== 'Customer' ? user.name : ''
@@ -46,6 +48,8 @@ export default function CompleteProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -55,7 +59,7 @@ export default function CompleteProfileScreen() {
         const savedUser = await syncCustomerProfile();
         if (!isActive || !savedUser) return;
 
-        if (isCustomerProfileComplete(savedUser)) {
+        if (isCustomerProfileComplete(savedUser) && !isEditMode) {
           router.replace('/(tabs)');
           return;
         }
@@ -75,12 +79,12 @@ export default function CompleteProfileScreen() {
     return () => {
       isActive = false;
     };
-  }, [syncCustomerProfile]);
+  }, [syncCustomerProfile, isEditMode]);
 
   const cleanPhone = phone.replace(/\D/g, '');
   const isNameValid = name.trim().length >= 2;
   const isPhoneValid = /^[6-9]\d{9}$/.test(cleanPhone);
-  const canSubmit = isNameValid && isPhoneValid && !loading;
+  const canSubmit = (otpSent ? otp.length === 6 : isNameValid && isPhoneValid) && !loading;
 
   const handleSave = async () => {
     if (!isNameValid) {
@@ -96,10 +100,19 @@ export default function CompleteProfileScreen() {
     setErrorMsg('');
 
     try {
-      const res = await customerApi.updateProfile({
-        name: name.trim(),
-        phone: cleanPhone,
-      });
+      if (!otpSent && normalizeIndianPhone(user?.phone) !== cleanPhone) {
+        await customerApi.requestPhoneChangeOtp(cleanPhone);
+        setOtpSent(true);
+        showToast({ title: 'OTP sent', message: `Enter the code sent to +91 ${cleanPhone}.`, variant: 'success' });
+        return;
+      }
+
+      const verifiedPhone = otpSent ? await customerApi.verifyPhoneChangeOtp(cleanPhone, otp) : null;
+      if (verifiedPhone) {
+        await updateUser({ phone: verifiedPhone.phone || cleanPhone, profileCompleted: verifiedPhone.profileCompleted });
+        setOtpSent(false);
+      }
+      const res = await customerApi.updateProfile({ name: name.trim() });
 
       await updateUser({
         name: res.name,
@@ -107,8 +120,9 @@ export default function CompleteProfileScreen() {
         profileCompleted: res.profileCompleted ?? true,
       });
 
-      showToast({ title: 'Profile completed', message: 'Welcome to Triveni Transports.', variant: 'success' });
-      router.replace('/(tabs)');
+      showToast({ title: otpSent ? 'Mobile number verified' : (isEditMode ? 'Profile updated' : 'Profile completed'), message: otpSent ? 'Your contact number has been updated.' : 'Your details have been saved.', variant: 'success' });
+      if (isEditMode) router.back();
+      else router.replace('/(tabs)');
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to save profile. Please try again.');
     } finally {
@@ -154,9 +168,9 @@ export default function CompleteProfileScreen() {
               <ShieldCheck size={28} color={Colors.marigold} strokeWidth={2.2} />
             </View>
 
-            <Text style={styles.title}>Complete Your Profile</Text>
+            <Text style={styles.title}>{isEditMode ? 'Edit Your Profile' : 'Complete Your Profile'}</Text>
             <Text style={styles.subtitle}>
-              To coordinate your move, pair verified drivers, and send live GPS tracking updates, we require your name and phone number.
+              {isEditMode ? 'Update your name or verify a new mobile number with a one-time password.' : 'To coordinate your move, pair verified drivers, and send live GPS tracking updates, we require your name and phone number.'}
             </Text>
 
             {!!errorMsg && (
@@ -204,6 +218,22 @@ export default function CompleteProfileScreen() {
               </View>
             </View>
 
+            {otpSent && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>6-digit verification code</Text>
+                <TextInput
+                  style={[styles.input, styles.otpInput]}
+                  placeholder="Enter OTP"
+                  placeholderTextColor={Colors.inputPlaceholder}
+                  value={otp}
+                  onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+                <Text style={styles.inputHelpText}>Sent by SMS to +91 {cleanPhone}.</Text>
+              </View>
+            )}
+
             {/* Phone Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Mobile Number (for Driver & SMS Updates)</Text>
@@ -218,6 +248,8 @@ export default function CompleteProfileScreen() {
                   value={phone}
                   onChangeText={(t) => {
                     setPhone(t.replace(/\D/g, '').slice(0, 10));
+                    setOtpSent(false);
+                    setOtp('');
                     setErrorMsg('');
                   }}
                   keyboardType="phone-pad"
@@ -245,21 +277,21 @@ export default function CompleteProfileScreen() {
                 <ActivityIndicator color={Colors.navyDark} />
               ) : (
                 <View style={styles.btnContent}>
-                  <Text style={styles.submitBtnText}>Save Profile & Continue</Text>
+                  <Text style={styles.submitBtnText}>{loading ? 'Please wait…' : otpSent ? 'Verify & Save' : isEditMode ? 'Save Changes' : 'Continue'}</Text>
                   <ArrowRight size={16} color={Colors.navyDark} strokeWidth={2.4} />
                 </View>
               )}
             </TouchableOpacity>
 
             {/* Sign Out Option */}
-            <TouchableOpacity
+            {!isEditMode && <TouchableOpacity
               style={styles.signOutBtn}
               onPress={handleSignOut}
               activeOpacity={0.8}
             >
               <LogOut size={14} color={Colors.textMuted} />
               <Text style={styles.signOutText}>Sign in with a different account</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -451,6 +483,14 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.medium,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.inputBg,
+    letterSpacing: 8,
+    textAlign: 'center',
   },
   inputHelpText: {
     fontSize: FontSize.xxs,

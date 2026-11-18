@@ -19,5 +19,7 @@ export function isCustomerProfileComplete(
     /^[6-9]\d{9}$/.test(phone)
   );
 
-  return user?.profileCompleted === false ? false : fieldsAreComplete;
+  // The persisted profile fields are authoritative. A stale cached completion
+  // flag must not send a customer with a valid name and phone through setup again.
+  return fieldsAreComplete;
 }

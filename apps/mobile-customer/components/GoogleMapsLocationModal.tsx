@@ -9,7 +9,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { WebView } from 'react-native-webview';
 import {
   MapPin,
@@ -26,7 +28,7 @@ import {
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
-import { mapsApi, PlaceLocation } from '@/lib/api';
+import { customerApi, mapsApi, PlaceLocation, SavedAddress } from '@/lib/api';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
@@ -38,19 +40,6 @@ interface GoogleMapsLocationModalProps {
   onSelect: (location: { address: string; lat: number; lng: number; city: string; type?: 'pickup' | 'drop' }) => void;
   onClose: () => void;
 }
-
-// Popular quick selection hubs in Maharashtra
-const POPULAR_HUBS = [
-  { name: 'Viman Nagar', city: 'Pune', lat: 18.5679, lng: 73.9143, landmark: 'Near Airport Rd' },
-  { name: 'Baner', city: 'Pune', lat: 18.559, lng: 73.7868, landmark: 'High Street' },
-  { name: 'Kothrud', city: 'Pune', lat: 18.5074, lng: 73.8077, landmark: 'Near Karve Statue' },
-  { name: 'Hinjewadi Phase 1', city: 'Pune', lat: 18.5913, lng: 73.7389, landmark: 'IT Park' },
-  { name: 'Kharadi', city: 'Pune', lat: 18.5516, lng: 73.9348, landmark: 'World Trade Center' },
-  { name: 'Bandra West', city: 'Mumbai', lat: 19.0596, lng: 72.8295, landmark: 'Hill Road' },
-  { name: 'Powai', city: 'Mumbai', lat: 19.1176, lng: 72.906, landmark: 'Hiranandani Gardens' },
-  { name: 'Thane West', city: 'Thane', lat: 19.2183, lng: 72.9781, landmark: 'Gokhale Road' },
-  { name: 'BKC', city: 'Mumbai', lat: 19.0657, lng: 72.8687, landmark: 'G Block' },
-];
 
 export function GoogleMapsLocationModal({
   visible,
@@ -69,6 +58,8 @@ export function GoogleMapsLocationModal({
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [isMapMoving, setIsMapMoving] = useState(false);
   const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [locationBias, setLocationBias] = useState<{ lat: number; lng: number } | undefined>();
 
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({
     lat: 18.5679,
@@ -76,7 +67,7 @@ export function GoogleMapsLocationModal({
   });
   const [selectedAddress, setSelectedAddress] = useState(initialValue);
   const [selectedCity, setSelectedCity] = useState('Pune');
-  const [areaHeadline, setAreaHeadline] = useState(initialValue ? initialValue.split(',')[0] : 'Viman Nagar');
+  const [areaHeadline, setAreaHeadline] = useState(initialValue ? initialValue.split(',')[0] : '');
 
   const debounceTimer = useRef<any>(null);
   const reverseGeocodeTimer = useRef<any>(null);
@@ -95,22 +86,27 @@ export function GoogleMapsLocationModal({
       if (initialValue.trim()) {
         geocodeInput(initialValue);
       }
+      void customerApi.getAddresses().then(setSavedAddresses).catch(() => setSavedAddresses([]));
+      void loadLocationBias(true);
     }
   }, [visible, initialType, initialValue]);
 
-  // Find nearest known landmark as fallback when offline or reverse-geocode fails
-  const findNearestHub = useCallback((lat: number, lng: number) => {
-    let closest = POPULAR_HUBS[0];
-    let minDiff = Infinity;
-    for (const hub of POPULAR_HUBS) {
-      const d = Math.hypot(hub.lat - lat, hub.lng - lng);
-      if (d < minDiff) {
-        minDiff = d;
-        closest = hub;
-      }
+  const loadLocationBias = async (askPermission: boolean) => {
+    try {
+      let permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== 'granted' && askPermission) permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') return undefined;
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const current = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setLocationBias(current);
+      initialMapCoords.current = current;
+      setSelectedCoords(current);
+      if (visible) panMapTo(current.lat, current.lng);
+      return current;
+    } catch {
+      return undefined;
     }
-    return closest;
-  }, []);
+  };
 
   // Geocode address text into coords
   const geocodeInput = async (addr: string) => {
@@ -137,26 +133,18 @@ export function GoogleMapsLocationModal({
           setSelectedCity(rev.city || 'Pune');
           setAreaHeadline(rev.address.split(',')[0] || 'Selected Spot');
           setQuery(rev.address);
-        } else {
-          const nearest = findNearestHub(lat, lng);
-          const fallback = `${nearest.name}, ${nearest.landmark}, ${nearest.city}, Maharashtra`;
-          setSelectedAddress(fallback);
-          setSelectedCity(nearest.city);
-          setAreaHeadline(nearest.name);
-          setQuery(fallback);
-        }
+        } else setSelectedAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
       } catch {
-        const nearest = findNearestHub(lat, lng);
-        const fallback = `${nearest.name}, ${nearest.landmark}, ${nearest.city}, Maharashtra`;
+        const fallback = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         setSelectedAddress(fallback);
-        setSelectedCity(nearest.city);
-        setAreaHeadline(nearest.name);
+        setSelectedCity('');
+        setAreaHeadline('Pinned location');
         setQuery(fallback);
       } finally {
         setIsResolvingAddress(false);
       }
     }, 320);
-  }, [findNearestHub]);
+  }, []);
 
 
   // Handle messages coming from either Web iframe or Native WebView
@@ -232,76 +220,52 @@ export function GoogleMapsLocationModal({
       return;
     }
 
-    // Instant local match (0ms latency)
-    const localMatches = mapsApi.getLocalMatches(text);
-    if (localMatches.length > 0) {
-      setSuggestions(localMatches);
-    }
+    setSuggestions([]);
     setLoading(true);
 
     debounceTimer.current = setTimeout(async () => {
       try {
-        const results = await mapsApi.searchPlaces(text);
-        if (results && results.length > 0) {
-          setSuggestions((prev) => {
-            const seen = new Set(results.map((r) => r.placeId || r.description));
-            const merged = [...results, ...prev.filter((p) => !seen.has(p.placeId || p.description))];
-            return merged.slice(0, 7);
-          });
-        }
+        const bias = locationBias || await loadLocationBias(true);
+        setSuggestions(await mapsApi.searchPlaces(text, bias));
       } catch {
-        // Keep local matches
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }
     }, 250);
   };
 
-  const handleSelectSuggestion = (place: PlaceLocation) => {
+  const handleSelectSuggestion = async (place: PlaceLocation) => {
     setQuery(place.description);
     setSelectedAddress(place.description);
-    setSelectedCoords({ lat: place.lat, lng: place.lng });
+    const geo = await mapsApi.geocode(place.description);
+    setSelectedCoords({ lat: geo.lat, lng: geo.lng });
     setSelectedCity(place.city);
     setAreaHeadline(place.mainText);
     setSuggestions([]);
-    panMapTo(place.lat, place.lng);
+    panMapTo(geo.lat, geo.lng);
   };
 
-  const handleSelectQuickHub = (hub: (typeof POPULAR_HUBS)[0]) => {
-    const fullAddress = `${hub.name}, ${hub.landmark}, ${hub.city}, Maharashtra`;
-    setQuery(fullAddress);
-    setSelectedAddress(fullAddress);
-    setSelectedCoords({ lat: hub.lat, lng: hub.lng });
-    setSelectedCity(hub.city);
-    setAreaHeadline(hub.name);
+  const handleSelectSavedAddress = (item: SavedAddress) => {
+    setQuery(item.address);
+    setSelectedAddress(item.address);
+    setSelectedCity(item.city || item.address.split(',').slice(-2, -1)[0]?.trim() || '');
+    setAreaHeadline(item.label);
     setSuggestions([]);
-    panMapTo(hub.lat, hub.lng);
+    if (item.lat != null && item.lng != null) {
+      setSelectedCoords({ lat: item.lat, lng: item.lng });
+      panMapTo(item.lat, item.lng);
+    } else {
+      void geocodeInput(item.address);
+    }
   };
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setLoading(true);
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setSelectedCoords({ lat, lng });
-          panMapTo(lat, lng);
-          handleCoordsChanged(lat, lng);
-          setLoading(false);
-        },
-        () => {
-          const fallback = POPULAR_HUBS[0];
-          handleSelectQuickHub(fallback);
-          setLoading(false);
-        },
-        { timeout: 6000 }
-      );
-    } else {
-      const fallback = POPULAR_HUBS[0];
-      handleSelectQuickHub(fallback);
-      setLoading(false);
-    }
+    const current = await loadLocationBias(true);
+    if (!current) Alert.alert('Location unavailable', 'Allow location access or enter an address in the search field.');
+    else handleCoordsChanged(current.lat, current.lng);
+    setLoading(false);
   };
 
   const handleConfirm = () => {
@@ -657,30 +621,22 @@ export function GoogleMapsLocationModal({
           )}
 
           {/* Quick Hubs Horizontal Glass Carousel */}
-          {suggestions.length === 0 && (
+          {suggestions.length === 0 && savedAddresses.length > 0 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.quickHubsScroll}
               contentContainerStyle={styles.quickHubsContent}
             >
-              {POPULAR_HUBS.map((hub) => (
+              {savedAddresses.map((item) => (
                 <TouchableOpacity
-                  key={hub.name}
-                  style={[
-                    styles.quickHubPill,
-                    selectedAddress.includes(hub.name) && styles.quickHubPillActive,
-                  ]}
-                  onPress={() => handleSelectQuickHub(hub)}
+                  key={`saved-${item.id}`}
+                  style={[styles.quickHubPill, selectedAddress === item.address && styles.quickHubPillActive]}
+                  onPress={() => handleSelectSavedAddress(item)}
                   activeOpacity={0.75}
                 >
-                  <Text
-                    style={[
-                      styles.quickHubText,
-                      selectedAddress.includes(hub.name) && styles.quickHubTextActive,
-                    ]}
-                  >
-                    {hub.name}
+                  <Text style={[styles.quickHubText, selectedAddress === item.address && styles.quickHubTextActive]}>
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               ))}

@@ -48,7 +48,13 @@
         }
       ],
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Triveni Transports to use your location to save a move address."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

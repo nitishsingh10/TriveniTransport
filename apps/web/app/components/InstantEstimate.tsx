@@ -5,6 +5,9 @@ import { Home, Building2, Briefcase, LandPlot, MapPin, Flag, Crosshair, Map } fr
 import styles from './InstantEstimate.module.css';
 import WebMapModal from './WebMapModal';
 import { useAuth } from '../lib/useAuth';
+import { getBrowserLocation, type LocationBias } from '../lib/location';
+
+type PlaceSuggestion = { placeId: string; description: string; mainText: string; secondaryText: string };
 
 const CONFIG_TYPES = [
   { value: '1bhk', label: '1 BHK', Icon: Home },
@@ -17,17 +20,23 @@ export default function InstantEstimate() {
   const { isLoggedIn } = useAuth();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
+  const [pickupUnit, setPickupUnit] = useState('');
+  const [pickupLandmark, setPickupLandmark] = useState('');
+  const [dropUnit, setDropUnit] = useState('');
+  const [dropLandmark, setDropLandmark] = useState('');
+  const [alternateContactPhone, setAlternateContactPhone] = useState('');
   const [config, setConfig] = useState('');
   const [estimate, setEstimate] = useState<{ min: number; max: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Autocomplete suggestions
-  const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
-  const [dropSuggestions, setDropSuggestions] = useState<any[]>([]);
+  const [pickupSuggestions, setPickupSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [dropSuggestions, setDropSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
   const [showDropSuggestions, setShowDropSuggestions] = useState(false);
   const [pickupLoading, setPickupLoading] = useState(false);
   const [dropLoading, setDropLoading] = useState(false);
+  const [locationBias, setLocationBias] = useState<LocationBias | null>(null);
 
   const pickupDebounce = useRef<NodeJS.Timeout | null>(null);
   const dropDebounce = useRef<NodeJS.Timeout | null>(null);
@@ -60,7 +69,11 @@ export default function InstantEstimate() {
     setShowPickupSuggestions(true);
     pickupDebounce.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        const bias = locationBias || await getBrowserLocation();
+        if (bias) setLocationBias(bias);
+        const params = new URLSearchParams({ input: val.trim() });
+        if (bias) { params.set('lat', String(bias.lat)); params.set('lng', String(bias.lng)); }
+        const res = await fetch(`/api/v1/maps/places?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setPickupSuggestions(Array.isArray(data) ? data : []);
@@ -86,7 +99,11 @@ export default function InstantEstimate() {
     setShowDropSuggestions(true);
     dropDebounce.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/v1/maps/places?input=${encodeURIComponent(val.trim())}`);
+        const bias = locationBias || await getBrowserLocation();
+        if (bias) setLocationBias(bias);
+        const params = new URLSearchParams({ input: val.trim() });
+        if (bias) { params.set('lat', String(bias.lat)); params.set('lng', String(bias.lng)); }
+        const res = await fetch(`/api/v1/maps/places?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setDropSuggestions(Array.isArray(data) ? data : []);
@@ -103,7 +120,7 @@ export default function InstantEstimate() {
   const [mapModalType, setMapModalType] = useState<'pickup' | 'drop' | null>(null);
 
   const getEstimate = () => {
-    if (!pickup || !drop || !config) return;
+    if (!pickup || !drop || !pickupUnit.trim() || !pickupLandmark.trim() || !dropUnit.trim() || !dropLandmark.trim() || !config || (alternateContactPhone && !/^[6-9]\d{9}$/.test(alternateContactPhone))) return;
     setLoading(true);
 
     const baseRates: Record<string, number> = {
@@ -130,35 +147,22 @@ export default function InstantEstimate() {
     city: string;
     type: 'pickup' | 'drop';
   }) => {
-    if (loc.type === 'pickup') setPickup(loc.address);
-    else setDrop(loc.address);
+    if (loc.type === 'pickup') { setPickup(loc.address); setPickupUnit(''); setPickupLandmark(''); }
+    else { setDrop(loc.address); setDropUnit(''); setDropLandmark(''); }
     setMapModalType(null);
   };
 
   const handleGps = () => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async pos => {
-          const { latitude: lat, longitude: lng } = pos.coords;
-          try {
-            const res = await fetch(`/api/v1/maps/reverse?lat=${lat}&lng=${lng}`);
-            if (res.ok) {
-              const data = await res.json();
-              setPickup(data.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            } else {
-              setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            }
-          } catch {
-            setPickup(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-          }
-        },
-        () => setPickup('Viman Nagar, Pune, Maharashtra'),
-        { timeout: 6000 },
-      );
-    } else {
-      setPickup('Viman Nagar, Pune, Maharashtra');
-    }
+    void (async () => {
+      const location = locationBias || await getBrowserLocation();
+      if (!location) return;
+      setLocationBias(location);
+      const res = await fetch(`/api/v1/maps/reverse?lat=${location.lat}&lng=${location.lng}`);
+      if (res.ok) { setPickup((await res.json()).address || ''); setPickupUnit(''); setPickupLandmark(''); }
+    })();
   };
+
+  const detailedQuoteParams = new URLSearchParams({ pickup, drop, pickupUnit, pickupLandmark, dropUnit, dropLandmark, alternateContactPhone });
 
   return (
     <>
@@ -221,6 +225,8 @@ export default function InstantEstimate() {
                           className={styles.inlineSuggestionItem}
                           onClick={() => {
                             setPickup(item.description);
+                            setPickupUnit('');
+                            setPickupLandmark('');
                             setShowPickupSuggestions(false);
                             setPickupSuggestions([]);
                           }}
@@ -277,6 +283,8 @@ export default function InstantEstimate() {
                           className={styles.inlineSuggestionItem}
                           onClick={() => {
                             setDrop(item.description);
+                            setDropUnit('');
+                            setDropLandmark('');
                             setShowDropSuggestions(false);
                             setDropSuggestions([]);
                           }}
@@ -301,6 +309,29 @@ export default function InstantEstimate() {
                 <Flag size={12} strokeWidth={2.4} />
                 <span>Pin</span>
               </button>
+            </div>
+          </div>
+
+          <div className={styles.inputRow}>
+            <div className={styles.inputWrap}>
+              <label className={styles.label}>Pickup flat / house number *</label>
+              <input className={styles.input} maxLength={100} value={pickupUnit} onChange={e => setPickupUnit(e.target.value)} placeholder="Flat, house, or unit number" />
+            </div>
+            <div className={styles.inputWrap}>
+              <label className={styles.label}>Pickup landmark *</label>
+              <input className={styles.input} maxLength={100} value={pickupLandmark} onChange={e => setPickupLandmark(e.target.value)} placeholder="Nearby landmark" />
+            </div>
+            <div className={styles.inputWrap}>
+              <label className={styles.label}>Delivery flat / house number *</label>
+              <input className={styles.input} maxLength={100} value={dropUnit} onChange={e => setDropUnit(e.target.value)} placeholder="Flat, house, or unit number" />
+            </div>
+            <div className={styles.inputWrap}>
+              <label className={styles.label}>Delivery landmark *</label>
+              <input className={styles.input} maxLength={100} value={dropLandmark} onChange={e => setDropLandmark(e.target.value)} placeholder="Nearby landmark" />
+            </div>
+            <div className={`${styles.inputWrap}`} style={{ gridColumn: '1 / -1' }}>
+              <label className={styles.label}>Alternative contact number (optional)</label>
+              <input className={styles.input} type="tel" inputMode="numeric" maxLength={10} value={alternateContactPhone} onChange={e => setAlternateContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number" />
             </div>
           </div>
 
@@ -336,7 +367,7 @@ export default function InstantEstimate() {
             type="button"
             className={styles.cta}
             onClick={getEstimate}
-            disabled={!pickup || !drop || !config || loading}
+            disabled={!pickup || !drop || !pickupUnit.trim() || !pickupLandmark.trim() || !dropUnit.trim() || !dropLandmark.trim() || !config || loading || Boolean(alternateContactPhone && !/^[6-9]\d{9}$/.test(alternateContactPhone))}
           >
             {loading ? (
               <span className={styles.spinner} />
@@ -355,7 +386,7 @@ export default function InstantEstimate() {
             <span className={styles.resultNote}>
               Final price calculated after itemised inventory review
             </span>
-            <a href="/quote" className={styles.resultCta}>
+            <a href={`/quote?${detailedQuoteParams.toString()}`} className={styles.resultCta}>
               {isLoggedIn ? 'Continue to Itemised Quote →' : 'Get Detailed Quote →'}
             </a>
           </div>

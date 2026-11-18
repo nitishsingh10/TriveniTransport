@@ -274,6 +274,7 @@ export const quotes = {
   itemized: (body: {
     pickupAddress: string;
     dropAddress: string;
+    alternateContactPhone?: string;
     configurationType: string;
     floorNumber: number;
     liftAvailable: boolean;
@@ -340,6 +341,7 @@ export const bookings = {
   create: (body: {
     pickupAddress: string;
     dropAddress: string;
+    alternateContactPhone?: string;
     configurationType: string;
     floorNumber: number;
     liftAvailable: boolean;

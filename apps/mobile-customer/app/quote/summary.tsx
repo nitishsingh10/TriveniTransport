@@ -56,6 +56,9 @@ export default function SummaryScreen() {
     lift: string;
     quantities: string;
     selectedItems: string;
+    pickupAddress?: string;
+    dropAddress?: string;
+    alternateContactPhone?: string;
   }>();
 
   const quantities = useMemo<Record<string, number>>(() => {
@@ -126,8 +129,9 @@ export default function SummaryScreen() {
       }
 
       const res = await bookingApi.createBooking({
-        pickupAddress: params.pickup || 'Viman Nagar, Pune',
-        dropAddress: params.drop || 'Baner, Pune',
+        pickupAddress: params.pickupAddress || params.pickup || '',
+        dropAddress: params.dropAddress || params.drop || '',
+        ...(params.alternateContactPhone ? { alternateContactPhone: params.alternateContactPhone } : {}),
         configurationType: (params.config as any) || '2bhk',
         floorNumber: parseInt(params.floor || '0', 10),
         liftAvailable: params.lift === '1',
@@ -198,7 +202,7 @@ export default function SummaryScreen() {
           <MapPin size={16} color={Colors.marigold} />
           <View style={styles.routeTextBlock}>
             <Text style={styles.routeLabel}>PICKUP</Text>
-            <Text style={styles.routeVal}>{params.pickup || 'Pickup location'}</Text>
+            <Text style={styles.routeVal}>{params.pickupAddress || params.pickup || 'Pickup location'}</Text>
           </View>
         </View>
         <View style={styles.routeDividerLine}>
@@ -208,7 +212,7 @@ export default function SummaryScreen() {
           <Home size={16} color={Colors.text} />
           <View style={styles.routeTextBlock}>
             <Text style={styles.routeLabel}>DELIVERY</Text>
-            <Text style={styles.routeVal}>{params.drop || 'Drop destination'}</Text>
+            <Text style={styles.routeVal}>{params.dropAddress || params.drop || 'Drop destination'}</Text>
           </View>
         </View>
       </View>
