@@ -2173,3 +2173,95 @@
   .storeBtn { width: auto; }
   .ctaGlass { background: rgba(255, 255, 255, 0.9); }
 }
+
+/* Final responsive corrections for the homepage hero and closing CTA. */
+.hero {
+  min-height: min(760px, calc(100dvh - 68px));
+  padding: clamp(2.5rem, 5vw, 4rem) 0;
+}
+
+.heroImageBg { width: 40%; }
+.heroGradient { width: 57%; }
+.heroText { max-width: 660px; }
+.heroTitle {
+  max-width: 650px;
+  font-size: clamp(2.2rem, 3.4vw, 3.2rem);
+  line-height: 1.1;
+}
+.heroDesc { max-width: 590px; font-size: 0.98rem; line-height: 1.65; }
+.heroQuoteBtn { width: fit-content; }
+
+.ctaSection { padding: clamp(2.75rem, 5vw, 4rem) 0; }
+.ctaGlass {
+  max-width: 900px;
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+}
+.ctaTitle {
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  line-height: 1.16;
+}
+.titleAccent {
+  background: none;
+  color: #a45d00;
+  -webkit-text-fill-color: #a45d00;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+}
+.ctaDesc { margin-top: 1rem; }
+.ctaBtnGroup { margin-top: 1.5rem; }
+.ctaTrustRow {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-color: rgba(13, 31, 55, 0.1);
+}
+
+@media (max-width: 1024px) {
+  .hero { min-height: auto; padding: 2.5rem 0; }
+  .heroImageBg,
+  .heroGradient { display: none; }
+  .heroText { max-width: 720px; }
+  .heroTitle { font-size: clamp(2.1rem, 5vw, 3rem); }
+}
+
+@media (max-width: 640px) {
+  .hero { padding: 1.75rem 0 2rem; }
+  .heroText { max-width: none; gap: 1rem; }
+  .heroTitle { font-size: clamp(1.95rem, 8.2vw, 2.65rem); line-height: 1.12; }
+  .heroDesc { font-size: 0.94rem; line-height: 1.58; }
+  .heroActions { margin: 0.1rem 0 0.25rem; }
+  .heroQuoteBtn { min-width: 200px; min-height: 52px; width: fit-content; }
+  .heroStats { padding: 0.75rem 0.85rem; }
+  .appDownloadBlock { gap: 0.55rem; margin-top: 0; }
+  .appDownloadHeader { gap: 0.5rem 0.75rem; }
+  .appStoreButtons { gap: 0.5rem; }
+  .storeBtn { flex: 1 1 calc(50% - 0.5rem); min-width: 0; padding: 0.65rem 0.75rem; border-radius: 0.85rem; }
+  .storeBtnText { min-width: 0; }
+  .storeBtnMain { font-size: 0.85rem; }
+
+  .ctaSection { padding: 1.5rem 0 2rem; }
+  .ctaGlow { display: none; }
+  .ctaGlass {
+    margin: 0 var(--space-3);
+    padding: 1.4rem;
+    border-radius: 1.25rem;
+    text-align: left;
+  }
+  .ctaBadge { margin-bottom: 0.9rem; font-size: 0.62rem; line-height: 1.4; }
+  .ctaTitle { margin: 0; font-size: clamp(1.55rem, 6.5vw, 2rem); }
+  .ctaDesc { margin: 0.75rem 0 0; font-size: 0.9rem; line-height: 1.55; }
+  .ctaBtnGroup { display: grid; grid-template-columns: 1fr; gap: 0.65rem; margin-top: 1.1rem; }
+  .ctaBtn,
+  .ctaPhoneBtn { width: 100%; box-sizing: border-box; padding: 0.85rem 1rem !important; border-radius: 0.85rem !important; }
+  .ctaTrustRow { align-items: flex-start; flex-direction: column; gap: 0.65rem; margin-top: 1.1rem; padding-top: 1rem; }
+}
+
+@media (max-width: 380px) {
+  .heroBadge { font-size: 0.68rem; padding: 0.35rem 0.65rem; }
+  .heroStats { gap: 0.4rem; padding-inline: 0.55rem; }
+  .stat { min-width: 0; }
+  .statLabel { font-size: 0.55rem; }
+  .appDownloadBadge { font-size: 0.62rem; }
+  .appDownloadRating { font-size: 0.72rem; }
+}
