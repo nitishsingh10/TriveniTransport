@@ -108,7 +108,7 @@ export default function BookingsPage() {
               return (
                 <Link href={`/booking/${b.id}`} key={b.id} className={styles.bookingCard}>
                   <div className={styles.bookingTop}>
-                    <span className={styles.bookingId}>#{b.id.slice(0, 8).toUpperCase()}</span>
+                    <span className={styles.bookingId}>#{b.id.slice(-6).toUpperCase()}</span>
                     <span className={`badge ${status.className}`}>{status.label}</span>
                   </div>
                   <div className={styles.route}>

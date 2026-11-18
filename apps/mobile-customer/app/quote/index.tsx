@@ -14,8 +14,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import {
   MapPin,
   Home,
-  Building2,
-  Bed,
   Briefcase,
   Layers,
   ArrowRight,
@@ -26,6 +24,7 @@ import {
   CheckCircle2,
   Sparkles,
   X,
+  Truck,
 } from 'lucide-react-native';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
@@ -34,22 +33,6 @@ import type { ConfigurationType } from '@triveni/shared-types';
 import { GoogleMapsLocationModal } from '@/components/GoogleMapsLocationModal';
 import { GoogleMapsRouteCard } from '@/components/GoogleMapsRouteCard';
 import { mapsApi, RouteEstimate, PlaceLocation } from '@/lib/api';
-
-interface ConfigOption {
-  value: ConfigurationType;
-  label: string;
-  icon: React.ComponentType<any>;
-}
-
-const CONFIGS: ConfigOption[] = [
-  { value: '1bhk', label: '1 BHK', icon: Home },
-  { value: '2bhk', label: '2 BHK', icon: Home },
-  { value: '3bhk', label: '3 BHK', icon: Building2 },
-  { value: '4bhk', label: '4 BHK', icon: Building2 },
-  { value: 'studio', label: 'Studio Room', icon: Bed },
-  { value: 'villa', label: 'Luxury Villa', icon: Home },
-  { value: 'office', label: 'Commercial Office', icon: Briefcase },
-];
 
 const FLOORS = ['Ground', '1st', '2nd', '3rd', '4th', '5th+'];
 
@@ -69,8 +52,10 @@ export default function QuoteIndexScreen() {
   const [pickup, setPickup] = useState(params.pickup || '');
   const [drop, setDrop] = useState(params.drop || '');
   const [config, setConfig] = useState<ConfigurationType>((params.config as ConfigurationType) || '2bhk');
+  const [shiftSelected, setShiftSelected] = useState(false);
   const [floor, setFloor] = useState(0);
   const [lift, setLift] = useState(true);
+  const [parkingClose, setParkingClose] = useState(true);
   const [pickupUnit, setPickupUnit] = useState('');
   const [pickupLandmark, setPickupLandmark] = useState('');
   const [dropUnit, setDropUnit] = useState('');
@@ -115,8 +100,6 @@ export default function QuoteIndexScreen() {
         }
       }, 500);
       return () => clearTimeout(timer);
-    } else {
-      setRouteEstimate(null);
     }
   }, [pickup, drop]);
 
@@ -244,6 +227,23 @@ export default function QuoteIndexScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      {!shiftSelected ? (
+        <View style={styles.shiftTypeScreen}>
+          <Text style={styles.shiftStepLabel}>STEP 1 OF 4</Text>
+          <Text style={styles.shiftTitle}>What are you moving?</Text>
+          <Text style={styles.shiftSubtitle}>Choose a home or office move to begin.</Text>
+          <TouchableOpacity style={styles.shiftOption} onPress={() => { setConfig('2bhk'); setShiftSelected(true); }} activeOpacity={0.84}>
+            <View style={styles.shiftIcon}><Home size={24} color={Colors.marigoldDark} /></View>
+            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Home shifting</Text><Text style={styles.shiftOptionSub}>Household goods, room by room</Text></View>
+            <ArrowRight size={18} color={Colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shiftOption} onPress={() => { setConfig('office'); setShiftSelected(true); }} activeOpacity={0.84}>
+            <View style={[styles.shiftIcon, styles.shiftOfficeIcon]}><Briefcase size={24} color={Colors.brandSurface} /></View>
+            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Office shifting</Text><Text style={styles.shiftOptionSub}>Workstations, equipment, and records</Text></View>
+            <ArrowRight size={18} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      ) : <>
       {/* ── Modern Step Progress Bar ─────────────────────────────── */}
       <View style={styles.progressCard}>
         <View style={styles.progressItem}>
@@ -494,44 +494,6 @@ export default function QuoteIndexScreen() {
         />
       )}
 
-      {/* ── Home Configuration Grid ─────────────────────────────────── */}
-      <View style={styles.sectionBlock}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Home Size / Configuration</Text>
-          <Text style={styles.sectionSubtitle}>Standard truck sized to fit</Text>
-        </View>
-        <View style={styles.configGrid}>
-          {CONFIGS.map((c) => {
-            const Icon = c.icon;
-            const isSelected = config === c.value;
-            return (
-              <TouchableOpacity
-                key={c.value}
-                style={[styles.configChip, isSelected && styles.configChipActive]}
-                onPress={() => setConfig(c.value)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.configIconBox, isSelected && styles.configIconBoxActive]}>
-                  <Icon
-                    size={16}
-                    color={isSelected ? Colors.marigold : Colors.text}
-                    strokeWidth={isSelected ? 2.4 : 1.8}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.configLabel,
-                    isSelected && styles.configLabelActive,
-                  ]}
-                >
-                  {c.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
       {/* ── Floor Number Level ───────────────────────────────────────── */}
       <View style={styles.sectionBlock}>
         <Text style={styles.sectionTitle}>Pickup Floor Level</Text>
@@ -585,6 +547,21 @@ export default function QuoteIndexScreen() {
         </View>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.liftToggleCard}
+        onPress={() => setParkingClose(!parkingClose)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.liftInfo}>
+          <View style={[styles.liftIconCircle, { backgroundColor: Colors.marigoldSubtle }]}><Truck size={18} color={Colors.marigoldDark} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.liftTitle}>Can the truck park near the entrance?</Text>
+            <Text style={styles.liftSub}>{parkingClose ? 'Short carry distance for the moving crew' : 'Crew may need to carry items farther'}</Text>
+          </View>
+        </View>
+        <View style={[styles.toggle, parkingClose && styles.toggleActive]}><View style={[styles.toggleThumb, parkingClose && styles.toggleThumbActive]} /></View>
+      </TouchableOpacity>
+
       {/* ── Primary CTA Button ───────────────────────────────────────── */}
       <TouchableOpacity
         style={[styles.cta, !canProceed && styles.ctaDisabled]}
@@ -601,6 +578,7 @@ export default function QuoteIndexScreen() {
               config,
               floor: floor.toString(),
               lift: lift ? '1' : '0',
+              parkingClose: parkingClose ? '1' : '0',
               distance: (routeEstimate?.distanceKm || 14.5).toString(),
             },
           })
@@ -622,6 +600,7 @@ export default function QuoteIndexScreen() {
           onClose={() => setMapModalType(null)}
         />
       )}
+      </>}
     </ScrollView>
   );
 }
@@ -636,6 +615,16 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: Spacing.md,
     paddingBottom: Spacing.xxxl,
   },
+  shiftTypeScreen: { flex: 1, minHeight: '100%', padding: Spacing.lg, paddingTop: Spacing.xxxl, gap: Spacing.md, backgroundColor: Colors.background },
+  shiftStepLabel: { color: Colors.marigoldDark, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1 },
+  shiftTitle: { color: Colors.text, fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, marginTop: Spacing.sm },
+  shiftSubtitle: { color: Colors.textSecondary, fontSize: FontSize.sm, marginBottom: Spacing.md },
+  shiftOption: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.cardBorder, borderRadius: BorderRadius.xl, padding: Spacing.md, ...Shadow.sm },
+  shiftIcon: { width: 48, height: 48, borderRadius: BorderRadius.lg, backgroundColor: Colors.marigoldSubtle, justifyContent: 'center', alignItems: 'center' },
+  shiftOfficeIcon: { backgroundColor: Colors.navySubtle },
+  shiftText: { flex: 1, gap: 4 },
+  shiftOptionTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  shiftOptionSub: { color: Colors.textSecondary, fontSize: FontSize.xs },
 
   // ── Step Progress Indicator ──────────────────────────────────
   progressCard: {

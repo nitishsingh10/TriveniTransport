@@ -325,6 +325,27 @@ export const mapsApi = {
   },
 };
 
+export const quoteApi = {
+  itemized(body: {
+    pickupAddress: string;
+    dropAddress: string;
+    alternateContactPhone?: string;
+    configurationType: string;
+    floorNumber: number;
+    liftAvailable: boolean;
+    parkingClose?: boolean;
+    scheduledDate: string;
+    scheduledSlot: string;
+    items: Array<{ itemId?: string; customName?: string; quantity: number; packingTier: 'lite' | 'standard' | 'premium'; customCft?: number }>;
+    addons: string[];
+  }) {
+    return request<{ quoteAmount: number; breakdown: { goodsSubtotal: number; zoneCharge: number; labourCharge: number; surcharges: number; addonsTotal: number } }>('/quotes/itemized', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+};
+
 // ── Auth Service ───────────────────────────────────────────────────
 export const authApi = {
   async requestOtp(identifier: string, isSignup = false) {
@@ -442,6 +463,7 @@ export const bookingApi = {
     configurationType: string;
     floorNumber: number;
     liftAvailable: boolean;
+    parkingClose?: boolean;
     scheduledDate: string;
     scheduledSlot: string;
     items: Array<{

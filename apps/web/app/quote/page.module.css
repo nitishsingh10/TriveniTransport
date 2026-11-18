@@ -104,6 +104,92 @@
   margin-bottom: var(--space-6);
 }
 
+.serviceChoiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.serviceChoice {
+  display: grid;
+  grid-template-columns: 42px 1fr 20px;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 108px;
+  padding: var(--space-5);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  color: var(--brand-700);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.serviceChoice:hover {
+  border-color: var(--brand-400);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.serviceChoice strong {
+  grid-column: 2;
+  color: var(--gray-900);
+  font-size: var(--text-base);
+}
+
+.serviceChoice span {
+  grid-column: 2;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+
+.serviceChoice svg:last-child {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+}
+
+.technicalChoices {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.technicalChoice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--gray-700);
+  text-align: left;
+  cursor: pointer;
+}
+
+.technicalChoice strong { margin-left: auto; white-space: nowrap; color: var(--gray-700); font-size: var(--text-xs); }
+.technicalChoiceActive { border-color: var(--brand-400); background: var(--brand-50); }
+.checkboxMark { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--gray-300); border-radius: 5px; color: #fff; font-size: 12px; }
+.checkboxMarkActive { border-color: var(--brand-600); background: var(--brand-600); }
+
+.couponNotice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--space-5);
+  padding: 14px 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--gray-50);
+  color: var(--gray-500);
+}
+
+.couponNotice span { display: grid; gap: 3px; flex: 1; color: var(--gray-800); font-size: var(--text-sm); }
+.couponNotice small { color: var(--gray-500); font-size: var(--text-xs); }
+.couponNotice em { color: var(--gray-400); font-size: 9px; font-style: normal; font-weight: 800; letter-spacing: .5px; }
+
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -394,6 +480,7 @@
 }
 
 @media (max-width: 640px) {
+  .serviceChoiceGrid { grid-template-columns: 1fr; }
   .locationRow {
     align-items: flex-start;
   }

@@ -278,6 +278,7 @@ export const quotes = {
     configurationType: string;
     floorNumber: number;
     liftAvailable: boolean;
+    parkingClose?: boolean;
     scheduledDate: string;
     scheduledSlot: string;
     items: Array<{
@@ -345,6 +346,7 @@ export const bookings = {
     configurationType: string;
     floorNumber: number;
     liftAvailable: boolean;
+    parkingClose?: boolean;
     scheduledDate: string;
     scheduledSlot: string;
     items: unknown[];

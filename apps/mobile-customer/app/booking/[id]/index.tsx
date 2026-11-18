@@ -367,7 +367,7 @@ export default function BookingTrackScreen() {
         <View style={styles.infoCardHeader}>
           <View>
             <Text style={styles.bookingIdLabel}>TRACKING CODE</Text>
-            <Text style={styles.bookingId}>#{booking.id}</Text>
+            <Text style={styles.bookingId}>#{booking.id.slice(-6).toUpperCase()}</Text>
           </View>
           <View style={styles.transitBadge}>
             <View style={!isDriverAssigned ? styles.pulseMarigold : styles.pulseGreen} />

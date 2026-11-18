@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Compass, MapPin, Flag, ArrowRight, Crosshair } from 'lucide-react';
+import { Compass, MapPin, Flag, ArrowRight, Crosshair, Home, Briefcase, Tag } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WebMapModal from '../components/WebMapModal';
@@ -45,6 +45,22 @@ const ITEM_CATALOG = [
     { name: 'Carton Box (Large)', cft: 5 },
     { name: 'Carton Box (Small)', cft: 3 },
   ]},
+  { category: 'Office Furniture', items: [
+    { name: 'Office Desk / Workstation', cft: 45 },
+    { name: 'Office Chair', cft: 18 },
+    { name: 'Filing Cabinet', cft: 25 },
+    { name: 'Conference Table', cft: 55 },
+  ]},
+  { category: 'Office IT & Electronics', items: [
+    { name: 'Desktop Computer / Monitor', cft: 8 },
+    { name: 'Printer / Scanner', cft: 8 },
+    { name: 'Server Rack / Network Equipment', cft: 30 },
+    { name: 'Projector / Display', cft: 12 },
+  ]},
+  { category: 'Office Records & Supplies', items: [
+    { name: 'Archive / File Box', cft: 5 },
+    { name: 'Carton Box (Large)', cft: 5 },
+  ]},
 ];
 
 const PACKING_TIERS = [
@@ -52,8 +68,6 @@ const PACKING_TIERS = [
   { value: 'standard' as const, label: 'Standard', desc: 'Corrugated sheets + foam padding', note: '1× base rate' },
   { value: 'premium' as const, label: 'Premium', desc: 'Wooden crating for all items', note: '1.35× base rate' },
 ];
-
-const CONFIG_TYPES = ['1bhk', '2bhk', '3bhk', '4bhk', 'villa', 'office', 'studio'] as const;
 
 type SelectedItems = Record<string, number>;
 type PackingTier = 'lite' | 'standard' | 'premium';
@@ -65,12 +79,14 @@ export default function QuotePage() {
   const { isLoggedIn, user } = useAuth();
 
   // Form state
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [floor, setFloor] = useState(0);
   const [liftAvailable, setLiftAvailable] = useState(true);
-  const [configType, setConfigType] = useState<string>('1bhk');
+  const [configType, setConfigType] = useState<string>('2bhk');
+  const [parkingClose, setParkingClose] = useState(true);
+  const [technicalWork, setTechnicalWork] = useState<string[]>([]);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledSlot, setScheduledSlot] = useState('morning');
   const [selectedItems, setSelectedItems] = useState<SelectedItems>({});
@@ -95,7 +111,6 @@ export default function QuotePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [quoteResult, setQuoteResult] = useState<Awaited<ReturnType<typeof quotes.itemized>> | null>(null);
-  const [, setBookingId] = useState<string | null>(null);
   const [bookingCreating, setBookingCreating] = useState(false);
 
   // Autocomplete suggestion states
@@ -150,6 +165,7 @@ export default function QuotePage() {
   };
 
   const handlePickupChange = (val: string) => {
+    setQuoteResult(null);
     setPickup(val);
     if (pickupDebounce.current) clearTimeout(pickupDebounce.current);
     if (val.trim().length < 2) {
@@ -164,6 +180,7 @@ export default function QuotePage() {
   };
 
   const handleDropChange = (val: string) => {
+    setQuoteResult(null);
     setDrop(val);
     if (dropDebounce.current) clearTimeout(dropDebounce.current);
     if (val.trim().length < 2) {
@@ -178,6 +195,7 @@ export default function QuotePage() {
   };
 
   const selectPickupSuggestion = (item: PlaceSuggestion) => {
+    setQuoteResult(null);
     setPickup(item.description);
     setPickupUnit('');
     setPickupLandmark('');
@@ -186,6 +204,7 @@ export default function QuotePage() {
   };
 
   const selectDropSuggestion = (item: PlaceSuggestion) => {
+    setQuoteResult(null);
     setDrop(item.description);
     setDropUnit('');
     setDropLandmark('');
@@ -222,6 +241,7 @@ export default function QuotePage() {
     : null;
 
   const handleLocationSelected = (loc: { address: string; lat: number; lng: number; city: string; type: 'pickup' | 'drop' }) => {
+    setQuoteResult(null);
     if (loc.type === 'pickup') {
       setPickup(loc.address);
       setPickupUnit('');
@@ -235,6 +255,7 @@ export default function QuotePage() {
   };
 
   const handleUseGps = async () => {
+    setQuoteResult(null);
     const location = locationBias || await getBrowserLocation();
     if (!location) return;
     setLocationBias(location);
@@ -291,13 +312,13 @@ export default function QuotePage() {
         configurationType: configType,
         floorNumber: floor,
         liftAvailable,
+        parkingClose,
         scheduledDate,
         scheduledSlot,
         items: buildItemsPayload(),
-        addons: [],
+        addons: technicalWork,
       });
       setQuoteResult(result);
-      setStep(4);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to calculate quote. Please try again.');
     } finally {
@@ -317,13 +338,13 @@ export default function QuotePage() {
         configurationType: configType,
         floorNumber: floor,
         liftAvailable,
+        parkingClose,
         scheduledDate,
         scheduledSlot,
         items: buildItemsPayload(),
-        addons: [],
+        addons: technicalWork,
       });
-      setBookingId(res.booking.id);
-      router.push(`/booking/${res.booking.id}`);
+      router.push(`/booking/${res.booking.id}/pay`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create booking. Please try again.');
     } finally {
@@ -343,14 +364,14 @@ export default function QuotePage() {
         <div className="container">
           {/* Progress Bar */}
           <div className={styles.progress}>
-            {['Location', 'Inventory', 'Packing', 'Quote'].map((label, i) => (
-              <div key={label} className={`${styles.progressStep} ${step > i ? styles.done : ''} ${step === i + 1 ? styles.current : ''}`}>
-                <span className={styles.progressDot}>{step > i + 1 ? '✓' : i + 1}</span>
+            {['Shift type', 'Locations', 'Items', 'Schedule & price'].map((label, i) => (
+              <div key={label} className={`${styles.progressStep} ${step > i ? styles.done : ''} ${step === i ? styles.current : ''}`}>
+                <span className={styles.progressDot}>{step > i ? '✓' : i + 1}</span>
                 <span className={styles.progressLabel}>{label}</span>
               </div>
             ))}
             <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: `${((step - 1) / 3) * 100}%` }} />
+              <div className={styles.progressFill} style={{ width: `${(step / 3) * 100}%` }} />
             </div>
           </div>
 
@@ -361,15 +382,31 @@ export default function QuotePage() {
             </div>
           )}
 
-          {/* Step 1: Location + Date */}
+          {step === 0 && (
+            <div className={`card ${styles.stepCard} animate-in`}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#B45309', letterSpacing: '0.8px' }}>STEP 1 · SHIFT TYPE</span>
+              <h2 className={styles.stepTitle}>What are you moving?</h2>
+              <p className={styles.stepSubtitle}>Choose a home or office move to start your booking.</p>
+              <div className={styles.serviceChoiceGrid}>
+                <button type="button" className={styles.serviceChoice} onClick={() => { setQuoteResult(null); setConfigType('2bhk'); setStep(1); }}>
+                  <Home size={24} /><strong>Home shifting</strong><span>Household goods, room by room</span><ArrowRight size={16} />
+                </button>
+                <button type="button" className={styles.serviceChoice} onClick={() => { setQuoteResult(null); setConfigType('office'); setStep(1); }}>
+                  <Briefcase size={24} /><strong>Office shifting</strong><span>Workstations, equipment, and records</span><ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 1: Locations and access details */}
           {step === 1 && (
             <div className={`card ${styles.stepCard} animate-in`}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#B45309', letterSpacing: '0.8px' }}>
-                  STEP 1 · RELOCATION ROUTE
+                  STEP 2 · LOCATIONS
                 </span>
               </div>
-              <h2 className={styles.stepTitle}>Where &amp; When are you moving?</h2>
+              <h2 className={styles.stepTitle}>Where are you moving?</h2>
               <p className={styles.stepSubtitle}>
                 Select your pickup & drop points using our interactive map.
               </p>
@@ -523,61 +560,48 @@ export default function QuotePage() {
               <div className={styles.formGrid} style={{ marginTop: 'var(--space-4)' }}>
                 <div className="input-group">
                   <label>Pickup flat / house number *</label>
-                  <input className="input-field" maxLength={100} value={pickupUnit} onChange={e => setPickupUnit(e.target.value)} placeholder="Flat, house, or unit number" />
+                  <input className="input-field" maxLength={100} value={pickupUnit} onChange={e => { setPickupUnit(e.target.value); setQuoteResult(null); }} placeholder="Flat, house, or unit number" />
                 </div>
                 <div className="input-group">
                   <label>Pickup landmark *</label>
-                  <input className="input-field" maxLength={100} value={pickupLandmark} onChange={e => setPickupLandmark(e.target.value)} placeholder="Nearby landmark" />
+                  <input className="input-field" maxLength={100} value={pickupLandmark} onChange={e => { setPickupLandmark(e.target.value); setQuoteResult(null); }} placeholder="Nearby landmark" />
                 </div>
                 <div className="input-group">
                   <label>Delivery flat / house number *</label>
-                  <input className="input-field" maxLength={100} value={dropUnit} onChange={e => setDropUnit(e.target.value)} placeholder="Flat, house, or unit number" />
+                  <input className="input-field" maxLength={100} value={dropUnit} onChange={e => { setDropUnit(e.target.value); setQuoteResult(null); }} placeholder="Flat, house, or unit number" />
                 </div>
                 <div className="input-group">
                   <label>Delivery landmark *</label>
-                  <input className="input-field" maxLength={100} value={dropLandmark} onChange={e => setDropLandmark(e.target.value)} placeholder="Nearby landmark" />
+                  <input className="input-field" maxLength={100} value={dropLandmark} onChange={e => { setDropLandmark(e.target.value); setQuoteResult(null); }} placeholder="Nearby landmark" />
                 </div>
                 <div className={`input-group ${styles.fullWidthCol}`}>
                   <label>Alternative contact number (optional)</label>
-                  <input className="input-field" type="tel" inputMode="numeric" maxLength={10} value={alternateContactPhone} onChange={e => setAlternateContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number" />
+                  <input className="input-field" type="tel" inputMode="numeric" maxLength={10} value={alternateContactPhone} onChange={e => { setAlternateContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setQuoteResult(null); }} placeholder="10-digit mobile number" />
                   {!alternatePhoneValid && <small style={{ color: '#dc2626' }}>Enter a valid 10-digit Indian mobile number.</small>}
                 </div>
               </div>
 
               <div className={styles.formGrid} style={{ marginTop: 'var(--space-4)' }}>
                 <div className="input-group">
-                  <label>Home Configuration</label>
-                  <select className="input-field" value={configType} onChange={e => setConfigType(e.target.value)}>
-                    {CONFIG_TYPES.map(c => (
-                      <option key={c} value={c}>{c.toUpperCase().replace('BHK', ' BHK')}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="input-group">
                   <label>Floor Number</label>
-                  <input className="input-field" type="number" min="0" value={floor} onChange={e => setFloor(Number(e.target.value))} />
-                </div>
-                <div className="input-group">
-                  <label>Preferred Move Date</label>
-                  <input className="input-field" type="date" min={minDateStr} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} />
-                </div>
-                <div className="input-group">
-                  <label>Preferred Time Slot</label>
-                  <select className="input-field" value={scheduledSlot} onChange={e => setScheduledSlot(e.target.value)}>
-                    <option value="morning">Morning (7 AM – 12 PM)</option>
-                    <option value="afternoon">Afternoon (12 PM – 5 PM)</option>
-                    <option value="evening">Evening (5 PM – 8 PM)</option>
-                  </select>
+                  <input className="input-field" type="number" min="0" value={floor} onChange={e => { setFloor(Number(e.target.value)); setQuoteResult(null); }} />
                 </div>
                 <div className={`input-group ${styles.fullWidthCol}`}>
                   <label>Lift Available?</label>
                   <div className={styles.toggleRow}>
-                    <button type="button" className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(true)}>Yes (Elevator Available)</button>
-                    <button type="button" className={`${styles.toggleBtn} ${!liftAvailable ? styles.toggleActive : ''}`} onClick={() => setLiftAvailable(false)}>No (Staircase Only)</button>
+                    <button type="button" className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`} onClick={() => { setLiftAvailable(true); setQuoteResult(null); }}>Yes (Elevator Available)</button>
+                    <button type="button" className={`${styles.toggleBtn} ${!liftAvailable ? styles.toggleActive : ''}`} onClick={() => { setLiftAvailable(false); setQuoteResult(null); }}>No (Staircase Only)</button>
+                  </div>
+                </div>
+                <div className={`input-group ${styles.fullWidthCol}`}>
+                  <label>Can the truck park close to the entrance?</label>
+                  <div className={styles.toggleRow}>
+                    <button type="button" className={`${styles.toggleBtn} ${parkingClose ? styles.toggleActive : ''}`} onClick={() => { setParkingClose(true); setQuoteResult(null); }}>Yes, nearby</button>
+                    <button type="button" className={`${styles.toggleBtn} ${!parkingClose ? styles.toggleActive : ''}`} onClick={() => { setParkingClose(false); setQuoteResult(null); }}>No, farther away</button>
                   </div>
                 </div>
               </div>
-              <button className="btn btn-primary btn-lg" style={{ marginTop: 'var(--space-6)', width: '100%' }} onClick={() => setStep(2)} disabled={!pickup || !drop || !pickupUnit.trim() || !pickupLandmark.trim() || !dropUnit.trim() || !dropLandmark.trim() || !alternatePhoneValid || !scheduledDate}>
+              <button className="btn btn-primary btn-lg" style={{ marginTop: 'var(--space-6)', width: '100%' }} onClick={() => setStep(2)} disabled={!pickup || !drop || !pickupUnit.trim() || !pickupLandmark.trim() || !dropUnit.trim() || !dropLandmark.trim() || !alternatePhoneValid}>
                 Next: Select Items →
               </button>
             </div>
@@ -589,7 +613,7 @@ export default function QuotePage() {
               <h2 className={styles.stepTitle}>📦 What are you moving?</h2>
               <p className={styles.stepSubtitle}>Select items and quantities from the catalog below</p>
 
-              {ITEM_CATALOG.map(cat => (
+              {ITEM_CATALOG.filter(cat => configType === 'office' ? cat.category.startsWith('Office') : !cat.category.startsWith('Office')).map(cat => (
                 <div key={cat.category} className={styles.catSection}>
                   <h3 className={styles.catTitle}>{cat.category}</h3>
                   <div className={styles.itemGrid}>
@@ -597,7 +621,7 @@ export default function QuotePage() {
                       <div key={item.name} className={`${styles.itemCard} ${(selectedItems[item.name] || 0) > 0 ? styles.itemSelected : ''}`}>
                         <div className={styles.itemInfo}>
                           <span className={styles.itemName}>{item.name}</span>
-                          <span className={styles.itemRate}>{item.cft} CFT</span>
+                          <span className={styles.itemRate}>Select quantity</span>
                         </div>
                         <div className={styles.itemControls}>
                           <button type="button" className={styles.qtyBtn} onClick={() => updateItem(item.name, -1)}>−</button>
@@ -613,24 +637,41 @@ export default function QuotePage() {
               <div className={styles.stepActions}>
                 <button type="button" className="btn btn-outline" onClick={() => setStep(1)}>← Back</button>
                 <button type="button" className="btn btn-primary btn-lg" onClick={() => setStep(3)} disabled={totalItems === 0}>
-                  Next: Packing ({totalItems} items) →
+                  Next: Schedule ({totalItems} items) →
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Packing Tier */}
+          {/* Step 3: Schedule, packing, and optional work */}
           {step === 3 && (
             <div className={`card ${styles.stepCard} animate-in`}>
-              <h2 className={styles.stepTitle}>🛡️ Choose Packing Protection</h2>
-              <p className={styles.stepSubtitle}>All tiers include loading, unloading, and transit insurance</p>
+              <h2 className={styles.stepTitle}>STEP 4 · Schedule your move</h2>
+              <p className={styles.stepSubtitle}>Choose a date, packing type, and any technical work you need.</p>
+
+              <div className={styles.formGrid}>
+                <div className="input-group">
+                  <label>Move date *</label>
+                  <input className="input-field" type="date" min={minDateStr} value={scheduledDate} onChange={e => { setScheduledDate(e.target.value); setQuoteResult(null); }} />
+                </div>
+                <div className="input-group">
+                  <label>Arrival window</label>
+                  <select className="input-field" value={scheduledSlot} onChange={e => { setScheduledSlot(e.target.value); setQuoteResult(null); }}>
+                    <option value="morning">Morning (7 AM – 12 PM)</option>
+                    <option value="afternoon">Afternoon (12 PM – 5 PM)</option>
+                    <option value="evening">Evening (5 PM – 8 PM)</option>
+                  </select>
+                </div>
+              </div>
+
+              <h3 className={styles.catTitle} style={{ marginTop: 'var(--space-5)' }}>Packing type</h3>
 
               <div className={styles.tierGrid}>
                 {PACKING_TIERS.map(tier => (
                   <div
                     key={tier.value}
                     className={`${styles.tierCard} ${packingTier === tier.value ? styles.tierSelected : ''}`}
-                    onClick={() => setPackingTier(tier.value)}
+                    onClick={() => { setPackingTier(tier.value); setQuoteResult(null); }}
                   >
                     <div className={styles.tierHeader}>
                       <span className={styles.tierName}>{tier.label}</span>
@@ -644,19 +685,36 @@ export default function QuotePage() {
                 ))}
               </div>
 
+              <h3 className={styles.catTitle} style={{ marginTop: 'var(--space-5)' }}>Technical work (optional)</h3>
+              <p className={styles.stepSubtitle}>Additional charges apply when you request installation or dismantling.</p>
+              <div className={styles.technicalChoices}>
+                {[
+                  ['electrician', 'Electronics installation / uninstallation', 'Extra charge'],
+                  ['carpenter', 'Bed or furniture dismantling / assembly', 'Extra charge'],
+                ].map(([addon, label, price]) => {
+                  const selected = technicalWork.includes(addon);
+                  return <button type="button" key={addon} className={`${styles.technicalChoice} ${selected ? styles.technicalChoiceActive : ''}`} onClick={() => { setQuoteResult(null); setTechnicalWork(current => selected ? current.filter(item => item !== addon) : [...current, addon]); }}>
+                    <span className={`${styles.checkboxMark} ${selected ? styles.checkboxMarkActive : ''}`}>{selected ? '✓' : ''}</span>
+                    <span>{label}</span><strong>{price}</strong>
+                  </button>;
+                })}
+              </div>
+
+              <div className={styles.couponNotice}><Tag size={17} /><span><strong>Coupon</strong><small>No coupons available yet</small></span><em>COMING SOON</em></div>
+
               <div className={styles.stepActions}>
                 <button type="button" className="btn btn-outline" onClick={() => setStep(2)}>← Back</button>
-                <button type="button" className="btn btn-primary btn-lg" onClick={calculateQuote} disabled={loading}>
-                  {loading ? 'Calculating Quote…' : 'Calculate My Quote →'}
+                <button type="button" className="btn btn-primary btn-lg" onClick={calculateQuote} disabled={loading || !scheduledDate}>
+                  {loading ? 'Calculating Quote…' : quoteResult ? 'Recalculate price' : 'Calculate price →'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 4: Quote Breakdown */}
-          {step === 4 && quoteResult && (
+          {/* Price appears on the schedule page after calculation. */}
+          {step === 3 && quoteResult && (
             <div className={`card ${styles.stepCard} animate-in`}>
-              <h2 className={styles.stepTitle}>🎉 Your Itemised Quote</h2>
+              <h2 className={styles.stepTitle}>🎉 Your price</h2>
               <p className={styles.stepSubtitle}>Locked upfront — no hidden charges, guaranteed</p>
 
               <div className={styles.quoteSummary}>
@@ -669,7 +727,7 @@ export default function QuotePage() {
                 <div className={styles.breakdownTable}>
                   <h3 className={styles.breakdownTitle}>Cost Breakdown</h3>
                   <div className={styles.breakdownRow}>
-                    <span>Goods Base Rate ({quoteResult.metrics.totalCft} CFT, {quoteResult.metrics.totalWeightKg} kg)</span>
+                    <span>Selected goods</span>
                     <span>₹{quoteResult.breakdown.goodsSubtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className={styles.breakdownRow}>
@@ -773,9 +831,8 @@ export default function QuotePage() {
                 )}
 
                 <div className={styles.stepActions}>
-                  <button type="button" className="btn btn-outline" onClick={() => setStep(3)}>← Edit Options</button>
                   <button type="button" className="btn btn-primary btn-lg" onClick={createBooking} disabled={bookingCreating}>
-                    {bookingCreating ? 'Confirming Move…' : 'Confirm Booking (Cash on Delivery) →'}
+                    {bookingCreating ? 'Preparing payment…' : 'Continue to payment →'}
                   </button>
                 </div>
               </div>

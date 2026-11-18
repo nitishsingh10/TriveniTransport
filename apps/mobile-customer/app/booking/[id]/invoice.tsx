@@ -77,7 +77,7 @@ export default function BookingInvoiceScreen() {
         year: 'numeric',
       })
     : 'Scheduled Date';
-  const invoiceNum = booking ? `INV-${booking.id.slice(0, 8).toUpperCase()}` : 'INV-PROVISIONAL';
+  const invoiceNum = booking ? `INV-${booking.id.slice(-6).toUpperCase()}` : 'INV-PROVISIONAL';
 
   return (
     <ScrollView

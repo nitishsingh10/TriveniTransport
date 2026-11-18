@@ -101,7 +101,7 @@ export default function BookingPayScreen() {
         <Text style={styles.amountLabel}>ESTIMATED MOVE TOTAL</Text>
         <Text style={styles.amountValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
         <Text style={styles.amountSub}>
-          Booking #{id?.slice(0, 8).toUpperCase() || 'NEW'} · 100% payable only upon safe delivery
+          Booking #{id?.slice(-6).toUpperCase() || 'NEW'} · 100% payable only upon safe delivery
         </Text>
       </View>
 

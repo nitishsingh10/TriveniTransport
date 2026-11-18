@@ -139,7 +139,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
         <div className="container">
           <div className={styles.header}>
             <div>
-              <h1 className={styles.title}>Booking #{id.slice(0, 8).toUpperCase()}</h1>
+              <h1 className={styles.title}>Booking #{id.slice(-6).toUpperCase()}</h1>
               <p className={styles.subtitle}>
                 {booking.configurationType.toUpperCase().replace('BHK', ' BHK')} &nbsp;·&nbsp;
                 {formatDate(booking.scheduledDate)} &nbsp;·&nbsp;

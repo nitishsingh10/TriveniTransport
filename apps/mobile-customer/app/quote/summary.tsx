@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -21,11 +21,15 @@ import {
   Check,
   FileCheck,
   Banknote,
+  Calendar,
+  Wrench,
+  Tag,
+  Package,
 } from 'lucide-react-native';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
-import { bookingApi } from '@/lib/api';
+import { bookingApi, quoteApi } from '@/lib/api';
 import { DEFAULT_CATALOG } from '@/constants/inventory';
 
 interface SelectedItem {
@@ -59,6 +63,7 @@ export default function SummaryScreen() {
     pickupAddress?: string;
     dropAddress?: string;
     alternateContactPhone?: string;
+    parkingClose?: string;
   }>();
 
   const quantities = useMemo<Record<string, number>>(() => {
@@ -97,26 +102,63 @@ export default function SummaryScreen() {
     [selectedItems]
   );
 
-  const goodsSubtotal = itemLines.reduce((s, l) => s + l.total, 0);
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    const date = new Date(); date.setDate(date.getDate() + 1); return date.toISOString().slice(0, 10);
+  });
+  const [scheduledSlot, setScheduledSlot] = useState('morning');
+  const [packingTier, setPackingTier] = useState<'lite' | 'standard' | 'premium'>('standard');
+  const [technicalWork, setTechnicalWork] = useState<string[]>([]);
+  const goodsSubtotal = itemLines.reduce((s, l) => s + l.total, 0) * (packingTier === 'lite' ? 0.8 : packingTier === 'premium' ? 1.35 : 1);
   const liftDiscount = params.lift === '1' ? 0 : 400;
   const floorCharge = parseInt(params.floor ?? '0', 10) > 0 ? 300 : 0;
   const labourCharge = LABOUR_RATE + floorCharge + liftDiscount;
-  const totalAmount = ZONE_RATE + goodsSubtotal + labourCharge;
-  const advanceAmount = Math.ceil(totalAmount * 0.2);
+  const technicalCharge = technicalWork.length * 500;
+  const totalAmount = ZONE_RATE + goodsSubtotal + labourCharge + technicalCharge;
+  const [quoteEstimate, setQuoteEstimate] = useState<{ quoteAmount: number; breakdown: { goodsSubtotal: number; zoneCharge: number; labourCharge: number; surcharges: number; addonsTotal: number } } | null>(null);
+
+  const dateOptions = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(); date.setDate(date.getDate() + index + 1);
+    const value = date.toISOString().slice(0, 10);
+    return { value, day: date.toLocaleDateString('en-IN', { weekday: 'short' }), date: date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) };
+  });
 
   const [loading, setLoading] = useState(false);
+
+  const pickupAddress = params.pickupAddress || params.pickup || '';
+  const dropAddress = params.dropAddress || params.drop || '';
+  const configType = params.config || '2bhk';
+  const floorNumber = parseInt(params.floor || '0', 10);
+  const liftAvailable = params.lift === '1';
+  const parkingClose = params.parkingClose !== '0';
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void quoteApi.itemized({
+        pickupAddress,
+        dropAddress,
+        ...(params.alternateContactPhone ? { alternateContactPhone: params.alternateContactPhone } : {}),
+        configurationType: configType,
+        floorNumber,
+        liftAvailable,
+        parkingClose,
+        scheduledDate,
+        scheduledSlot,
+        items: itemLines.map((line) => ({ ...(line.itemId ? { itemId: line.itemId } : { customName: line.label, customCft: line.cft }), quantity: line.qty, packingTier })),
+        addons: technicalWork,
+      }).then(setQuoteEstimate).catch(() => setQuoteEstimate(null));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [pickupAddress, dropAddress, params.alternateContactPhone, configType, floorNumber, liftAvailable, parkingClose, scheduledDate, scheduledSlot, itemLines, packingTier, technicalWork]);
+
+  const estimatedTotal = quoteEstimate?.quoteAmount ?? totalAmount;
 
   const handleConfirmBooking = async () => {
     setLoading(true);
     try {
-      const today = new Date();
-      today.setDate(today.getDate() + 2);
-      const scheduledDate = today.toISOString().split('T')[0];
-
       const itemsPayload = itemLines.map((line) => ({
         ...(line.itemId ? { itemId: line.itemId } : { customName: line.label, customCft: line.cft }),
         quantity: line.qty,
-        packingTier: 'standard' as const,
+        packingTier,
       }));
 
       if (itemsPayload.length === 0) {
@@ -135,9 +177,11 @@ export default function SummaryScreen() {
         configurationType: (params.config as any) || '2bhk',
         floorNumber: parseInt(params.floor || '0', 10),
         liftAvailable: params.lift === '1',
+        parkingClose: params.parkingClose !== '0',
         scheduledDate,
-        scheduledSlot: '09:00 AM – 12:00 PM',
+        scheduledSlot,
         items: itemsPayload,
+        addons: technicalWork,
         paymentMethod: 'cash_on_delivery',
       });
 
@@ -184,16 +228,69 @@ export default function SummaryScreen() {
           <View style={[styles.progressCircle, styles.progressCircleActive]}>
             <Text style={styles.progressNumActive}>3</Text>
           </View>
-          <Text style={[styles.progressLabel, styles.progressLabelActive]}>Summary</Text>
+          <Text style={[styles.progressLabel, styles.progressLabelActive]}>Schedule</Text>
         </View>
       </View>
 
       <View style={styles.titleGroup}>
-        <Text style={styles.stepBadge}>STEP 3 OF 3 — ESTIMATE READY</Text>
-        <Text style={styles.title}>Price Breakdown</Text>
+        <Text style={styles.stepBadge}>STEP 4 OF 4 — SCHEDULE &amp; PRICE</Text>
+        <Text style={styles.title}>Plan your move</Text>
         <Text style={styles.subtitle}>
-          Itemized transparent estimate with zero hidden costs or surge pricing.
+          Choose a date, packing protection, and any technical work needed.
         </Text>
+      </View>
+
+      <View style={styles.linesCard}>
+        <View style={styles.receiptHeader}><Calendar size={16} color={Colors.text} /><Text style={styles.receiptTitle}>MOVE DATE</Text></View>
+        <View style={styles.dateOptions}>
+          {dateOptions.map((option) => (
+            <TouchableOpacity key={option.value} style={[styles.dateOption, scheduledDate === option.value && styles.optionSelected]} onPress={() => setScheduledDate(option.value)}>
+              <Text style={[styles.dateDay, scheduledDate === option.value && styles.selectedOptionText]}>{option.day}</Text>
+              <Text style={[styles.dateValue, scheduledDate === option.value && styles.selectedOptionText]}>{option.date}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.fieldLabel}>Arrival window</Text>
+        <View style={styles.choiceRow}>
+          {['morning', 'afternoon', 'evening'].map((slot) => (
+            <TouchableOpacity key={slot} style={[styles.choiceChip, scheduledSlot === slot && styles.optionSelected]} onPress={() => setScheduledSlot(slot)}>
+              <Text style={[styles.choiceText, scheduledSlot === slot && styles.selectedOptionText]}>{slot[0].toUpperCase() + slot.slice(1)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.linesCard}>
+        <View style={styles.receiptHeader}><Package size={16} color={Colors.text} /><Text style={styles.receiptTitle}>PACKING TYPE</Text></View>
+        {([
+          ['lite', 'Basic', 'Protective wrap for everyday items'],
+          ['standard', 'Standard', 'Layered protection for furniture and fragile goods'],
+          ['premium', 'Premium', 'Enhanced protection for delicate and valuable items'],
+        ] as const).map(([tier, label, detail]) => (
+          <TouchableOpacity key={tier} style={[styles.packingOption, packingTier === tier && styles.optionSelected]} onPress={() => setPackingTier(tier)}>
+            <View style={{ flex: 1 }}><Text style={[styles.packingTitle, packingTier === tier && styles.selectedOptionText]}>{label}</Text><Text style={styles.packingDesc}>{detail}</Text></View>
+            <Text style={[styles.packingTick, packingTier === tier && styles.selectedOptionText]}>{packingTier === tier ? '✓' : '○'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.linesCard}>
+        <View style={styles.receiptHeader}><Wrench size={16} color={Colors.text} /><Text style={styles.receiptTitle}>TECHNICAL WORK (OPTIONAL)</Text></View>
+        {([
+          ['electrician', 'Electronics installation / uninstallation', 'Extra charge'],
+          ['carpenter', 'Bed or furniture dismantling / assembly', 'Extra charge'],
+        ] as const).map(([addon, label, price]) => {
+          const selected = technicalWork.includes(addon);
+          return <TouchableOpacity key={addon} style={[styles.addonRow, selected && styles.optionSelected]} onPress={() => setTechnicalWork((current) => selected ? current.filter((item) => item !== addon) : [...current, addon])}>
+            <View style={[styles.checkbox, selected && styles.checkboxActive]}>{selected ? <Check size={12} color={Colors.white} /> : null}</View>
+            <Text style={styles.addonLabel}>{label}</Text><Text style={styles.addonPrice}>{price}</Text>
+          </TouchableOpacity>;
+        })}
+      </View>
+
+      <View style={styles.couponCard}>
+        <Tag size={16} color={Colors.textMuted} /><View style={{ flex: 1 }}><Text style={styles.packingTitle}>Coupon</Text><Text style={styles.packingDesc}>No coupons available yet</Text></View>
+        <Text style={styles.comingSoon}>COMING SOON</Text>
       </View>
 
       {/* Route Summary (White Card) */}
@@ -226,24 +323,23 @@ export default function SummaryScreen() {
 
         <View style={styles.lineRow}>
           <Text style={styles.lineLabel}>Base Vehicle & Distance Fee</Text>
-          <Text style={styles.lineAmount}>₹{ZONE_RATE.toLocaleString('en-IN')}</Text>
+          <Text style={styles.lineAmount}>₹{(quoteEstimate?.breakdown.zoneCharge ?? ZONE_RATE).toLocaleString('en-IN')}</Text>
         </View>
 
-        {itemLines.map((l) => (
-          <View key={l.label} style={styles.lineRow}>
-            <Text style={styles.lineLabel}>
-              {l.label} <Text style={styles.qtyBadge}>×{l.qty}</Text>
-            </Text>
-            <Text style={styles.lineAmount}>₹{l.total.toLocaleString('en-IN')}</Text>
-          </View>
-        ))}
+        <View style={styles.lineRow}>
+          <Text style={styles.lineLabel}>Selected inventory ({itemLines.reduce((sum, line) => sum + line.qty, 0)} items)</Text>
+          <Text style={styles.lineAmount}>₹{(quoteEstimate?.breakdown.goodsSubtotal ?? Math.round(goodsSubtotal)).toLocaleString('en-IN')}</Text>
+        </View>
 
         <View style={styles.lineRow}>
           <Text style={styles.lineLabel}>
             Labour & Crew Handling {params.lift !== '1' ? '(Stairs)' : '(Lift Assisted)'}
           </Text>
-          <Text style={styles.lineAmount}>₹{labourCharge.toLocaleString('en-IN')}</Text>
+          <Text style={styles.lineAmount}>₹{(quoteEstimate?.breakdown.labourCharge ?? labourCharge).toLocaleString('en-IN')}</Text>
         </View>
+
+        {!!quoteEstimate?.breakdown.surcharges && <View style={styles.lineRow}><Text style={styles.lineLabel}>Site &amp; floor charges</Text><Text style={styles.lineAmount}>₹{quoteEstimate.breakdown.surcharges.toLocaleString('en-IN')}</Text></View>}
+        {!!(quoteEstimate?.breakdown.addonsTotal ?? technicalCharge) && <View style={styles.lineRow}><Text style={styles.lineLabel}>Technical work</Text><Text style={styles.lineAmount}>₹{(quoteEstimate?.breakdown.addonsTotal ?? technicalCharge).toLocaleString('en-IN')}</Text></View>}
 
         <View style={styles.divider} />
 
@@ -252,7 +348,7 @@ export default function SummaryScreen() {
             <Text style={styles.totalLabel}>Estimated Total</Text>
             <Text style={styles.taxInclusive}>Inclusive of GST & Transit Cover</Text>
           </View>
-          <Text style={styles.totalAmount}>₹{totalAmount.toLocaleString('en-IN')}</Text>
+          <Text style={styles.totalAmount}>₹{estimatedTotal.toLocaleString('en-IN')}</Text>
         </View>
       </View>
 
@@ -273,7 +369,7 @@ export default function SummaryScreen() {
           <Banknote size={18} color={Colors.marigold} />
           <Text style={styles.depositTitle}>Confirm with Cash on Delivery</Text>
         </View>
-        <Text style={styles.depositAmount}>₹{totalAmount.toLocaleString('en-IN')}</Text>
+        <Text style={styles.depositAmount}>₹{estimatedTotal.toLocaleString('en-IN')}</Text>
         <Text style={styles.depositSub}>
           ₹0 Advance Required · Full amount payable directly upon safe delivery
         </Text>
@@ -288,7 +384,7 @@ export default function SummaryScreen() {
             <ActivityIndicator color={Colors.text} />
           ) : (
             <>
-              <Text style={styles.bookCtaText}>Confirm & Book Move (COD)</Text>
+              <Text style={styles.bookCtaText}>Proceed to payment</Text>
               <ArrowRight size={17} color={Colors.text} strokeWidth={2.4} />
             </>
           )}
@@ -435,6 +531,27 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: Spacing.sm,
     ...Shadow.sm,
   },
+  dateOptions: { flexDirection: 'row', gap: 7 },
+  dateOption: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 10, paddingHorizontal: 3, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.cardBorder, backgroundColor: Colors.surfaceSubtle },
+  dateDay: { color: Colors.textMuted, fontSize: 9, fontWeight: FontWeight.semibold },
+  dateValue: { color: Colors.text, fontSize: 10, fontWeight: FontWeight.bold },
+  fieldLabel: { color: Colors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, marginTop: 3 },
+  choiceRow: { flexDirection: 'row', gap: 7 },
+  choiceChip: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.cardBorder, backgroundColor: Colors.surfaceSubtle },
+  choiceText: { color: Colors.textSecondary, fontSize: 10, fontWeight: FontWeight.semibold },
+  optionSelected: { borderColor: Colors.marigold, backgroundColor: Colors.marigoldSubtle },
+  selectedOptionText: { color: Colors.marigoldDark },
+  packingOption: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 9, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.cardBorder },
+  packingTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  packingDesc: { color: Colors.textSecondary, fontSize: 10, marginTop: 2 },
+  packingTick: { color: Colors.textMuted, fontSize: 16, fontWeight: FontWeight.bold },
+  addonRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 9, paddingHorizontal: 7, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.cardBorder },
+  checkbox: { width: 18, height: 18, borderRadius: 5, borderWidth: 1, borderColor: Colors.inputBorder, alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: Colors.brandSurface, borderColor: Colors.brandSurface },
+  addonLabel: { flex: 1, color: Colors.text, fontSize: 10, fontWeight: FontWeight.medium },
+  addonPrice: { color: Colors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold },
+  couponCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: Spacing.md, backgroundColor: Colors.surfaceSubtle, borderWidth: 1, borderColor: Colors.cardBorder, borderRadius: BorderRadius.lg },
+  comingSoon: { color: Colors.textMuted, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 0.5 },
   receiptHeader: {
     flexDirection: 'row',
     alignItems: 'center',

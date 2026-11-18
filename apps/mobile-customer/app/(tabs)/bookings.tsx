@@ -74,7 +74,7 @@ function BookingCard({
       <View style={styles.cardHeader}>
         <View>
           <Text style={styles.bookingIdLabel}>BOOKING ID</Text>
-          <Text style={styles.bookingId}>#{id}</Text>
+          <Text style={styles.bookingId}>#{id.slice(-6).toUpperCase()}</Text>
         </View>
         <View style={[styles.statusPill, { backgroundColor: config.bg, borderColor: `${config.color}35` }]}>
           <StatusIcon size={12} color={config.color} strokeWidth={2.4} />

@@ -29,6 +29,7 @@ export default function InventoryScreen() {
   const styles = useThemedStyles(createStyles);
 
   const params = useLocalSearchParams();
+  const isOfficeMove = params.config === 'office';
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [catalog, setCatalog] = useState<RoomSection[]>(DEFAULT_CATALOG);
   const [search, setSearch] = useState('');
@@ -80,16 +81,21 @@ export default function InventoryScreen() {
       }))),
     [catalog, quantities]
   );
-  const estimatedVolume = selectedLines.reduce((total, item) => total + item.defaultCft * item.quantity, 0);
   const estimatedGoodsCost = selectedLines.reduce((total, item) => total + item.baseRate * item.quantity, 0);
-  const categories = ['All', ...catalog.map((section) => section.room)];
-  const visibleCatalog = useMemo(() => catalog
+  const moveCatalog = useMemo(() => catalog.filter((section) => {
+    const category = section.room.toLowerCase();
+    return isOfficeMove
+      ? category.includes('office') || category.includes('electronic') || category.includes('carton') || category.includes('storage')
+      : !category.includes('office');
+  }), [catalog, isOfficeMove]);
+  const categories = ['All', ...moveCatalog.map((section) => section.room)];
+  const visibleCatalog = useMemo(() => moveCatalog
     .filter((section) => selectedCategory === 'All' || section.room === selectedCategory)
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase())),
     }))
-    .filter((section) => section.items.length > 0), [catalog, search, selectedCategory]);
+    .filter((section) => section.items.length > 0), [moveCatalog, search, selectedCategory]);
 
   return (
     <View style={styles.screen}>
@@ -173,8 +179,8 @@ export default function InventoryScreen() {
           <Text style={styles.selectionHeadline}>{totalItems} {totalItems === 1 ? 'item' : 'items'} selected</Text>
         </View>
         <View style={styles.selectionStats}>
-          <Text style={styles.selectionVolume}>{estimatedVolume} CFT</Text>
-          <Text style={styles.selectionCost}>Goods estimate ₹{estimatedGoodsCost.toLocaleString('en-IN')}</Text>
+          <Text style={styles.selectionVolume}>{estimatedGoodsCost > 0 ? `Est. ₹${estimatedGoodsCost.toLocaleString('en-IN')}` : 'Select your goods'}</Text>
+          <Text style={styles.selectionCost}>Item quantities</Text>
         </View>
       </View>
 
@@ -209,9 +215,7 @@ export default function InventoryScreen() {
                   </View>
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemMeta}>
-                      {item.defaultCft} CFT · ₹{item.baseRate}/unit
-                    </Text>
+              <Text style={styles.itemMeta}>₹{item.baseRate}/unit</Text>
                   </View>
                   <View style={styles.counter}>
                     <TouchableOpacity
@@ -270,7 +274,7 @@ export default function InventoryScreen() {
         >
           <View style={styles.ctaCopy}>
             <Text style={styles.ctaText}>{totalItems > 0 ? 'Review your estimate' : 'Add an item to continue'}</Text>
-            {totalItems > 0 && <Text style={styles.ctaSubtext}>{totalItems} goods · about {estimatedVolume} CFT</Text>}
+            {totalItems > 0 && <Text style={styles.ctaSubtext}>{totalItems} goods selected</Text>}
           </View>
           <ArrowRight size={18} color={Colors.white} strokeWidth={2.4} />
         </TouchableOpacity>

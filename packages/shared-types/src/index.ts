@@ -162,6 +162,7 @@ export interface Booking {
   configurationType: ConfigurationType;
   floorNumber: number;
   liftAvailable: boolean;
+  parkingClose?: boolean;
   scheduledDate: string;
   scheduledSlot: string;
   baseQuoteAmount: number;

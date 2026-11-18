@@ -82,6 +82,7 @@ export const ItemizedQuoteSchema = z.object({
   configurationType: ConfigurationTypeSchema,
   floorNumber: z.number().int().min(0).max(50),
   liftAvailable: z.boolean(),
+  parkingClose: z.boolean().optional(),
   scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD format'),
   scheduledSlot: z.string().min(1),
   items: z.array(ChecklistItemSchema).min(1, 'At least one item required'),
