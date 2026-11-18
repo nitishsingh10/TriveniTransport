@@ -344,6 +344,36 @@
   margin-left: auto;
 }
 
+.heroQuoteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  min-width: 230px;
+  min-height: 64px;
+  padding: 0.9rem 1.5rem;
+  margin-left: auto;
+  border: 1px solid rgba(255, 209, 102, 0.9);
+  border-radius: var(--radius-xl);
+  background: var(--accent-500);
+  color: var(--brand-900);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.heroQuoteBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+}
+
+.heroQuoteBtn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
 .stat:hover .statIcon {
   transform: scale(1.15);
   color: #fff;
@@ -1240,6 +1270,15 @@
     grid-template-columns: 1fr;
     gap: var(--space-8);
     align-items: flex-start;
+  }
+
+  .heroWidgetCol {
+    margin: 0;
+  }
+
+  .heroQuoteBtn {
+    margin: 0;
+    width: 100%;
   }
 
   .heroTitle {

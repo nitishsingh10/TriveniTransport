@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import InstantEstimate from './components/InstantEstimate';
 import AnimatedCounter from './components/AnimatedCounter';
 import { useAuth } from './lib/useAuth';
 import styles from './page.module.css';
@@ -254,7 +253,7 @@ function PricingGuideSection() {
         >
           <h2 className="section-heading" style={{ color: '#ffffff' }}>Transparent Moving Charges in Mumbai &amp; Thane</h2>
           <p className="section-subheading" style={{ marginInline: 'auto', color: 'rgba(255,255,255,0.6)' }}>
-            Indicative costs based on real Mumbai &amp; Thane moves. Use our instant calculator for an exact itemised rate.
+            Indicative costs based on real Mumbai &amp; Thane moves. Start a quote for pricing tailored to your move.
           </p>
         </motion.div>
 
@@ -430,15 +429,17 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* Right Column: Instant Fare Calculator Widget */}
+            {/* Right Column: Quote action */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className={styles.heroWidgetCol}
-              id="instant-estimate"
             >
-              <InstantEstimate />
+              <Link href="/quote" className={styles.heroQuoteBtn}>
+                <span>Get a quote</span>
+                <ArrowRight size={21} strokeWidth={2.5} />
+              </Link>
             </motion.div>
           </div>
         </section>
