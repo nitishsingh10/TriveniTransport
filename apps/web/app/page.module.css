@@ -1911,3 +1911,265 @@
   font-size: 0.875rem;
   line-height: 1.65;
 }
+
+/* ── Homepage palette aligned with the customer login experience ── */
+.hero {
+  min-height: min(820px, calc(100dvh - 68px));
+  padding: clamp(3rem, 7vw, 6rem) 0;
+  background: #f0f4f8;
+}
+
+.heroImageBg {
+  width: 47%;
+  left: auto;
+  border-radius: 2.5rem 0 0 2.5rem;
+  background-position: center;
+  opacity: 0.88;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 18%);
+}
+
+.heroGradient {
+  width: 64%;
+  background: linear-gradient(90deg, #f0f4f8 0%, rgba(240, 244, 248, 0.96) 26%, rgba(240, 244, 248, 0.68) 58%, rgba(240, 244, 248, 0.04) 100%);
+}
+
+.heroGlow1 {
+  background: radial-gradient(circle, rgba(247, 163, 0, 0.12) 0%, transparent 70%);
+}
+
+.heroAccentCircle {
+  border-color: rgba(13, 31, 55, 0.055);
+}
+
+.heroInner {
+  display: block;
+}
+
+.heroText {
+  max-width: 720px;
+  gap: var(--space-5);
+}
+
+.heroBadge {
+  color: #17365d;
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(13, 31, 55, 0.1);
+  box-shadow: 0 8px 24px rgba(13, 31, 55, 0.08);
+}
+
+.heroBadge::after {
+  opacity: 0.35;
+}
+
+.heroTitle {
+  color: #0d1f37;
+  font-size: clamp(2.35rem, 4.6vw, 4.15rem);
+  line-height: 1.08;
+  max-width: 760px;
+}
+
+.heroAccent {
+  background: none;
+  color: #a45d00;
+  -webkit-text-fill-color: #a45d00;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  animation: none;
+  filter: none;
+}
+
+.heroDesc {
+  max-width: 620px;
+  color: #52647a;
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  margin: 0.15rem 0 var(--space-2);
+}
+
+.heroQuoteBtn {
+  justify-content: space-between;
+  min-width: 210px;
+  min-height: 58px;
+  margin: 0;
+  padding: 0.85rem 1.25rem 0.85rem 1.5rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, #f7a300, #ffc247);
+  box-shadow: 0 10px 24px rgba(247, 163, 0, 0.25);
+  font-size: 1rem;
+}
+
+.heroQuoteBtn:hover {
+  box-shadow: 0 14px 28px rgba(247, 163, 0, 0.32);
+}
+
+.heroQuoteBtn:focus-visible {
+  outline-color: #0d1f37;
+}
+
+.loggedInHeroBanner {
+  max-width: 620px;
+  color: #0d1f37;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 42px rgba(13, 31, 55, 0.1);
+}
+
+.loggedInRoleBadge {
+  color: #8a5700;
+  background: rgba(247, 163, 0, 0.14);
+  border-color: rgba(247, 163, 0, 0.24);
+}
+
+.loggedInGreeting { color: #0d1f37; }
+.loggedInSubtext { color: #64748b; }
+.loggedInSecondaryCta { color: #17365d !important; border-color: rgba(13, 31, 55, 0.16) !important; background: #fff !important; }
+.loggedInSecondaryCta:hover { color: #0d1f37 !important; background: #f8fafc !important; }
+.loggedInOnlineDot { border-color: #fff; }
+
+.heroStats {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(13, 31, 55, 0.08);
+  box-shadow: 0 10px 28px rgba(13, 31, 55, 0.08);
+}
+
+.heroStats:hover {
+  box-shadow: 0 14px 32px rgba(13, 31, 55, 0.12);
+  border-color: rgba(247, 163, 0, 0.28);
+}
+
+.statIcon { color: #c98200; filter: none; }
+.stat:hover .statIcon { color: #0d1f37; }
+.statLabel { color: #17365d; }
+.statDivider { background: rgba(13, 31, 55, 0.13); }
+.appDownloadBadge { color: #17365d; background: rgba(255, 255, 255, 0.68); border-color: rgba(13, 31, 55, 0.1); }
+.appPerks { color: #52647a; }
+.perkDot { color: #a9b5c3; }
+
+.servicesSection,
+.howSection,
+.pricingGuideSection,
+.faqSection,
+.areasSection,
+.ctaSection {
+  background: #f0f4f8;
+  border-color: rgba(13, 31, 55, 0.06);
+}
+
+.howSection::before,
+.areasSection::before,
+.ctaSection::before { background-image: radial-gradient(rgba(13, 31, 55, 0.045) 1px, transparent 1px); }
+.howSection::after,
+.ctaGlow { background: radial-gradient(circle, rgba(247, 163, 0, 0.12) 0%, rgba(247, 163, 0, 0.025) 52%, transparent 72%); }
+
+.servicesSection { border-top: 1px solid rgba(13, 31, 55, 0.06); }
+.serviceBox,
+.stepCard,
+.areaCard,
+.faqCard {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 32px rgba(13, 31, 55, 0.07);
+}
+
+.serviceBox:hover,
+.stepCard:hover,
+.areaCard:hover,
+.faqCardOpen {
+  background: #fff;
+  border-color: rgba(247, 163, 0, 0.35);
+  box-shadow: 0 18px 40px rgba(13, 31, 55, 0.12);
+}
+
+.serviceTitle,
+.stepTitle,
+.areaName,
+.faqQuestionBtn,
+.pricePrimary,
+.ctaTitle { color: #0d1f37; }
+
+.serviceDesc,
+.stepDesc,
+.areaDistance,
+.faqAnswerBox,
+.ctaDesc { color: #607086; }
+
+.serviceFeatureItem { color: #52647a; }
+.stepNum { color: #9a6200; border-color: rgba(247, 163, 0, 0.35); background: rgba(247, 163, 0, 0.1); }
+.stepCard:hover .stepNum { color: #0d1f37; }
+.stepIconWrap { color: #a76600; }
+.stepCard:hover .stepIconWrap { color: #0d1f37; }
+.milestoneDot { background: #f0f4f8; }
+.trackLine { background: repeating-linear-gradient(90deg, rgba(185, 108, 0, 0.42) 0 12px, transparent 12px 24px); }
+
+.areasSection { border-top: 1px solid rgba(13, 31, 55, 0.06); }
+.areaCard::after { background: linear-gradient(135deg, rgba(247, 163, 0, 0.08), transparent 60%); }
+.areaIconWrap { color: #a76600; box-shadow: none; }
+.areaName { color: #0d1f37; }
+.areaTag,
+.areaTagLong { color: #805100; background: rgba(247, 163, 0, 0.14); }
+
+.pricingGuideSection { border-top: 1px solid rgba(13, 31, 55, 0.06); }
+.priceTableWrap { background: rgba(255, 255, 255, 0.86); border-color: rgba(13, 31, 55, 0.08); box-shadow: 0 14px 36px rgba(13, 31, 55, 0.08); }
+.seoPriceTable th { background: #e8eef5; color: #17365d; border-color: rgba(13, 31, 55, 0.08); }
+.seoPriceTable td { color: #52647a; border-color: rgba(13, 31, 55, 0.07); }
+.seoPriceTable tr:hover td { background: #f8fafc; }
+.pricePrimary { color: #0d1f37; }
+.priceAmount { color: #8a5700; }
+.priceTableFooter { color: #718096; }
+
+.faqSection { border-top: 1px solid rgba(13, 31, 55, 0.06); }
+.faqCardOpen { background: #fff; }
+.faqQuestionBtn { color: #0d1f37; }
+.faqIcon { color: #a76600; }
+.faqAnswerBox { color: #607086; }
+
+.ctaSection { border-top: 1px solid rgba(13, 31, 55, 0.06); }
+.ctaGlass {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 24px 64px rgba(13, 31, 55, 0.1);
+}
+.ctaGlass:hover { border-color: rgba(247, 163, 0, 0.34); box-shadow: 0 28px 70px rgba(13, 31, 55, 0.14); }
+.ctaBadge { color: #805100; background: rgba(247, 163, 0, 0.12); border-color: rgba(247, 163, 0, 0.24); }
+.titleAccent { background: linear-gradient(135deg, #a45d00, #e49a00); }
+.ctaPhoneBtn { background: #fff; color: #17365d; border-color: rgba(13, 31, 55, 0.14); }
+.ctaPhoneBtn:hover { background: #f8fafc; color: #0d1f37; border-color: #f7a300; }
+.ctaTrustItem { color: #52647a; }
+
+.servicesSection :global(.section-heading),
+.howSection :global(.section-heading),
+.pricingGuideSection :global(.section-heading),
+.faqSection :global(.section-heading),
+.areasSection :global(.section-heading) { color: #0d1f37; }
+
+.servicesSection :global(.section-subheading),
+.howSection :global(.section-subheading),
+.pricingGuideSection :global(.section-subheading),
+.faqSection :global(.section-subheading),
+.areasSection :global(.section-subheading) { color: #607086; }
+
+@media (max-width: 1024px) {
+  .hero { min-height: auto; padding: var(--space-10) 0; }
+  .heroImageBg { width: 58%; opacity: 0.2; border-radius: 0; mask-image: linear-gradient(90deg, transparent, #000 80%); }
+  .heroGradient { width: 100%; background: linear-gradient(90deg, #f0f4f8 0%, rgba(240, 244, 248, 0.9) 62%, rgba(240, 244, 248, 0.55) 100%); }
+  .heroText { max-width: 760px; }
+}
+
+@media (max-width: 640px) {
+  .hero { padding: var(--space-8) 0; }
+  .heroImageBg { display: block; width: 100%; opacity: 0.12; }
+  .heroTitle { font-size: clamp(2rem, 9vw, 3rem); }
+  .heroDesc { font-size: 0.94rem; }
+  .heroActions { width: 100%; }
+  .heroQuoteBtn { width: 100%; }
+  .heroStats { width: 100%; box-sizing: border-box; }
+  .appStoreButtons { flex-direction: row; }
+  .storeBtn { width: auto; }
+  .ctaGlass { background: rgba(255, 255, 255, 0.9); }
+}

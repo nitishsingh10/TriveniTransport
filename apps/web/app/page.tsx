@@ -138,8 +138,8 @@ function HowItWorks() {
           variants={scrollReveal}
           style={{ textAlign: 'center', marginBottom: 'var(--space-10)' }}
         >
-          <h2 className="section-heading" style={{ color: '#ffffff' }}>How It Works</h2>
-          <p className="section-subheading" style={{ marginInline: 'auto', color: 'rgba(255,255,255,0.5)' }}>
+          <h2 className="section-heading">How It Works</h2>
+          <p className="section-subheading" style={{ marginInline: 'auto' }}>
             Four simple steps — from estimate to doorstep delivery
           </p>
         </motion.div>
@@ -203,8 +203,8 @@ function FaqSection() {
           variants={scrollReveal}
           style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}
         >
-          <h2 className="section-heading" style={{ color: '#ffffff' }}>Frequently Asked Questions</h2>
-          <p className="section-subheading" style={{ marginInline: 'auto', color: 'rgba(255,255,255,0.6)' }}>
+          <h2 className="section-heading">Frequently Asked Questions</h2>
+          <p className="section-subheading" style={{ marginInline: 'auto' }}>
             Transparent answers about relocation rates, packing, insurance, and booking in Mumbai &amp; Thane
           </p>
         </motion.div>
@@ -251,8 +251,8 @@ function PricingGuideSection() {
           variants={scrollReveal}
           style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}
         >
-          <h2 className="section-heading" style={{ color: '#ffffff' }}>Transparent Moving Charges in Mumbai &amp; Thane</h2>
-          <p className="section-subheading" style={{ marginInline: 'auto', color: 'rgba(255,255,255,0.6)' }}>
+          <h2 className="section-heading">Transparent Moving Charges in Mumbai &amp; Thane</h2>
+          <p className="section-subheading" style={{ marginInline: 'auto' }}>
             Indicative costs based on real Mumbai &amp; Thane moves. Start a quote for pricing tailored to your move.
           </p>
         </motion.div>
@@ -344,6 +344,13 @@ export default function Home() {
                 Triveni Transports is your trusted packers and movers in Mumbai and Thane. Move smarter and pay fairly with transparent, itemised pricing for every home or office shifting — no hidden charges, verified captains, ₹5L transit insurance, and a professional crew that treats your belongings like their own.
               </motion.p>
 
+              <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.38 }} className={styles.heroActions}>
+                <Link href="/quote" className={styles.heroQuoteBtn}>
+                  <span>Get a quote</span>
+                  <ArrowRight size={19} strokeWidth={2.5} />
+                </Link>
+              </motion.div>
+
               {/* Logged-In User Quick Action Banner */}
               {isLoggedIn && (
                 <motion.div
@@ -429,18 +436,6 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* Right Column: Quote action */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className={styles.heroWidgetCol}
-            >
-              <Link href="/quote" className={styles.heroQuoteBtn}>
-                <span>Get a quote</span>
-                <ArrowRight size={21} strokeWidth={2.5} />
-              </Link>
-            </motion.div>
           </div>
         </section>
 
@@ -448,8 +443,8 @@ export default function Home() {
         <section className={`section ${styles.servicesSection}`} id="services">
           <div className="container">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: '-50px' }} variants={scrollReveal} style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-              <h2 className="section-heading" style={{ color: '#ffffff' }}>Our Relocation Services</h2>
-              <p className="section-subheading" style={{ marginInline: 'auto', color: 'rgba(255,255,255,0.6)' }}>
+              <h2 className="section-heading">Our Relocation Services</h2>
+              <p className="section-subheading" style={{ marginInline: 'auto' }}>
                 Professional home, corporate, and vehicle moving engineered for safety and speed
               </p>
             </motion.div>
@@ -531,8 +526,8 @@ export default function Home() {
         <section className={`section ${styles.areasSection}`}>
           <div className="container">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: '-50px' }} variants={scrollReveal} style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
-              <h2 className="section-heading" style={{ color: '#ffffff' }}>Service Areas</h2>
-              <p className="section-subheading" style={{ marginInline: 'auto', color: 'rgba(255,255,255,0.5)' }}>
+              <h2 className="section-heading">Service Areas</h2>
+              <p className="section-subheading" style={{ marginInline: 'auto' }}>
                 Core operations across Mumbai &amp; Thane — with long routes to Pune and Gujarat.
               </p>
             </motion.div>
