@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { BookingService } from './service';
-import { ItemizedQuoteSchema } from '@triveni/shared-validation';
+import { ItemizedQuoteSchema, TransportQuoteSchema } from '@triveni/shared-validation';
 import { z } from 'zod';
 import { getRedis } from '../../config/redis';
 
@@ -8,8 +8,37 @@ export class BookingController {
   static async createDraft(req: Request, res: Response, next: NextFunction) {
     try {
       const customerId = req.user!.id;
+      // Allow seamless creation if request is a transport quote payload
+      if (
+        req.body?.serviceType === 'transport' ||
+        req.body?.vehicleType ||
+        ['tata_ace', 'tata_407', 'eicher_17ft', 'transport'].includes(req.body?.configurationType)
+      ) {
+        const transportInput = TransportQuoteSchema.parse({
+          ...req.body,
+          vehicleType: req.body.vehicleType || req.body.configurationType,
+        });
+        const result = await BookingService.createTransportDraftBooking(customerId, transportInput);
+        return res.status(201).json(result);
+      }
+
       const data = ItemizedQuoteSchema.parse(req.body);
       const result = await BookingService.createDraftBooking(customerId, data);
+      res.status(201).json(result);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid input', details: e.errors });
+      next(e);
+    }
+  }
+
+  static async createTransportDraft(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = req.user!.id;
+      const data = TransportQuoteSchema.parse({
+        ...req.body,
+        vehicleType: req.body?.vehicleType || req.body?.configurationType,
+      });
+      const result = await BookingService.createTransportDraftBooking(customerId, data);
       res.status(201).json(result);
     } catch (e: any) {
       if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid input', details: e.errors });

@@ -1,5 +1,5 @@
 import { prisma } from '../../config/prisma';
-import { ItemizedQuoteInput } from '@triveni/shared-validation';
+import { ItemizedQuoteInput, TransportQuoteInput } from '@triveni/shared-validation';
 import { PricingService } from '../pricing/service';
 import { GeocodingService } from '../geocoding/service';
 import { ZoneService } from '../geocoding/zoneService';
@@ -115,6 +115,82 @@ export class BookingService {
           }),
         });
       }
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: created.id,
+          toState: initialStatus,
+          actorId: customerId,
+          actorRole: 'customer',
+        },
+      });
+
+      return created;
+    });
+
+    return { booking, quote };
+  }
+
+  /**
+   * Generates a transport / pickup-drop quote and creates a vehicle-only booking draft.
+   */
+  static async createTransportDraftBooking(
+    customerId: string,
+    input: TransportQuoteInput
+  ) {
+    const quote = await PricingService.calculateTransportQuote(input);
+
+    const pickupZone = await ZoneService.resolveZoneForAddress(input.pickupAddress);
+    const dropZone = await ZoneService.resolveZoneForAddress(input.dropAddress);
+
+    const paymentMethod = input.paymentMethod || 'cash_on_delivery';
+    const initialStatus: BookingStatus = 'REQUESTED';
+
+    const booking = await prisma.$transaction(async (tx) => {
+      const created = await tx.booking.create({
+        data: {
+          customerId,
+          status: initialStatus,
+          pickupAddress: input.pickupAddress,
+          dropAddress: input.dropAddress,
+          alternateContactPhone: input.alternateContactPhone || null,
+          pickupZoneId: pickupZone.id,
+          dropZoneId: dropZone.id,
+          distanceKm: quote.metrics.distanceKm,
+          configurationType: input.vehicleType,
+          floorNumber: 0,
+          liftAvailable: true,
+          scheduledDate: new Date(input.scheduledDate),
+          scheduledSlot: input.scheduledSlot,
+          baseQuoteAmount: quote.quoteAmount,
+          finalAmount: quote.quoteAmount,
+          pricingSnapshot: {
+            serviceType: 'transport',
+            vehicleType: input.vehicleType,
+            vehicleName: quote.metrics.vehicleName,
+            helperCount: input.helperCount || 0,
+            goodsType: input.goodsType || null,
+            paymentMethod,
+            distanceKm: quote.metrics.distanceKm,
+            durationMins: quote.metrics.durationMins,
+            breakdown: quote.breakdown,
+            ...(quote.snapshot as any),
+          },
+        },
+      });
+
+      await tx.bookingItem.create({
+        data: {
+          bookingId: created.id,
+          customName: input.goodsType
+            ? `Transport (${quote.metrics.vehicleName}): ${input.goodsType}`
+            : `Transport (${quote.metrics.vehicleName})`,
+          quantity: 1,
+          packingTier: 'lite',
+          unitPriceApplied: quote.quoteAmount,
+          lineTotal: quote.quoteAmount,
+        },
+      });
 
       await tx.bookingStatusHistory.create({
         data: {

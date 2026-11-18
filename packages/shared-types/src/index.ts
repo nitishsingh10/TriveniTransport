@@ -41,7 +41,22 @@ export type PricingRuleType =
   | 'surcharge'
   | 'addon';
 
-export type ConfigurationType = '1bhk' | '2bhk' | '3bhk' | '4bhk' | 'villa' | 'office' | 'studio';
+export type ServiceType = 'packers_movers' | 'transport';
+
+export type TransportVehicleType = 'tata_ace' | 'tata_407' | 'eicher_17ft';
+
+export type ConfigurationType =
+  | '1bhk'
+  | '2bhk'
+  | '3bhk'
+  | '4bhk'
+  | 'villa'
+  | 'office'
+  | 'studio'
+  | 'tata_ace'
+  | 'tata_407'
+  | 'eicher_17ft'
+  | 'transport';
 
 // ─────────────────────────────────────────────────────────────────
 // Core entity types (API response shapes)
@@ -443,4 +458,56 @@ export interface RevisionLoggedPayload {
   revisionId: string;
   amountDelta: number;
   description: string;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Transport & Trucks (Pickup-Drop Only Service)
+// ─────────────────────────────────────────────────────────────────
+
+export interface TransportVehicleConfig {
+  type: TransportVehicleType;
+  displayName: string;
+  capacityCft: number;
+  payloadKg: number;
+  dimensions: string;
+  baseRate: number;
+  baseKm: number;
+  perKmRate: number;
+  helperRate: number;
+  description: string;
+  recommendedFor: string;
+}
+
+export interface TransportQuoteRequest {
+  pickupAddress: string;
+  dropAddress: string;
+  vehicleType: TransportVehicleType;
+  scheduledDate: string; // YYYY-MM-DD
+  scheduledSlot: string;
+  helperCount?: number;
+  items?: ChecklistItem[];
+  goodsType?: string;
+  alternateContactPhone?: string;
+  paymentMethod?: 'cash_on_delivery' | 'online';
+}
+
+export interface TransportQuoteResponse {
+  serviceType: 'transport';
+  quoteAmount: number;
+  breakdown: {
+    baseTripCharge: number;
+    distanceCharge: number;
+    helperCharge: number;
+    tollOrSurcharges: number;
+  };
+  metrics: {
+    vehicleType: TransportVehicleType;
+    vehicleName: string;
+    distanceKm: number;
+    durationMins: number;
+    helperCount: number;
+    capacityCft: number;
+    payloadKg: number;
+  };
+  snapshot: any;
 }

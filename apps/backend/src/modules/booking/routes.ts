@@ -8,6 +8,7 @@ const router: Router = Router();
 // All booking endpoints require at least customer auth
 router.use(authGuard);
 
+router.post('/transport', requireRole('customer'), BookingController.createTransportDraft);
 router.post('/', requireRole('customer'), BookingController.createDraft);
 router.post('/:id/hold', requireRole('customer'), BookingController.holdSlot);
 router.post('/:id/cancel', requireRole('customer'), BookingController.cancel);

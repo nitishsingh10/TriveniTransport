@@ -241,7 +241,15 @@ export default function BookingsScreen() {
               activeOpacity={0.88}
             >
               <Truck size={16} color={Colors.white} />
-              <Text style={styles.quoteBtnText}>Get Instant Quote & Book</Text>
+              <Text style={styles.quoteBtnText}>Book Packers &amp; Movers</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quoteBtn, { backgroundColor: Colors.navyDark, marginTop: 8 }]}
+              onPress={() => router.push('/transport' as any)}
+              activeOpacity={0.88}
+            >
+              <Truck size={16} color={Colors.white} />
+              <Text style={styles.quoteBtnText}>Book Transport / Truck</Text>
             </TouchableOpacity>
           </View>
         ) : (

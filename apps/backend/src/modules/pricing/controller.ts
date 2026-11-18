@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { PricingService } from './service';
-import { InstantEstimateSchema, ItemizedQuoteSchema } from '@triveni/shared-validation';
+import { InstantEstimateSchema, ItemizedQuoteSchema, TransportQuoteSchema } from '@triveni/shared-validation';
 import { z } from 'zod';
 
 export class PricingController {
@@ -33,4 +33,28 @@ export class PricingController {
       next(e);
     }
   }
+
+  static async transportVehicles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const distanceKm = req.query.distanceKm ? Number(req.query.distanceKm) : undefined;
+      const vehicles = PricingService.getTransportVehicles(distanceKm);
+      res.status(200).json(vehicles);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  static async transportQuote(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = TransportQuoteSchema.parse(req.body);
+      const quote = await PricingService.calculateTransportQuote(data);
+      res.status(200).json(quote);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) {
+        return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid transport quote input', details: e.errors });
+      }
+      next(e);
+    }
+  }
 }
+

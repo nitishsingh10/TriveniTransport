@@ -13,4 +13,8 @@ router.post('/instant-estimate', quoteRateLimiter, PricingController.instantEsti
 // but per spec, they sign up/login first for itemized quotes.
 router.post('/itemized', authGuard, quoteRateLimiter, PricingController.itemizedQuote);
 
+// Transport & Trucks / Pickup-Drop Service
+router.get('/transport-vehicles', PricingController.transportVehicles);
+router.post('/transport', quoteRateLimiter, PricingController.transportQuote);
+
 export default router;

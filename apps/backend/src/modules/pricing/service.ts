@@ -1,8 +1,51 @@
 import { prisma } from '../../config/prisma';
 import { getRedis } from '../../config/redis';
-import { InstantEstimateInput, ItemizedQuoteInput } from '@triveni/shared-validation';
+import { InstantEstimateInput, ItemizedQuoteInput, TransportQuoteInput } from '@triveni/shared-validation';
+import { TransportVehicleConfig, TransportVehicleType } from '@triveni/shared-types';
 import { GeocodingService } from '../geocoding/service';
 import { ZoneService } from '../geocoding/zoneService';
+
+export const TRANSPORT_VEHICLES: Record<TransportVehicleType, TransportVehicleConfig> = {
+  tata_ace: {
+    type: 'tata_ace',
+    displayName: 'Tata Ace (Chota Hathi)',
+    capacityCft: 300,
+    payloadKg: 750,
+    dimensions: '7ft × 4.5ft × 5ft',
+    baseRate: 650,      // base fare for initial 4 km
+    baseKm: 4,
+    perKmRate: 28,      // per km after 4 km
+    helperRate: 350,    // per helper
+    description: 'Best for 1 RK, single appliances, boxes, or quick city pickup-drop.',
+    recommendedFor: '1 RK / Few Furniture / Electronics',
+  },
+  tata_407: {
+    type: 'tata_407',
+    displayName: 'Tata 407 (9ft / 10ft)',
+    capacityCft: 600,
+    payloadKg: 1800,
+    dimensions: '10ft × 6ft × 6ft',
+    baseRate: 1400,     // base fare for initial 4 km
+    baseKm: 4,
+    perKmRate: 42,      // per km after 4 km
+    helperRate: 450,
+    description: 'Ideal for 1-2 BHK household items or medium commercial freight.',
+    recommendedFor: '1-2 BHK / Moderate Cargo',
+  },
+  eicher_17ft: {
+    type: 'eicher_17ft',
+    displayName: 'Eicher 17ft (Heavy Carrier)',
+    capacityCft: 1000,
+    payloadKg: 4000,
+    dimensions: '17ft × 7ft × 7ft',
+    baseRate: 2800,     // base fare for initial 5 km
+    baseKm: 5,
+    perKmRate: 65,      // per km after 5 km
+    helperRate: 600,
+    description: 'Heavy duty truck for large home relocations or full industrial freight.',
+    recommendedFor: '3+ BHK / Industrial / Bulk Goods',
+  },
+};
 
 export class PricingService {
   /**
@@ -228,6 +271,103 @@ export class PricingService {
         durationMins: route.durationMins,
       },
       snapshot: pricingSnapshot,
+    };
+  }
+
+  /**
+   * Transport & Trucks / Pickup-Drop Service
+   * Returns available vehicle options with estimated prices if distance is known.
+   */
+  static getTransportVehicles(distanceKm?: number) {
+    return Object.values(TRANSPORT_VEHICLES).map((v) => {
+      let estimatedCost: number | undefined;
+      if (typeof distanceKm === 'number' && distanceKm > 0) {
+        const extraKm = Math.max(0, distanceKm - v.baseKm);
+        estimatedCost = Math.round(v.baseRate + extraKm * v.perKmRate);
+      }
+      return {
+        ...v,
+        estimatedCost,
+      };
+    });
+  }
+
+  /**
+   * Calculates a transparent, distance-based quote for transport / pickup-drop service.
+   */
+  static async calculateTransportQuote(input: TransportQuoteInput) {
+    const now = new Date();
+    const vehicleKey = (input.vehicleType as TransportVehicleType) || 'tata_ace';
+    const vehicle = TRANSPORT_VEHICLES[vehicleKey] || TRANSPORT_VEHICLES.tata_ace;
+
+    // 1. Calculate road distance & duration
+    const route = await GeocodingService.calculateDistanceKm(input.pickupAddress, input.dropAddress);
+    const distanceKm = Math.max(1, route.distanceKm || 10.0);
+
+    // 2. Resolve zones for geographic context
+    const pickupZone = await ZoneService.resolveZoneForAddress(input.pickupAddress);
+    const dropZone = await ZoneService.resolveZoneForAddress(input.dropAddress);
+
+    // 3. Distance calculation
+    const extraKm = Math.max(0, distanceKm - vehicle.baseKm);
+    const baseTripCharge = vehicle.baseRate;
+    const distanceCharge = Math.round(extraKm * vehicle.perKmRate);
+
+    // 4. Helper / loading assistance charge
+    const helperCount = Math.max(0, Math.min(4, input.helperCount || 0));
+    const helperCharge = helperCount * vehicle.helperRate;
+
+    // 5. Long distance toll estimate (>50km highway)
+    let tollOrSurcharges = 0;
+    if (distanceKm > 50) {
+      tollOrSurcharges += 200;
+    }
+
+    const totalAmount = Math.round(baseTripCharge + distanceCharge + helperCharge + tollOrSurcharges);
+
+    const snapshot = {
+      serviceType: 'transport' as const,
+      timestamp: now.toISOString(),
+      vehicleType: vehicleKey,
+      vehicleName: vehicle.displayName,
+      vehicleCapacityCft: vehicle.capacityCft,
+      vehiclePayloadKg: vehicle.payloadKg,
+      dimensions: vehicle.dimensions,
+      distanceKm,
+      durationMins: route.durationMins,
+      helperCount,
+      goodsType: input.goodsType || 'General Cargo',
+      baseTripCharge,
+      distanceCharge,
+      helperCharge,
+      tollOrSurcharges,
+      finalTotal: totalAmount,
+      pickupZone: pickupZone ? { id: pickupZone.id, name: pickupZone.name } : null,
+      dropZone: dropZone ? { id: dropZone.id, name: dropZone.name } : null,
+      inputs: input,
+      items: input.items || [],
+      paymentMethod: input.paymentMethod || 'cash_on_delivery',
+    };
+
+    return {
+      serviceType: 'transport' as const,
+      quoteAmount: totalAmount,
+      breakdown: {
+        baseTripCharge,
+        distanceCharge,
+        helperCharge,
+        tollOrSurcharges,
+      },
+      metrics: {
+        vehicleType: vehicleKey,
+        vehicleName: vehicle.displayName,
+        distanceKm,
+        durationMins: route.durationMins,
+        helperCount,
+        capacityCft: vehicle.capacityCft,
+        payloadKg: vehicle.payloadKg,
+      },
+      snapshot,
     };
   }
 }

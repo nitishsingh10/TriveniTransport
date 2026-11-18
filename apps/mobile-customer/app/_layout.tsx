@@ -71,6 +71,8 @@ function RootNavigation() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="quote" options={{ headerShown: false }} />
         <Stack.Screen name="booking" options={{ headerShown: false }} />
+        <Stack.Screen name="transport" options={{ headerShown: false }} />
+        <Stack.Screen name="saved-addresses" options={{ title: 'Saved Addresses', headerShown: true }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />

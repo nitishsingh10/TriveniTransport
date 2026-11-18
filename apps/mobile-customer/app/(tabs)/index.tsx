@@ -104,7 +104,7 @@ export default function HomeScreen() {
           </View>
           <ArrowRight size={19} color={Colors.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.serviceCard} onPress={() => router.push('/(tabs)/bookings')} activeOpacity={0.86}>
+        <TouchableOpacity style={styles.serviceCard} onPress={() => router.push({ pathname: '/transport' as any, params: { pickup: currentAddress, ...(currentCoords ? { pickupLat: String(currentCoords.lat), pickupLng: String(currentCoords.lng) } : {}) } })} activeOpacity={0.86}>
           <View style={[styles.serviceIcon, styles.truckIcon]}><Truck size={23} color={Colors.brandSurface} /></View>
           <View style={styles.serviceCopy}>
             <Text style={styles.serviceTitle}>Transport &amp; Trucks</Text>

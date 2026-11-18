@@ -325,6 +325,54 @@ export const mapsApi = {
   },
 };
 
+export interface TransportVehicleConfig {
+  type: 'tata_ace' | 'tata_407' | 'eicher_17ft';
+  displayName: string;
+  capacityCft: number;
+  payloadKg: number;
+  dimensions: string;
+  baseRate: number;
+  baseKm: number;
+  perKmRate: number;
+  helperRate: number;
+  description: string;
+  recommendedFor: string;
+  estimatedCost?: number;
+}
+
+export interface TransportQuoteResponse {
+  serviceType: 'transport';
+  quoteAmount: number;
+  breakdown: {
+    baseTripCharge: number;
+    distanceCharge: number;
+    helperCharge: number;
+    tollOrSurcharges: number;
+  };
+  metrics: {
+    vehicleType: 'tata_ace' | 'tata_407' | 'eicher_17ft';
+    vehicleName: string;
+    distanceKm: number;
+    durationMins: number;
+    helperCount: number;
+    capacityCft: number;
+    payloadKg: number;
+  };
+  snapshot: any;
+}
+
+export interface TransportQuoteInput {
+  pickupAddress: string;
+  dropAddress: string;
+  vehicleType: 'tata_ace' | 'tata_407' | 'eicher_17ft';
+  scheduledDate: string;
+  scheduledSlot: string;
+  helperCount?: number;
+  alternateContactPhone?: string;
+  goodsType?: string;
+  paymentMethod?: 'cash_on_delivery' | 'online';
+}
+
 export const quoteApi = {
   itemized(body: {
     pickupAddress: string;
@@ -340,6 +388,18 @@ export const quoteApi = {
     addons: string[];
   }) {
     return request<{ quoteAmount: number; breakdown: { goodsSubtotal: number; zoneCharge: number; labourCharge: number; surcharges: number; addonsTotal: number } }>('/quotes/itemized', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  getTransportVehicles(distanceKm?: number) {
+    const query = distanceKm ? `?distanceKm=${encodeURIComponent(distanceKm)}` : '';
+    return request<TransportVehicleConfig[]>(`/quotes/transport-vehicles${query}`);
+  },
+
+  transport(body: TransportQuoteInput) {
+    return request<TransportQuoteResponse>('/quotes/transport', {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -481,6 +541,16 @@ export const bookingApi = {
       body: JSON.stringify({
         ...body,
         addons: body.addons || [],
+      }),
+    });
+  },
+
+  async createTransportBooking(body: TransportQuoteInput) {
+    return request<{ booking: BookingItem; quote: TransportQuoteResponse }>('/bookings/transport', {
+      method: 'POST',
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        ...body,
       }),
     });
   },

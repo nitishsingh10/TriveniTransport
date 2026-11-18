@@ -10,7 +10,12 @@ export const PackingTierSchema = z.enum(['lite', 'standard', 'premium']);
 
 export const ConfigurationTypeSchema = z.enum([
   '1bhk', '2bhk', '3bhk', '4bhk', 'villa', 'office', 'studio',
+  'tata_ace', 'tata_407', 'eicher_17ft', 'transport',
 ]);
+
+export const ServiceTypeSchema = z.enum(['packers_movers', 'transport']);
+
+export const TransportVehicleTypeSchema = z.enum(['tata_ace', 'tata_407', 'eicher_17ft']);
 
 export const BookingStatusSchema = z.enum([
   'REQUESTED',
@@ -87,6 +92,19 @@ export const ItemizedQuoteSchema = z.object({
   scheduledSlot: z.string().min(1),
   items: z.array(ChecklistItemSchema).min(1, 'At least one item required'),
   addons: z.array(z.string()).default([]),
+  paymentMethod: z.enum(['cash_on_delivery', 'online']).default('cash_on_delivery').optional(),
+});
+
+export const TransportQuoteSchema = z.object({
+  pickupAddress: z.string().min(5, 'Pickup address is required').max(1000),
+  dropAddress: z.string().min(5, 'Drop address is required').max(1000),
+  alternateContactPhone: PhoneSchema.optional().nullable(),
+  vehicleType: TransportVehicleTypeSchema,
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD format'),
+  scheduledSlot: z.string().min(1, 'Scheduled slot is required'),
+  helperCount: z.number().int().min(0).max(4).default(0).optional(),
+  items: z.array(ChecklistItemSchema).default([]).optional(),
+  goodsType: z.string().max(100).optional(),
   paymentMethod: z.enum(['cash_on_delivery', 'online']).default('cash_on_delivery').optional(),
 });
 
@@ -203,3 +221,4 @@ export type CreateZoneRateInput = z.infer<typeof CreateZoneRateSchema>;
 export type CreateItemInput = z.infer<typeof CreateItemSchema>;
 export type CreatePricingRuleInput = z.infer<typeof CreatePricingRuleSchema>;
 export type BookingFilterInput = z.infer<typeof BookingFilterSchema>;
+export type TransportQuoteInput = z.infer<typeof TransportQuoteSchema>;
