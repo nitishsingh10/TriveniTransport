@@ -340,7 +340,7 @@ export default function SummaryScreen() {
 
         <View style={styles.lineRow}>
           <Text style={styles.lineLabel}>
-            Labour & Crew Handling {params.lift !== '1' ? '(Stairs)' : '(Lift Assisted)'}
+            Labour & Crew Handling {params.floor === '0' ? '(Ground Floor)' : params.lift !== '1' ? '(Stairs)' : '(Lift Assisted)'}
           </Text>
           <Text style={styles.lineAmount}>₹{(quoteEstimate?.breakdown.labourCharge ?? labourCharge).toLocaleString('en-IN')}</Text>
         </View>

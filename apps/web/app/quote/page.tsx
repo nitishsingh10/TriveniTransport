@@ -108,6 +108,7 @@ export default function QuotePage() {
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [floor, setFloor] = useState(0);
+  const [accessType, setAccessType] = useState<'ground' | 'floor'>('ground');
   const [liftAvailable, setLiftAvailable] = useState(true);
   const [configType, setConfigType] = useState<string>('2bhk');
   const [parkingClose, setParkingClose] = useState(true);
@@ -643,22 +644,90 @@ export default function QuotePage() {
               </div>
 
               <div className={styles.formGrid} style={{ marginTop: 'var(--space-4)' }}>
-                <div className="input-group">
-                  <label>Floor Number</label>
-                  <input className="input-field" type="number" min="0" value={floor} onChange={e => { setFloor(Number(e.target.value)); setQuoteResult(null); }} />
-                </div>
                 <div className={`input-group ${styles.fullWidthCol}`}>
-                  <label>Lift Available?</label>
+                  <label>Building Access (Pickup)</label>
                   <div className={styles.toggleRow}>
-                    <button type="button" className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`} onClick={() => { setLiftAvailable(true); setQuoteResult(null); }}>Yes (Elevator Available)</button>
-                    <button type="button" className={`${styles.toggleBtn} ${!liftAvailable ? styles.toggleActive : ''}`} onClick={() => { setLiftAvailable(false); setQuoteResult(null); }}>No (Staircase Only)</button>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${accessType === 'ground' ? styles.toggleActive : ''}`}
+                      onClick={() => {
+                        setAccessType('ground');
+                        setFloor(0);
+                        setLiftAvailable(true);
+                        setQuoteResult(null);
+                      }}
+                    >
+                      Ground Floor
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${accessType === 'floor' ? styles.toggleActive : ''}`}
+                      onClick={() => {
+                        setAccessType('floor');
+                        setFloor(prev => (prev > 0 ? prev : 1));
+                        setQuoteResult(null);
+                      }}
+                    >
+                      Floor
+                    </button>
                   </div>
                 </div>
+
+                {accessType === 'floor' && (
+                  <>
+                    <div className="input-group">
+                      <label>Floor Number</label>
+                      <input
+                        className="input-field"
+                        type="number"
+                        min="1"
+                        max="80"
+                        value={floor || 1}
+                        onChange={e => {
+                          setFloor(Math.max(1, Number(e.target.value)));
+                          setQuoteResult(null);
+                        }}
+                      />
+                    </div>
+                    <div className={`input-group ${styles.fullWidthCol}`}>
+                      <label>Lift Available?</label>
+                      <div className={styles.toggleRow}>
+                        <button
+                          type="button"
+                          className={`${styles.toggleBtn} ${liftAvailable ? styles.toggleActive : ''}`}
+                          onClick={() => { setLiftAvailable(true); setQuoteResult(null); }}
+                        >
+                          Yes (Elevator Available)
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.toggleBtn} ${!liftAvailable ? styles.toggleActive : ''}`}
+                          onClick={() => { setLiftAvailable(false); setQuoteResult(null); }}
+                        >
+                          No (Staircase Only)
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <div className={`input-group ${styles.fullWidthCol}`}>
                   <label>Can the truck park close to the entrance?</label>
                   <div className={styles.toggleRow}>
-                    <button type="button" className={`${styles.toggleBtn} ${parkingClose ? styles.toggleActive : ''}`} onClick={() => { setParkingClose(true); setQuoteResult(null); }}>Yes, nearby</button>
-                    <button type="button" className={`${styles.toggleBtn} ${!parkingClose ? styles.toggleActive : ''}`} onClick={() => { setParkingClose(false); setQuoteResult(null); }}>No, farther away</button>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${parkingClose ? styles.toggleActive : ''}`}
+                      onClick={() => { setParkingClose(true); setQuoteResult(null); }}
+                    >
+                      Yes, nearby
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${!parkingClose ? styles.toggleActive : ''}`}
+                      onClick={() => { setParkingClose(false); setQuoteResult(null); }}
+                    >
+                      No, farther away
+                    </button>
                   </div>
                 </div>
               </div>
