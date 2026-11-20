@@ -518,7 +518,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   cardTitle: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navyDark,
+    color: Colors.text,
     letterSpacing: -0.5,
   },
   cardSubtitle: {
@@ -718,7 +718,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     marginTop: 2,
   },
   switchPromptBtnText: {
-    color: Colors.navyDark,
+    color: Colors.navy,
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.bold,
   },

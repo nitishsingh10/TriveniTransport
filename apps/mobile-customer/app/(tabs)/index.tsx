@@ -295,10 +295,10 @@ export default function HomeScreen() {
             >
               <View style={styles.tileHeader}>
                 <View style={[styles.tileIconBox, { backgroundColor: Colors.navySubtle }]}>
-                  <Truck size={22} color={Colors.navy} strokeWidth={2.2} />
+                  <Truck size={22} color={Colors.text} strokeWidth={2.2} />
                 </View>
                 <View style={[styles.tileBadgePill, { backgroundColor: Colors.navySubtle }]}>
-                  <Text style={[styles.tileBadgeText, { color: Colors.navy }]}>VEHICLE ONLY</Text>
+                  <Text style={[styles.tileBadgeText, { color: Colors.text }]}>VEHICLE ONLY</Text>
                 </View>
               </View>
 
@@ -311,8 +311,8 @@ export default function HomeScreen() {
 
               <View style={styles.tileFooter}>
                 <Text style={styles.tileActionLink}>Book Truck Online</Text>
-                <View style={[styles.tileArrowCircle, { backgroundColor: Colors.navy }]}>
-                  <ArrowRight size={14} color={Colors.white} strokeWidth={2.5} />
+                <View style={[styles.tileArrowCircle, { backgroundColor: Colors.surfaceSubtle }]}>
+                  <ArrowRight size={14} color={Colors.text} strokeWidth={2.5} />
                 </View>
               </View>
             </PressableScale>
@@ -596,7 +596,7 @@ const createStyles = (Colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: Colors.navy,
+      backgroundColor: Colors.brandSurface,
       paddingHorizontal: 12,
       paddingVertical: 7,
       borderRadius: BorderRadius.full,
@@ -644,7 +644,7 @@ const createStyles = (Colors: ThemeColors) =>
     },
     trucksTile: {
       borderLeftWidth: 4,
-      borderLeftColor: Colors.navy,
+      borderLeftColor: Colors.navyMuted,
     },
     tileHeader: {
       flexDirection: 'row',
@@ -780,13 +780,13 @@ const createStyles = (Colors: ThemeColors) =>
       width: 24,
       height: 24,
       borderRadius: 12,
-      backgroundColor: Colors.navySubtle,
+      backgroundColor: Colors.marigoldSubtle,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 2,
     },
     stepNumText: {
-      color: Colors.navy,
+      color: Colors.marigoldDark,
       fontSize: 11,
       fontWeight: FontWeight.extrabold,
     },

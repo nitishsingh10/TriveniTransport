@@ -87,7 +87,7 @@ export default function SavedAddressesScreen() {
         <View style={styles.labelChoices}>{['Home', 'Work', 'Other'].map((value) => <TouchableOpacity key={value} onPress={() => setLabel(value)} style={[styles.choice, label === value && styles.choiceActive]}><Text style={[styles.choiceText, label === value && styles.choiceTextActive]}>{value}</Text></TouchableOpacity>)}</View>
         {label === 'Other' && <TextInput value={customLabel} onChangeText={setCustomLabel} style={styles.input} placeholder="Name this address" placeholderTextColor={Colors.inputPlaceholder} />}
         <TouchableOpacity style={styles.gpsButton} onPress={useCurrentLocation} disabled={locating}>
-          {locating ? <ActivityIndicator size="small" color={Colors.navyDark} /> : <Crosshair size={17} color={Colors.navyDark} />}
+          {locating ? <ActivityIndicator size="small" color={Colors.navy} /> : <Crosshair size={17} color={Colors.navy} />}
           <Text style={styles.gpsText}>{locating ? 'Getting current location…' : 'Use current location'}</Text>
         </TouchableOpacity>
         <Text style={styles.label}>FULL ADDRESS</Text>
@@ -95,7 +95,7 @@ export default function SavedAddressesScreen() {
         <Text style={styles.label}>CITY (OPTIONAL)</Text>
         <TextInput value={city} onChangeText={setCity} style={styles.input} placeholder="City" placeholderTextColor={Colors.inputPlaceholder} />
         <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving}>
-          {saving ? <ActivityIndicator color={Colors.navyDark} /> : <Text style={styles.saveText}>{editingId ? 'Update address' : 'Save address'}</Text>}
+          {saving ? <ActivityIndicator color={Colors.navy} /> : <Text style={styles.saveText}>{editingId ? 'Update address' : 'Save address'}</Text>}
         </TouchableOpacity>
         {!!editingId && <TouchableOpacity onPress={resetForm} style={styles.cancel}><Text style={styles.cancelText}>Cancel editing</Text></TouchableOpacity>}
       </View>
@@ -127,13 +127,13 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   choice: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: BorderRadius.full, backgroundColor: Colors.surfaceSubtle, borderWidth: 1, borderColor: Colors.cardBorder },
   choiceActive: { backgroundColor: Colors.marigoldSubtle, borderColor: Colors.marigoldBorder },
   choiceText: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
-  choiceTextActive: { color: Colors.navyDark },
+  choiceTextActive: { color: Colors.text },
   gpsButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginVertical: 4, backgroundColor: Colors.marigold, borderRadius: BorderRadius.lg },
-  gpsText: { color: Colors.navyDark, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
+  gpsText: { color: Colors.navy, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   input: { minHeight: 46, borderWidth: 1, borderColor: Colors.inputBorder, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, color: Colors.text, backgroundColor: Colors.inputBg, fontSize: FontSize.sm },
   addressInput: { minHeight: 82, paddingTop: Spacing.md, textAlignVertical: 'top' },
   saveButton: { minHeight: 48, marginTop: 6, backgroundColor: Colors.marigold, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.lg },
-  saveText: { color: Colors.navyDark, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
+  saveText: { color: Colors.navy, fontSize: FontSize.sm, fontWeight: FontWeight.bold },
   cancel: { alignItems: 'center', paddingVertical: 5 },
   cancelText: { color: Colors.textMuted, fontSize: FontSize.xs },
   listTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: FontWeight.bold, marginTop: Spacing.sm },

@@ -295,19 +295,19 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   headerTitle: {
     fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
+    color: Colors.text,
     letterSpacing: 0.2,
   },
   mapActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 4.5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.navyBorder,
+    borderColor: Colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -397,13 +397,13 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   metricValue: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
+    color: Colors.text,
     marginTop: 1,
   },
   divider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(13, 31, 55, 0.08)',
+    backgroundColor: Colors.cardBorder,
     marginHorizontal: Spacing.xs,
   },
   disclaimerText: {

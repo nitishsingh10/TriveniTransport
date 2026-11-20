@@ -288,7 +288,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   },
   profileDetails: { flex: 1, gap: 2 },
   userName: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.extrabold,
   },
@@ -387,7 +387,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   completePillBtnText: {
     fontSize: FontSize.xxs,
     fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
+    color: Colors.navy,
   },
 
   statsRow: {
@@ -406,7 +406,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     ...Shadow.sm,
   },
   statValue: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.lg,
     fontWeight: FontWeight.extrabold,
   },

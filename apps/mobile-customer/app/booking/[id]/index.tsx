@@ -588,17 +588,17 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: Colors.navyBorder,
+    borderColor: Colors.cardBorder,
     zIndex: 10,
     ...Shadow.sm,
   },
   speedFloatingText: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: 10,
     fontWeight: FontWeight.bold,
   },
@@ -626,7 +626,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 0.8,
   },
   bookingId: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.extrabold,
   },
@@ -747,7 +747,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   assigningTitle: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
+    color: Colors.text,
   },
   assigningSubtitle: {
     fontSize: 11,
@@ -813,7 +813,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: 6,
   },
   driverName: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },
@@ -875,7 +875,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: Colors.cardBorder,
   },
   timelineTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 0.2,
@@ -923,7 +923,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontWeight: FontWeight.medium,
   },
   milestoneLabelDone: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontWeight: FontWeight.bold,
   },
   milestoneDesc: {
@@ -987,7 +987,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     marginTop: Spacing.sm,
   },
   errorTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     marginTop: Spacing.sm,

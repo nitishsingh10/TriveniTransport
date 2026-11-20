@@ -388,11 +388,11 @@ export default function SummaryScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.text} />
+            <ActivityIndicator color={Colors.navy} />
           ) : (
             <>
               <Text style={styles.bookCtaText}>Proceed to payment</Text>
-              <ArrowRight size={17} color={Colors.text} strokeWidth={2.4} />
+              <ArrowRight size={17} color={Colors.navy} strokeWidth={2.4} />
             </>
           )}
         </TouchableOpacity>
@@ -482,7 +482,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 1,
   },
   title: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
     letterSpacing: -0.5,
@@ -588,7 +588,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   lineAmount: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -603,7 +603,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
   },
   totalLabel: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
   },
@@ -612,7 +612,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontSize: 10,
   },
   totalAmount: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
   },
@@ -682,7 +682,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     ...Shadow.glowSm,
   },
   bookCtaText: {
-    color: Colors.text,
+    color: Colors.navy,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
   },

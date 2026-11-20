@@ -85,7 +85,7 @@ export function SlidingPill<T = string | number | boolean>({
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? Colors.surfaceElevated : '#F1F5F9',
+          backgroundColor: isDark ? Colors.inputBg : '#F1F5F9',
           borderColor: Colors.cardBorder,
         },
         style,
@@ -98,8 +98,8 @@ export function SlidingPill<T = string | number | boolean>({
             {
               width: segmentWidth,
               transform: [{ translateX }],
-              backgroundColor: isDark ? Colors.cardBg : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.08)',
+              backgroundColor: isDark ? Colors.surfaceElevated : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(15, 23, 42, 0.08)',
             },
           ]}
         />

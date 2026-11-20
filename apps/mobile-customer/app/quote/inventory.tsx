@@ -374,7 +374,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 1,
   },
   title: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
     letterSpacing: -0.5,
@@ -423,9 +423,9 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     borderColor: Colors.navyBorder,
   },
   selectionEyebrow: { color: Colors.navyMuted, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1 },
-  selectionHeadline: { color: Colors.navyDark, fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginTop: 3 },
+  selectionHeadline: { color: Colors.text, fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginTop: 3 },
   selectionStats: { alignItems: 'flex-end', gap: 3 },
-  selectionVolume: { color: Colors.navyDark, fontSize: FontSize.md, fontWeight: FontWeight.extrabold },
+  selectionVolume: { color: Colors.text, fontSize: FontSize.md, fontWeight: FontWeight.extrabold },
   selectionCost: { color: Colors.textSecondary, fontSize: 10 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 2 },
   loadingText: { color: Colors.textSecondary, fontSize: FontSize.xxs },
@@ -448,7 +448,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   },
   sectionItemCount: { marginLeft: 'auto', color: Colors.textMuted, fontSize: FontSize.xxs, fontWeight: FontWeight.medium },
   roomTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 0.2,
@@ -517,7 +517,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     textAlign: 'center',
   },
   counterValActive: {
-    color: Colors.navyDark,
+    color: Colors.text,
   },
 
   emptyState: {
@@ -531,7 +531,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
-  emptyTitle: { color: Colors.navyDark, fontSize: FontSize.md, fontWeight: FontWeight.bold },
+  emptyTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: FontWeight.bold },
   emptyCopy: { color: Colors.textSecondary, fontSize: FontSize.xs, textAlign: 'center' },
 
   ctaArea: {

@@ -274,11 +274,11 @@ export default function CompleteProfileScreen() {
               activeOpacity={0.88}
             >
               {loading ? (
-                <ActivityIndicator color={Colors.navyDark} />
+                <ActivityIndicator color={Colors.navy} />
               ) : (
                 <View style={styles.btnContent}>
                   <Text style={styles.submitBtnText}>{loading ? 'Please wait…' : otpSent ? 'Verify & Save' : isEditMode ? 'Save Changes' : 'Continue'}</Text>
-                  <ArrowRight size={16} color={Colors.navyDark} strokeWidth={2.4} />
+                  <ArrowRight size={16} color={Colors.navy} strokeWidth={2.4} />
                 </View>
               )}
             </TouchableOpacity>
@@ -370,7 +370,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   title: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navyDark,
+    color: Colors.text,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -516,7 +516,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: Spacing.xs,
   },
   submitBtnText: {
-    color: Colors.navyDark,
+    color: Colors.navy,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.3,

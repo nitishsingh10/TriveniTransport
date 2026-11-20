@@ -32,7 +32,7 @@ function RootNavigation() {
       primary: Colors.marigold,
       background: Colors.background,
       card: Colors.surface,
-      text: Colors.navyDark,
+      text: Colors.text,
       border: Colors.cardBorder,
       notification: Colors.marigold,
     },

@@ -13,7 +13,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     padding: Spacing.md,
     gap: Spacing.md,
   },
-  heading: { color: Colors.navyDark, fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  heading: { color: Colors.text, fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
   hint: { color: Colors.textSecondary, fontSize: FontSize.xs, marginTop: 3 },
   options: {
     flexDirection: 'row',

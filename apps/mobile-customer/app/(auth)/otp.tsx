@@ -286,11 +286,11 @@ export default function OtpScreen() {
               activeOpacity={0.88}
             >
               {loading ? (
-                <ActivityIndicator color={Colors.navyDark} />
+                <ActivityIndicator color={Colors.navy} />
               ) : (
                 <View style={styles.ctaContent}>
                   <Text style={styles.ctaText}>Verify & Sign In</Text>
-                  <ArrowRight size={16} color={Colors.navyDark} strokeWidth={2.4} />
+                  <ArrowRight size={16} color={Colors.navy} strokeWidth={2.4} />
                 </View>
               )}
             </TouchableOpacity>
@@ -373,7 +373,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   title: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navyDark,
+    color: Colors.text,
     letterSpacing: -0.5,
   },
   subtitle: {
@@ -468,7 +468,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: Spacing.xs,
   },
   ctaText: {
-    color: Colors.navyDark,
+    color: Colors.navy,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.3,

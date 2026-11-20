@@ -260,7 +260,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     alignItems: 'flex-start',
   },
   brandTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 1.2,
@@ -375,7 +375,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     flex: 1,
   },
   linePrice: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -391,7 +391,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     fontSize: FontSize.xs,
   },
   totalAmount: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
@@ -407,12 +407,12 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     marginTop: 4,
   },
   dueLabel: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },
   dueAmount: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.extrabold,
   },

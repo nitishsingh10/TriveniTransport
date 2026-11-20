@@ -150,7 +150,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
 
   header: { gap: 4 },
   pageTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     letterSpacing: -0.5,
@@ -247,7 +247,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: Spacing.xs,
   },
   sectionTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.md,
     fontWeight: FontWeight.extrabold,
   },

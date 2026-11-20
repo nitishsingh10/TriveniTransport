@@ -56,7 +56,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   title: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.extrabold,
-    color: Colors.navyDark,
+    color: Colors.text,
   },
   subtitle: {
     fontSize: FontSize.xs,

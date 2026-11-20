@@ -394,9 +394,9 @@ export default function TransportBookingScreen() {
             onPress={() => setMapModalType('pickup')}
             activeOpacity={0.85}
           >
-            <Compass size={16} color={Colors.brandSurface} />
+            <Compass size={16} color={Colors.text} />
             <Text style={styles.mapPinText}>Pin location accurately on map</Text>
-            <ArrowRight size={14} color={Colors.brandSurface} />
+            <ArrowRight size={14} color={Colors.text} />
           </TouchableOpacity>
 
           {routeEstimate && (
@@ -645,7 +645,7 @@ const createStyles = (Colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: Colors.cardBorder,
     },
-    bannerText: { flex: 1, fontSize: FontSize.xs, color: Colors.navyDark, fontWeight: FontWeight.medium },
+    bannerText: { flex: 1, fontSize: FontSize.xs, color: Colors.text, fontWeight: FontWeight.medium },
 
     card: {
       backgroundColor: Colors.surface,
@@ -722,7 +722,7 @@ const createStyles = (Colors: ThemeColors) =>
     mapPinText: {
       fontSize: FontSize.xs,
       fontWeight: FontWeight.semibold,
-      color: Colors.brandSurface,
+      color: Colors.text,
     },
     routePill: {
       marginTop: Spacing.sm,
@@ -824,8 +824,8 @@ const createStyles = (Colors: ThemeColors) =>
       backgroundColor: Colors.surface,
     },
     helperChipActive: {
-      backgroundColor: Colors.navyDark,
-      borderColor: Colors.navyDark,
+      backgroundColor: Colors.brandSurface,
+      borderColor: Colors.brandSurface,
     },
     helperChipText: {
       fontSize: FontSize.xs,
@@ -881,8 +881,8 @@ const createStyles = (Colors: ThemeColors) =>
       backgroundColor: Colors.surface,
     },
     slotChipActive: {
-      backgroundColor: Colors.navyDark,
-      borderColor: Colors.navyDark,
+      backgroundColor: Colors.brandSurface,
+      borderColor: Colors.brandSurface,
     },
     slotText: { fontSize: FontSize.xs, color: Colors.text },
     slotTextActive: { color: Colors.white, fontWeight: FontWeight.bold },

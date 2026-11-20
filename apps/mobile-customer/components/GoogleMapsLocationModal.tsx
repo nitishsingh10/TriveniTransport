@@ -49,7 +49,7 @@ export function GoogleMapsLocationModal({
   onSelect,
   onClose,
 }: GoogleMapsLocationModalProps) {
-  const { colors: Colors } = useAppTheme();
+  const { colors: Colors, mode } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   const [activeType, setActiveType] = useState<'pickup' | 'drop'>(initialType);
   const [query, setQuery] = useState(initialValue);
@@ -316,8 +316,9 @@ export function GoogleMapsLocationModal({
   };
 
   const isPickup = activeType === 'pickup';
-  const pinColor = isPickup ? Colors.marigold : Colors.brandSurface;
-  const pinGradientBg = isPickup ? [Colors.marigold, '#E09200'] : [Colors.brandSurface, '#1A365D'];
+  const isDark = mode === 'dark';
+  const pinColor = isPickup ? Colors.marigold : (isDark ? '#38BDF8' : Colors.brandSurface);
+  const pinGradientBg = isPickup ? [Colors.marigold, '#E09200'] : (isDark ? ['#0284C7', '#0369A1'] : [Colors.brandSurface, '#1A365D']);
 
   // Memoize map HTML so dragging the pin NEVER causes iframe/webview reload loops
   const mapHtml = useMemo(() => {
@@ -556,13 +557,18 @@ export function GoogleMapsLocationModal({
               style={[
                 styles.pinStem,
                 {
-                  backgroundColor: isPickup ? Colors.marigoldDark : Colors.navyDark,
+                  backgroundColor: pinColor,
                   transform: [{ translateY: isMapMoving ? -14 : 0 }],
                 },
               ]}
             />
             {/* Ground contact dot */}
-            <View style={styles.pinGroundDot} />
+            <View
+              style={[
+                styles.pinGroundDot,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.6)' : '#000000' },
+              ]}
+            />
 
             {/* Floating guidance tag */}
             <View
@@ -731,7 +737,7 @@ export function GoogleMapsLocationModal({
               <View
                 style={[
                   styles.pinStatusDot,
-                  { backgroundColor: isPickup ? Colors.marigold : Colors.brandSurface },
+                  { backgroundColor: pinColor },
                 ]}
               />
               <Text
@@ -777,7 +783,7 @@ export function GoogleMapsLocationModal({
           <TouchableOpacity
             style={[
               styles.confirmBtn,
-              { backgroundColor: isPickup ? Colors.marigold : Colors.brandSurface },
+              { backgroundColor: isPickup ? Colors.marigold : (isDark ? '#0284C7' : Colors.brandSurface) },
             ]}
             onPress={handleConfirm}
             activeOpacity={0.88}

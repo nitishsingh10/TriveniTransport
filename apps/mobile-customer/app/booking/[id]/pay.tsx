@@ -279,7 +279,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 1,
   },
   amountValue: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xxxl,
     fontWeight: FontWeight.extrabold,
     lineHeight: 40,
@@ -310,7 +310,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   },
 
   sectionTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
     letterSpacing: 0.2,
@@ -363,7 +363,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: 6,
   },
   methodTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
   },

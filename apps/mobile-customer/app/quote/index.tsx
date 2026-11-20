@@ -218,7 +218,7 @@ export default function QuoteIndexScreen() {
             <ArrowRight size={18} color={Colors.textMuted} />
           </PressableScale>
           <PressableScale style={styles.shiftOption} onPress={() => { setConfig('office'); setShiftSelected(true); }}>
-            <View style={[styles.shiftIcon, styles.shiftOfficeIcon]}><Briefcase size={24} color={Colors.navy} /></View>
+            <View style={[styles.shiftIcon, styles.shiftOfficeIcon]}><Briefcase size={24} color={Colors.text} /></View>
             <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Office shifting</Text><Text style={styles.shiftOptionSub}>Workstations, equipment, IT assets &amp; files</Text></View>
             <ArrowRight size={18} color={Colors.textMuted} />
           </PressableScale>
@@ -601,7 +601,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 0.8,
   },
   title: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xl + 2,
     fontWeight: FontWeight.extrabold,
     letterSpacing: -0.4,
@@ -733,7 +733,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 0.8,
   },
   locationInput: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.semibold,
     paddingVertical: 2,
@@ -808,7 +808,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   suggestionMainText: {
     fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.bold,
-    color: Colors.navyDark,
+    color: Colors.text,
   },
   suggestionSubText: {
     fontSize: 10.5,
@@ -891,7 +891,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   sectionTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.sm + 1,
     fontWeight: FontWeight.extrabold,
     letterSpacing: -0.2,
@@ -936,7 +936,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   configLabel: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs + 0.5,
     fontWeight: FontWeight.bold,
   },
@@ -964,7 +964,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     ...Shadow.md,
   },
   floorText: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs + 0.5,
     fontWeight: FontWeight.bold,
   },
@@ -1000,7 +1000,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
   },
   liftTitle: {
-    color: Colors.navyDark,
+    color: Colors.text,
     fontSize: FontSize.xs + 1,
     fontWeight: FontWeight.bold,
   },

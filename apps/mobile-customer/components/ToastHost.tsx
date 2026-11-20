@@ -42,7 +42,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   },
   iconWell: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, minWidth: 0 },
-  title: { color: Colors.navyDark, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  title: { color: Colors.text, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
   message: { color: Colors.textSecondary, fontSize: FontSize.xxs, marginTop: 2 },
   dismiss: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   dismissText: { color: Colors.textMuted, fontSize: 18, lineHeight: 20 },
