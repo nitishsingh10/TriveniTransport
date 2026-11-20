@@ -56,7 +56,7 @@ const EnvSchema = z.object({
 
   // ── Resend (Email) ───────────────────────────────────────────
   RESEND_API_KEY: z.string().default('mock_resend_key'),
-  EMAIL_FROM: z.string().email().default('bookings@trivenipackers.com'),
+  EMAIL_FROM: z.string().email().default('bookings@trivenitransports.com'),
 
   // ── Cloudinary (Invoice / Photos) ────────────────────────────
   CLOUDINARY_CLOUD_NAME: z.string().optional(),

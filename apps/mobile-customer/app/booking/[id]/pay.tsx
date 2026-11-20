@@ -24,6 +24,7 @@ import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, type BookingItem } from '@/lib/api';
 import { showToast } from '@/components/ToastHost';
+import { PressableScale } from '@/components/PressableScale';
 
 export default function BookingPayScreen() {
   const { colors: Colors } = useAppTheme();
@@ -213,12 +214,11 @@ export default function BookingPayScreen() {
         </Text>
       </View>
 
-      {/* Confirm CTA: Deep Navy Button */}
-      <TouchableOpacity
+      {/* Confirm CTA: Deep Navy Button with tactile spring scale */}
+      <PressableScale
         style={[styles.payCta, processing && styles.payCtaDisabled]}
         onPress={handleConfirmCod}
         disabled={processing}
-        activeOpacity={0.88}
       >
         {processing ? (
           <ActivityIndicator color={Colors.white} />
@@ -228,7 +228,7 @@ export default function BookingPayScreen() {
             <ArrowRight size={17} color={Colors.white} strokeWidth={2.4} />
           </View>
         )}
-      </TouchableOpacity>
+      </PressableScale>
     </ScrollView>
   );
 }

@@ -27,6 +27,8 @@ import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { authApi } from '@/lib/api';
+import { PressableScale } from '@/components/PressableScale';
+import { FadeInUp } from '@/components/FadeInUp';
 
 type AuthMode = 'login' | 'signup';
 type Method = 'phone' | 'email';
@@ -121,9 +123,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bgBlobNavy} />
-      <View style={styles.bgBlobMarigold} />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -134,50 +133,47 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Brand Header */}
-          <View style={styles.brand}>
-            <View style={styles.logoCard}>
-              <Image
-                source={require('@/assets/logo-cropped.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.brandTitleBlock}>
-              <Text style={styles.brandName}>TRIVENI</Text>
-              <View style={styles.brandSubtitleRow}>
-                <View style={styles.subDash} />
-                <Text style={styles.brandSubtitle}>TRANSPORTS</Text>
-                <View style={styles.subDash} />
+          <FadeInUp delay={60}>
+            <View style={styles.brand}>
+              <View style={styles.logoCard}>
+                <Image
+                  source={require('@/assets/logo-cropped.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.logoTagline}>SAFE HANDS FOR YOUR SHIFTING PLANS</Text>
+              <View style={styles.brandTitleBlock}>
+                <Text style={styles.brandName}>Triveni</Text>
+                <Text style={styles.brandSubtitle}>TRANSPORTS</Text>
+                <Text style={styles.logoTagline}>Safe hands for your shifting plans</Text>
+              </View>
             </View>
-          </View>
+          </FadeInUp>
 
           {/* Form Card */}
-          <View style={styles.card}>
-            {/* Mode Switcher Tabs: Sign In vs Create Account */}
-            <View style={styles.modeTabsRow}>
-              <TouchableOpacity
-                style={[styles.modeTabBtn, authMode === 'login' && styles.modeTabBtnActive]}
-                onPress={() => switchAuthMode('login')}
-                activeOpacity={0.8}
-              >
-                <LogIn size={14} color={authMode === 'login' ? Colors.text : Colors.textMuted} />
-                <Text style={[styles.modeTabBtnText, authMode === 'login' && styles.modeTabBtnTextActive]}>
-                  Sign In
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modeTabBtn, authMode === 'signup' && styles.modeTabBtnActive]}
-                onPress={() => switchAuthMode('signup')}
-                activeOpacity={0.8}
-              >
-                <UserPlus size={14} color={authMode === 'signup' ? Colors.text : Colors.textMuted} />
-                <Text style={[styles.modeTabBtnText, authMode === 'signup' && styles.modeTabBtnTextActive]}>
-                  Create Account
-                </Text>
-              </TouchableOpacity>
-            </View>
+          <FadeInUp delay={120}>
+            <View style={styles.card}>
+              {/* Mode Switcher Tabs: Sign In vs Create Account */}
+              <View style={styles.modeTabsRow}>
+                <PressableScale
+                  style={[styles.modeTabBtn, authMode === 'login' && styles.modeTabBtnActive]}
+                  onPress={() => switchAuthMode('login')}
+                >
+                  <LogIn size={14} color={authMode === 'login' ? Colors.text : Colors.textMuted} />
+                  <Text style={[styles.modeTabBtnText, authMode === 'login' && styles.modeTabBtnTextActive]}>
+                    Sign In
+                  </Text>
+                </PressableScale>
+                <PressableScale
+                  style={[styles.modeTabBtn, authMode === 'signup' && styles.modeTabBtnActive]}
+                  onPress={() => switchAuthMode('signup')}
+                >
+                  <UserPlus size={14} color={authMode === 'signup' ? Colors.text : Colors.textMuted} />
+                  <Text style={[styles.modeTabBtnText, authMode === 'signup' && styles.modeTabBtnTextActive]}>
+                    Create Account
+                  </Text>
+                </PressableScale>
+              </View>
 
             <Text style={styles.cardTitle}>
               {authMode === 'login' ? 'Welcome Back' : 'Create an Account'}
@@ -315,13 +311,12 @@ export default function LoginScreen() {
             )}
 
             {/* Submit Button */}
-            <TouchableOpacity
+            <PressableScale
               style={[
                 styles.submitBtn,
                 (!canSubmit || loading) && styles.submitBtnDisabled,
               ]}
               onPress={handleSendOtp}
-              activeOpacity={0.88}
               disabled={!canSubmit || loading}
             >
               {loading ? (
@@ -334,7 +329,7 @@ export default function LoginScreen() {
                   <ArrowRight size={16} color={Colors.white} strokeWidth={2.4} />
                 </View>
               )}
-            </TouchableOpacity>
+            </PressableScale>
 
             {/* Alternate Mode Link */}
             <TouchableOpacity
@@ -361,22 +356,25 @@ export default function LoginScreen() {
               <Text style={styles.link}>Privacy Policy</Text>
             </Text>
           </View>
+        </FadeInUp>
 
-          {/* Trust Badges Bar */}
+        {/* Trust Badges Bar */}
+        <FadeInUp delay={200}>
           <View style={styles.trustRow}>
             <View style={styles.trustBadge}>
-              <ShieldCheck size={14} color={Colors.marigold} />
+              <ShieldCheck size={14} color={Colors.marigoldDark} />
               <Text style={styles.trustBadgeText}>256-Bit Encrypted</Text>
             </View>
             <View style={styles.trustBadge}>
-              <Package size={14} color={Colors.marigold} />
+              <Package size={14} color={Colors.marigoldDark} />
               <Text style={styles.trustBadgeText}>50,000+ Moves</Text>
             </View>
             <View style={styles.trustBadge}>
-              <CheckCircle2 size={14} color={Colors.marigold} />
+              <CheckCircle2 size={14} color={Colors.marigoldDark} />
               <Text style={styles.trustBadgeText}>4.9/5 Rating</Text>
             </View>
           </View>
+        </FadeInUp>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

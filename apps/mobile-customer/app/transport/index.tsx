@@ -42,6 +42,8 @@ import {
   type TransportQuoteResponse,
 } from '@/lib/api';
 import { showToast } from '@/components/ToastHost';
+import { PressableScale } from '@/components/PressableScale';
+import { FadeInUp } from '@/components/FadeInUp';
 
 const DEFAULT_VEHICLES: TransportVehicleConfig[] = [
   {
@@ -413,11 +415,10 @@ export default function TransportBookingScreen() {
             {vehicles.map((v) => {
               const isSelected = v.type === selectedVehicleType;
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={v.type}
                   style={[styles.vehicleCard, isSelected && styles.vehicleCardSelected]}
                   onPress={() => setSelectedVehicleType(v.type)}
-                  activeOpacity={0.85}
                 >
                   <View style={styles.vehicleHeader}>
                     <View style={[styles.vehicleIconCircle, isSelected && styles.vehicleIconCircleActive]}>
@@ -446,7 +447,7 @@ export default function TransportBookingScreen() {
                       <Text style={styles.specBadgeText}>{v.dimensions}</Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>
@@ -577,11 +578,10 @@ export default function TransportBookingScreen() {
             </View>
           )}
 
-          <TouchableOpacity
+          <PressableScale
             style={[styles.bookBtn, (!pickup || !drop || isSubmitting) && styles.bookBtnDisabled]}
             disabled={!pickup || !drop || isSubmitting}
             onPress={handleBookNow}
-            activeOpacity={0.88}
           >
             {isSubmitting ? (
               <ActivityIndicator color={Colors.white} />
@@ -591,7 +591,7 @@ export default function TransportBookingScreen() {
                 <ArrowRight size={18} color={Colors.white} />
               </>
             )}
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </ScrollView>
 

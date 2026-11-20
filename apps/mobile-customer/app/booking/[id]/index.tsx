@@ -36,6 +36,9 @@ import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, CURATED_LOCATIONS, type BookingItem } from '@/lib/api';
+import { PressableScale } from '@/components/PressableScale';
+import { FadeInUp } from '@/components/FadeInUp';
+import { PulsingDot } from '@/components/PulsingDot';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
@@ -370,7 +373,7 @@ export default function BookingTrackScreen() {
             <Text style={styles.bookingId}>#{booking.id.slice(-6).toUpperCase()}</Text>
           </View>
           <View style={styles.transitBadge}>
-            <View style={!isDriverAssigned ? styles.pulseMarigold : styles.pulseGreen} />
+            <PulsingDot color={!isDriverAssigned ? Colors.warning : Colors.success} size={6} />
             <Text style={styles.transitBadgeText}>
               {!isDriverAssigned ? 'ASSIGNING SHORTLY' : booking.status.replace('_', ' ')}
             </Text>
@@ -519,23 +522,21 @@ export default function BookingTrackScreen() {
 
       {/* Quick Action Buttons */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity
+        <PressableScale
           style={styles.invoiceBtn}
           onPress={() => router.push(`/booking/${booking.id}/invoice`)}
-          activeOpacity={0.85}
         >
           <FileText size={16} color={Colors.white} />
           <Text style={styles.invoiceBtnText}>View Move Invoice</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
-        <TouchableOpacity
+        <PressableScale
           style={styles.supportBtn}
           onPress={() => Linking.openURL('tel:8828647785')}
-          activeOpacity={0.85}
         >
           <PhoneCall size={16} color={Colors.text} />
           <Text style={styles.supportBtnText}>Call Helpline</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </ScrollView>
   );

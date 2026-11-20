@@ -31,6 +31,8 @@ import { useAuthStore } from '@/store/authStore';
 import { bookingApi } from '@/lib/api';
 import { AppearanceControl } from '@/components/AppearanceControl';
 import { isCustomerProfileComplete } from '@/lib/customerProfile';
+import { PressableScale } from '@/components/PressableScale';
+import { FadeInUp } from '@/components/FadeInUp';
 
 export default function ProfileScreen() {
   const { colors: Colors } = useAppTheme();
@@ -115,133 +117,142 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Avatar / User Info Card */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarInitial}>
-            {(user?.name && user.name !== 'Valued Customer' ? user.name : 'C').charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.profileDetails}>
-          <Text style={styles.userName}>
-            {user?.name && user.name !== 'Customer' ? user.name : 'Valued Customer'}
-          </Text>
-          <Text style={styles.userPhone}>
-            {user?.phone ? user.phone : (user?.email || 'No phone number set')}
-          </Text>
-          <View style={isProfileIncomplete ? styles.incompleteBadge : styles.verifiedBadge}>
-            {isProfileIncomplete ? (
-              <AlertCircle size={12} color={Colors.warning} />
-            ) : (
-              <CheckCircle2 size={12} color={Colors.success} />
-            )}
-            <Text style={isProfileIncomplete ? styles.incompleteText : styles.verifiedText}>
-              {isProfileIncomplete ? 'Profile Incomplete' : 'Verified Customer'}
+      <FadeInUp delay={50}>
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarInitial}>
+              {(user?.name && user.name !== 'Valued Customer' ? user.name : 'C').charAt(0).toUpperCase()}
             </Text>
           </View>
-        </View>
-        <TouchableOpacity
-          style={styles.editProfilePill}
-          onPress={() => router.push({ pathname: '/complete-profile', params: { mode: 'edit' } } as any)}
-          activeOpacity={0.8}
-        >
-          <Edit3 size={13} color={Colors.text} />
-          <Text style={styles.editProfileText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Incomplete Profile Callout Banner */}
-      {isProfileIncomplete && (
-        <TouchableOpacity
-          style={styles.incompleteBanner}
-          onPress={() => router.push('/complete-profile' as any)}
-          activeOpacity={0.88}
-        >
-          <View style={styles.incompleteBannerLeft}>
-            <AlertCircle size={18} color="#B45309" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.incompleteBannerTitle}>Add your phone number</Text>
-              <Text style={styles.incompleteBannerDesc}>
-                Needed to assign verified drivers and send live GPS tracking updates.
+          <View style={styles.profileDetails}>
+            <Text style={styles.userName}>
+              {user?.name && user.name !== 'Customer' ? user.name : 'Valued Customer'}
+            </Text>
+            <Text style={styles.userPhone}>
+              {user?.phone ? user.phone : (user?.email || 'No phone number set')}
+            </Text>
+            <View style={isProfileIncomplete ? styles.incompleteBadge : styles.verifiedBadge}>
+              {isProfileIncomplete ? (
+                <AlertCircle size={12} color={Colors.warning} />
+              ) : (
+                <CheckCircle2 size={12} color={Colors.success} />
+              )}
+              <Text style={isProfileIncomplete ? styles.incompleteText : styles.verifiedText}>
+                {isProfileIncomplete ? 'Profile Incomplete' : 'Verified Customer'}
               </Text>
             </View>
           </View>
-          <View style={styles.completePillBtn}>
-            <Text style={styles.completePillBtnText}>Complete</Text>
-            <ChevronRight size={13} color={Colors.text} />
-          </View>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editProfilePill}
+            onPress={() => router.push({ pathname: '/complete-profile', params: { mode: 'edit' } } as any)}
+            activeOpacity={0.8}
+          >
+            <Edit3 size={13} color={Colors.text} />
+            <Text style={styles.editProfileText}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+      </FadeInUp>
+
+      {/* Incomplete Profile Callout Banner */}
+      {isProfileIncomplete && (
+        <FadeInUp delay={90}>
+          <TouchableOpacity
+            style={styles.incompleteBanner}
+            onPress={() => router.push('/complete-profile' as any)}
+            activeOpacity={0.88}
+          >
+            <View style={styles.incompleteBannerLeft}>
+              <AlertCircle size={18} color="#B45309" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.incompleteBannerTitle}>Add your phone number</Text>
+                <Text style={styles.incompleteBannerDesc}>
+                  Needed to assign verified drivers and send live GPS tracking updates.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.completePillBtn}>
+              <Text style={styles.completePillBtnText}>Complete</Text>
+              <ChevronRight size={13} color={Colors.text} />
+            </View>
+          </TouchableOpacity>
+        </FadeInUp>
       )}
 
       {/* Real Stats Row */}
-      <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <PackageCheck size={18} color={Colors.text} />
-          <Text style={styles.statValue}>{completedCount}</Text>
-          <Text style={styles.statLabel}>Completed Moves</Text>
+      <FadeInUp delay={120}>
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <PackageCheck size={18} color={Colors.text} />
+            <Text style={styles.statValue}>{completedCount}</Text>
+            <Text style={styles.statLabel}>Completed Moves</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Truck size={18} color={Colors.marigoldDark} />
+            <Text style={styles.statValue}>{activeCount}</Text>
+            <Text style={styles.statLabel}>Active Moves</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Award size={18} color={Colors.text} />
+            <Text style={styles.statValue}>{totalCount}</Text>
+            <Text style={styles.statLabel}>Total Bookings</Text>
+          </View>
         </View>
-        <View style={styles.statBox}>
-          <Truck size={18} color={Colors.marigoldDark} />
-          <Text style={styles.statValue}>{activeCount}</Text>
-          <Text style={styles.statLabel}>Active Moves</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Award size={18} color={Colors.text} />
-          <Text style={styles.statValue}>{totalCount}</Text>
-          <Text style={styles.statLabel}>Total Bookings</Text>
-        </View>
-      </View>
+      </FadeInUp>
 
       {/* Account Settings Menu */}
-      <Text style={styles.menuSectionHeader}>Account & Settings</Text>
-      <View style={styles.menu}>
-        {MENU_ITEMS.map((item, index) => {
-          const ItemIcon = item.icon;
-          const isLast = index === MENU_ITEMS.length - 1;
-          return (
-            <TouchableOpacity
-              key={item.label}
-              style={[
-                styles.menuItem,
-                isLast && styles.menuItemLast,
-                item.highlight && styles.menuItemHighlight,
-              ]}
-              onPress={item.onPress}
-              activeOpacity={0.7}
-            >
-              <View
+      <FadeInUp delay={160}>
+        <Text style={styles.menuSectionHeader}>Account &amp; Settings</Text>
+        <View style={styles.menu}>
+          {MENU_ITEMS.map((item, index) => {
+            const ItemIcon = item.icon;
+            const isLast = index === MENU_ITEMS.length - 1;
+            return (
+              <TouchableOpacity
+                key={item.label}
                 style={[
-                  styles.menuIconContainer,
-                  item.highlight && styles.menuIconHighlight,
+                  styles.menuItem,
+                  isLast && styles.menuItemLast,
+                  item.highlight && styles.menuItemHighlight,
                 ]}
+                onPress={item.onPress}
+                activeOpacity={0.7}
               >
-                <ItemIcon size={18} color={item.highlight ? '#B45309' : Colors.text} strokeWidth={2} />
-              </View>
-              <View style={styles.menuTextGroup}>
-                <Text style={[styles.menuLabel, item.highlight && styles.menuLabelHighlight]}>
-                  {item.label}
-                </Text>
-                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-              </View>
-              <ChevronRight size={16} color={item.highlight ? '#B45309' : Colors.textMuted} />
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <View
+                  style={[
+                    styles.menuIconContainer,
+                    item.highlight && styles.menuIconHighlight,
+                  ]}
+                >
+                  <ItemIcon size={18} color={item.highlight ? '#B45309' : Colors.text} strokeWidth={2} />
+                </View>
+                <View style={styles.menuTextGroup}>
+                  <Text style={[styles.menuLabel, item.highlight && styles.menuLabelHighlight]}>
+                    {item.label}
+                  </Text>
+                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                </View>
+                <ChevronRight size={16} color={item.highlight ? '#B45309' : Colors.textMuted} />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </FadeInUp>
 
-      <Text style={styles.menuSectionHeader}>Display</Text>
-      <AppearanceControl />
+      <FadeInUp delay={200}>
+        <Text style={styles.menuSectionHeader}>Display Theme</Text>
+        <AppearanceControl />
 
-      {/* Logout */}
-      <TouchableOpacity
-        style={styles.logoutBtn}
-        onPress={handleLogout}
-        activeOpacity={0.8}
-      >
-        <LogOut size={16} color={Colors.error} />
-        <Text style={styles.logoutText}>Sign Out from Account</Text>
-      </TouchableOpacity>
+        {/* Logout */}
+        <PressableScale
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+        >
+          <LogOut size={16} color={Colors.error} />
+          <Text style={styles.logoutText}>Sign Out from Account</Text>
+        </PressableScale>
 
-      <Text style={styles.version}>Triveni Transports — Mobile Customer v1.0.0</Text>
+        <Text style={styles.version}>Triveni Transports — Mobile Customer v1.0.0</Text>
+      </FadeInUp>
     </ScrollView>
   );
 }

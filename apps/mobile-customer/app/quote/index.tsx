@@ -31,6 +31,9 @@ import type { ConfigurationType } from '@triveni/shared-types';
 import { GoogleMapsLocationModal } from '@/components/GoogleMapsLocationModal';
 import { GoogleMapsRouteCard } from '@/components/GoogleMapsRouteCard';
 import { mapsApi, RouteEstimate, PlaceLocation } from '@/lib/api';
+import { PressableScale } from '@/components/PressableScale';
+import { FadeInUp } from '@/components/FadeInUp';
+import { Truck } from 'lucide-react-native';
 
 export default function QuoteIndexScreen() {
   const { colors: Colors } = useAppTheme();
@@ -208,17 +211,22 @@ export default function QuoteIndexScreen() {
         <View style={styles.shiftTypeScreen}>
           <Text style={styles.shiftStepLabel}>STEP 1 OF 4</Text>
           <Text style={styles.shiftTitle}>What are you moving?</Text>
-          <Text style={styles.shiftSubtitle}>Choose a home or office move to begin.</Text>
-          <TouchableOpacity style={styles.shiftOption} onPress={() => { setConfig('2bhk'); setShiftSelected(true); }} activeOpacity={0.84}>
+          <Text style={styles.shiftSubtitle}>Choose a full move or single vehicle freight to begin.</Text>
+          <PressableScale style={styles.shiftOption} onPress={() => { setConfig('2bhk'); setShiftSelected(true); }}>
             <View style={styles.shiftIcon}><Home size={24} color={Colors.marigoldDark} /></View>
-            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Home shifting</Text><Text style={styles.shiftOptionSub}>Household goods, room by room</Text></View>
+            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Home shifting</Text><Text style={styles.shiftOptionSub}>Household goods, multi-layer packing &amp; crew</Text></View>
             <ArrowRight size={18} color={Colors.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.shiftOption} onPress={() => { setConfig('office'); setShiftSelected(true); }} activeOpacity={0.84}>
-            <View style={[styles.shiftIcon, styles.shiftOfficeIcon]}><Briefcase size={24} color={Colors.brandSurface} /></View>
-            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Office shifting</Text><Text style={styles.shiftOptionSub}>Workstations, equipment, and records</Text></View>
+          </PressableScale>
+          <PressableScale style={styles.shiftOption} onPress={() => { setConfig('office'); setShiftSelected(true); }}>
+            <View style={[styles.shiftIcon, styles.shiftOfficeIcon]}><Briefcase size={24} color={Colors.navy} /></View>
+            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Office shifting</Text><Text style={styles.shiftOptionSub}>Workstations, equipment, IT assets &amp; files</Text></View>
             <ArrowRight size={18} color={Colors.textMuted} />
-          </TouchableOpacity>
+          </PressableScale>
+          <PressableScale style={styles.shiftOption} onPress={() => router.push({ pathname: '/transport' as any, params: { pickup, drop } })}>
+            <View style={[styles.shiftIcon, { backgroundColor: Colors.surfaceSubtle }]}><Truck size={24} color={Colors.text} /></View>
+            <View style={styles.shiftText}><Text style={styles.shiftOptionTitle}>Transport &amp; Trucks</Text><Text style={styles.shiftOptionSub}>Dedicated freight vehicle (Tata Ace / 407 / 17ft)</Text></View>
+            <ArrowRight size={18} color={Colors.textMuted} />
+          </PressableScale>
         </View>
       ) : <>
       {/* ── Modern Step Progress Bar ─────────────────────────────── */}
@@ -449,7 +457,7 @@ export default function QuoteIndexScreen() {
       )}
 
       {/* ── Primary CTA Button ───────────────────────────────────────── */}
-      <TouchableOpacity
+      <PressableScale
         style={[styles.cta, !canProceed && styles.ctaDisabled]}
         disabled={!canProceed}
         onPress={() =>
@@ -465,11 +473,10 @@ export default function QuoteIndexScreen() {
             },
           })
         }
-        activeOpacity={0.88}
       >
         <Text style={styles.ctaText}>Proceed to Item Inventory</Text>
-        <ArrowRight size={17} color={Colors.text} strokeWidth={2.6} />
-      </TouchableOpacity>
+        <ArrowRight size={17} color={Colors.white} strokeWidth={2.6} />
+      </PressableScale>
 
       {/* Full-Screen Uber-Themed Interactive Map Pinning Modal */}
       {mapModalType && (
@@ -1030,17 +1037,17 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xs + 4,
-    backgroundColor: Colors.marigold,
+    backgroundColor: Colors.navy,
     borderRadius: BorderRadius.xl,
     paddingVertical: 15,
     marginTop: Spacing.xs,
-    ...Shadow.glowSm,
+    ...Shadow.sm,
   },
   ctaDisabled: {
     opacity: 0.45,
   },
   ctaText: {
-    color: Colors.text,
+    color: Colors.white,
     fontSize: FontSize.sm + 1,
     fontWeight: FontWeight.extrabold,
     letterSpacing: 0.2,

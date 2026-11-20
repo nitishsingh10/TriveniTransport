@@ -5,86 +5,86 @@
 // ─────────────────────────────────────────────────────────────────
 
 export const Colors = {
-  // Canvas & Surfaces (Matching web globals.css & login/bookings pages)
-  background: '#F8FAFC',        // Ultra-clean light canvas
+  // Canvas & Surfaces (Modern Apple / Linear Minimal Canvas)
+  background: '#F8FAFC',        // Ultra-crisp slate canvas
   surface: '#FFFFFF',           // Pure white card background
   surfaceElevated: '#FFFFFF',
   surfaceSubtle: '#F1F5F9',
   cardBg: '#FFFFFF',
-  cardBorder: 'rgba(13, 31, 55, 0.06)',
-  cardBorderSubtle: 'rgba(13, 31, 55, 0.04)',
+  cardBorder: 'rgba(15, 23, 42, 0.08)',
+  cardBorderSubtle: 'rgba(15, 23, 42, 0.04)',
 
-  // Primary Brand (Deep Navy palette from web --brand-*)
-  navy: '#0D1F37',              // Core Logo Navy (--brand-700)
-  brandSurface: '#0D1F37',      // Brand surface with legible inverse text
-  navyDark: '#050D17',          // Deep text navy (--brand-900)
-  navyLight: '#1C385B',         // Hover/accent navy (--brand-600)
-  navyMuted: '#486581',         // Muted navy (--brand-500)
-  navySubtle: 'rgba(13, 31, 55, 0.05)',
-  navyBorder: 'rgba(13, 31, 55, 0.10)',
+  // Primary Brand (Onyx Slate & Deep Midnight Navy)
+  navy: '#0F172A',              // Deep Slate 900
+  brandSurface: '#0F172A',      // High-contrast primary surface
+  navyDark: '#020617',          // Rich black text Slate 950
+  navyLight: '#1E293B',         // Subtle navy Slate 800
+  navyMuted: '#475569',         // Muted secondary copy
+  navySubtle: 'rgba(15, 23, 42, 0.04)',
+  navyBorder: 'rgba(15, 23, 42, 0.08)',
 
-  // Accent Brand (Rich Marigold from web --accent-*)
-  marigold: '#F7A300',          // Core Logo Yellow-Orange (--accent-500)
-  marigoldLight: '#FFB830',     // Warm gold highlight
-  marigoldDark: '#D98C00',      // Deep amber
-  marigoldSubtle: 'rgba(247, 163, 0, 0.12)',
-  marigoldBorder: 'rgba(247, 163, 0, 0.35)',
+  // Accent Brand (Refined Warm Amber / Gold - restrained luxury)
+  marigold: '#F59E0B',          // Refined Amber Gold
+  marigoldLight: '#FBBF24',     // Warm highlight
+  marigoldDark: '#D97706',      // Deep warm amber
+  marigoldSubtle: 'rgba(245, 158, 11, 0.09)',
+  marigoldBorder: 'rgba(245, 158, 11, 0.24)',
 
   // Typography & Content
-  text: '#0D1F37',              // Primary heading / bold text
-  textSecondary: '#486581',     // Supporting body copy
-  textMuted: '#829AB1',         // Captions and placeholders
+  text: '#0F172A',              // Primary heading / bold text
+  textSecondary: '#475569',     // Supporting body copy
+  textMuted: '#94A3B8',         // Captions and placeholders
   white: '#FFFFFF',
 
   // Semantic Status
-  success: '#16A34A',
-  successLight: 'rgba(22, 163, 74, 0.10)',
-  successBorder: 'rgba(22, 163, 74, 0.30)',
-  warning: '#D97706',
-  warningLight: 'rgba(217, 119, 6, 0.10)',
-  warningBorder: 'rgba(217, 119, 6, 0.30)',
-  error: '#DC2626',
-  errorLight: 'rgba(220, 38, 38, 0.10)',
-  errorBorder: 'rgba(220, 38, 38, 0.30)',
-  info: '#2563EB',
-  infoLight: 'rgba(37, 99, 235, 0.10)',
-  infoBorder: 'rgba(37, 99, 235, 0.30)',
+  success: '#10B981',
+  successLight: 'rgba(16, 185, 129, 0.10)',
+  successBorder: 'rgba(16, 185, 129, 0.25)',
+  warning: '#F59E0B',
+  warningLight: 'rgba(245, 158, 11, 0.10)',
+  warningBorder: 'rgba(245, 158, 11, 0.25)',
+  error: '#EF4444',
+  errorLight: 'rgba(239, 68, 68, 0.10)',
+  errorBorder: 'rgba(239, 68, 68, 0.25)',
+  info: '#3B82F6',
+  infoLight: 'rgba(59, 130, 246, 0.10)',
+  infoBorder: 'rgba(59, 130, 246, 0.25)',
 
-  // Navigation, Headers & Tab Bar (Matching web navbar)
-  headerBackground: 'rgba(252, 251, 250, 0.98)',
-  headerBorder: 'rgba(13, 31, 55, 0.08)',
+  // Navigation, Headers & Tab Bar
+  headerBackground: '#FFFFFF',
+  headerBorder: 'rgba(15, 23, 42, 0.06)',
   tabBackground: '#FFFFFF',
-  tabBorder: 'rgba(13, 31, 55, 0.08)',
-  tabActive: '#0D1F37',
-  tabActiveAccent: '#F7A300',
-  tabInactive: '#829AB1',
+  tabBorder: 'rgba(15, 23, 42, 0.06)',
+  tabActive: '#0F172A',
+  tabActiveAccent: '#F59E0B',
+  tabInactive: '#94A3B8',
 
   // Form Inputs
   inputBg: '#FFFFFF',
-  inputBorder: '#D9E2EC',
-  inputText: '#0D1F37',
-  inputPlaceholder: '#9FB3C8',
+  inputBorder: '#E2E8F0',
+  inputText: '#0F172A',
+  inputPlaceholder: '#94A3B8',
 
   // Glass / Overlay Tokens
-  glass: 'rgba(255, 255, 255, 0.85)',
-  glassBorder: 'rgba(13, 31, 55, 0.08)',
-  glassLight: 'rgba(255, 255, 255, 0.78)',
-  glassLightBorder: 'rgba(255, 255, 255, 0.60)',
-  glassDark: 'rgba(13, 31, 55, 0.88)',
-  glassDarkBorder: 'rgba(255, 255, 255, 0.16)',
-  glassMarigold: 'rgba(247, 163, 0, 0.16)',
-  glassMarigoldBorder: 'rgba(247, 163, 0, 0.38)',
-  overlay: 'rgba(13, 31, 55, 0.45)',
+  glass: 'rgba(255, 255, 255, 0.90)',
+  glassBorder: 'rgba(15, 23, 42, 0.08)',
+  glassLight: 'rgba(255, 255, 255, 0.82)',
+  glassLightBorder: 'rgba(255, 255, 255, 0.65)',
+  glassDark: 'rgba(15, 23, 42, 0.90)',
+  glassDarkBorder: 'rgba(255, 255, 255, 0.14)',
+  glassMarigold: 'rgba(245, 158, 11, 0.12)',
+  glassMarigoldBorder: 'rgba(245, 158, 11, 0.30)',
+  overlay: 'rgba(15, 23, 42, 0.45)',
 
-  // Custom Uber-like Triveni Map Theme
+  // Custom Triveni Map Theme
   mapBg: '#091524',
   mapRoads: '#1A2E46',
   mapRoadsHighlight: '#2A4365',
   mapWater: '#060E18',
   mapLand: '#0D1D30',
-  mapAccent: '#F7A300',
-  mapAccentGlow: 'rgba(247, 163, 0, 0.45)',
-  mapPinNavy: '#0D1F37',
+  mapAccent: '#F59E0B',
+  mapAccentGlow: 'rgba(245, 158, 11, 0.45)',
+  mapPinNavy: '#0F172A',
 } as const;
 
 export const Spacing = {
@@ -99,17 +99,17 @@ export const Spacing = {
 
 export const BorderRadius = {
   xs: 4,
-  sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 18,
-  xxl: 22,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 26,
   full: 9999,
 } as const;
 
 export const FontSize = {
-  xxs: 10,
-  xs: 12,
+  xxs: 11,
+  xs: 13,
   sm: 14,
   md: 16,
   lg: 18,
@@ -129,53 +129,53 @@ export const FontWeight = {
 
 export const Shadow = {
   sm: {
-    shadowColor: '#0D1F37',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 1,
   },
   md: {
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   lg: {
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.10,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
   },
   glow: {
-    shadowColor: '#F7A300',
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 4,
   },
   glowSm: {
-    shadowColor: '#F7A300',
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 2,
   },
   glass: {
-    shadowColor: '#0D1F37',
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.08,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
     shadowRadius: 20,
-    elevation: 6,
+    elevation: 3,
   },
   glassGlowGold: {
-    shadowColor: '#F7A300',
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 10,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 5,
   },
 } as const;
 
@@ -185,51 +185,51 @@ export type ThemeMode = 'light' | 'dark';
 export const LightColors: ThemeColors = Colors;
 export const DarkColors: ThemeColors = {
   ...Colors,
-  background: '#0A1019',
-  surface: '#111A26',
-  surfaceElevated: '#182333',
-  surfaceSubtle: '#151F2D',
-  cardBg: '#111A26',
-  cardBorder: 'rgba(220, 232, 246, 0.10)',
-  cardBorderSubtle: 'rgba(220, 232, 246, 0.07)',
-  navy: '#0D1F37',
-  navyDark: '#F4F7FB',
-  navyLight: '#AFC2DA',
-  navyMuted: '#A1B2C7',
-  navySubtle: 'rgba(216, 227, 241, 0.08)',
-  navyBorder: 'rgba(216, 227, 241, 0.14)',
-  brandSurface: '#1A2A40',
-  marigoldDark: '#FFC04D',
-  success: '#4ADE80',
+  background: '#070C14',
+  surface: '#0F1726',
+  surfaceElevated: '#172236',
+  surfaceSubtle: '#131C2D',
+  cardBg: '#0F1726',
+  cardBorder: 'rgba(255, 255, 255, 0.08)',
+  cardBorderSubtle: 'rgba(255, 255, 255, 0.04)',
+  navy: '#0F172A',
+  navyDark: '#F8FAFC',
+  navyLight: '#CBD5E1',
+  navyMuted: '#94A3B8',
+  navySubtle: 'rgba(255, 255, 255, 0.05)',
+  navyBorder: 'rgba(255, 255, 255, 0.10)',
+  brandSurface: '#172236',
+  marigoldDark: '#FBBF24',
+  success: '#34D399',
   warning: '#FBBF24',
   error: '#F87171',
   info: '#60A5FA',
-  text: '#F4F7FB',
-  textSecondary: '#B4C0D0',
-  textMuted: '#8492A5',
-  successLight: 'rgba(34, 197, 94, 0.16)',
-  successBorder: 'rgba(74, 222, 128, 0.30)',
-  warningLight: 'rgba(245, 158, 11, 0.16)',
-  warningBorder: 'rgba(251, 191, 36, 0.30)',
-  errorLight: 'rgba(239, 68, 68, 0.16)',
-  errorBorder: 'rgba(248, 113, 113, 0.30)',
-  infoLight: 'rgba(59, 130, 246, 0.16)',
-  infoBorder: 'rgba(96, 165, 250, 0.30)',
-  headerBackground: '#0D1520',
-  headerBorder: 'rgba(220, 232, 246, 0.10)',
-  tabBackground: '#0D1520',
-  tabBorder: 'rgba(220, 232, 246, 0.10)',
-  tabActive: '#F4F7FB',
-  tabInactive: '#8492A5',
-  inputBg: '#0D1520',
-  inputBorder: '#2B384B',
-  inputText: '#F4F7FB',
-  inputPlaceholder: '#8492A5',
-  glass: 'rgba(17, 26, 38, 0.92)',
-  glassBorder: 'rgba(220, 232, 246, 0.12)',
-  glassLight: 'rgba(17, 26, 38, 0.86)',
-  glassLightBorder: 'rgba(220, 232, 246, 0.10)',
-  overlay: 'rgba(0, 0, 0, 0.62)',
+  text: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textMuted: '#64748B',
+  successLight: 'rgba(52, 211, 153, 0.14)',
+  successBorder: 'rgba(52, 211, 153, 0.25)',
+  warningLight: 'rgba(251, 191, 36, 0.14)',
+  warningBorder: 'rgba(251, 191, 36, 0.25)',
+  errorLight: 'rgba(248, 113, 113, 0.14)',
+  errorBorder: 'rgba(248, 113, 113, 0.25)',
+  infoLight: 'rgba(96, 165, 250, 0.14)',
+  infoBorder: 'rgba(96, 165, 250, 0.25)',
+  headerBackground: '#070C14',
+  headerBorder: 'rgba(255, 255, 255, 0.07)',
+  tabBackground: '#070C14',
+  tabBorder: 'rgba(255, 255, 255, 0.07)',
+  tabActive: '#F8FAFC',
+  tabInactive: '#64748B',
+  inputBg: '#0F1726',
+  inputBorder: '#1E293B',
+  inputText: '#F8FAFC',
+  inputPlaceholder: '#64748B',
+  glass: 'rgba(15, 23, 38, 0.92)',
+  glassBorder: 'rgba(255, 255, 255, 0.10)',
+  glassLight: 'rgba(15, 23, 38, 0.85)',
+  glassLightBorder: 'rgba(255, 255, 255, 0.08)',
+  overlay: 'rgba(0, 0, 0, 0.70)',
 };
 
 export const ThemeColorsByMode: Record<ThemeMode, ThemeColors> = {

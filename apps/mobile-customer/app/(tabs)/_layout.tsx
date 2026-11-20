@@ -24,10 +24,10 @@ function TabBarIcon({ name, label, focused }: TabBarIconProps) {
   return (
     <View style={styles.tabItem}>
       <View style={[styles.iconWrapper, focused && styles.iconWrapperFocused]}>
-        {name === 'home' && <Home size={21} color={iconColor} strokeWidth={strokeWidth} />}
-        {name === 'bookings' && <Package size={21} color={iconColor} strokeWidth={strokeWidth} />}
-        {name === 'support' && <Headphones size={21} color={iconColor} strokeWidth={strokeWidth} />}
-        {name === 'profile' && <User size={21} color={iconColor} strokeWidth={strokeWidth} />}
+        {name === 'home' && <Home size={20} color={iconColor} strokeWidth={strokeWidth} />}
+        {name === 'bookings' && <Package size={20} color={iconColor} strokeWidth={strokeWidth} />}
+        {name === 'support' && <Headphones size={20} color={iconColor} strokeWidth={strokeWidth} />}
+        {name === 'profile' && <User size={20} color={iconColor} strokeWidth={strokeWidth} />}
       </View>
       <Text style={[styles.label, focused && styles.labelFocused]}>{label}</Text>
       {focused && <View style={styles.activeDot} />}
@@ -36,21 +36,20 @@ function TabBarIcon({ name, label, focused }: TabBarIconProps) {
 }
 
 function HeaderBrand() {
+  const { colors: Colors } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.headerBrand}>
-      <Image
-        source={require('@/assets/logo-cropped.png')}
-        style={styles.headerLogo}
-        resizeMode="contain"
-      />
+      <View style={styles.logoBadge}>
+        <Image
+          source={require('@/assets/logo-cropped.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
+      </View>
       <View style={styles.headerBrandText}>
-        <Text style={styles.headerTitle}>TRIVENI</Text>
-        <View style={styles.subRow}>
-          <View style={styles.subDash} />
-          <Text style={styles.headerSubtitle}>TRANSPORTS</Text>
-          <View style={styles.subDash} />
-        </View>
+        <Text style={styles.headerTitle}>Triveni</Text>
+        <Text style={styles.headerSubtitle}>TRANSPORTS</Text>
       </View>
     </View>
   );
@@ -63,13 +62,11 @@ function HeaderCallButton() {
     <TouchableOpacity
       style={styles.headerCallBtn}
       onPress={() => Linking.openURL('tel:8828647785')}
-      activeOpacity={0.78}
+      activeOpacity={0.8}
       accessibilityLabel="Call 24/7 Helpline"
     >
-      <View style={styles.callIconBox}>
-        <PhoneCall size={12} color={Colors.text} strokeWidth={2.4} />
-      </View>
-      <Text style={styles.headerCallText}>Support</Text>
+      <PhoneCall size={13} color={Colors.text} strokeWidth={2.4} />
+      <Text style={styles.headerCallText}>Help 24/7</Text>
     </TouchableOpacity>
   );
 }
@@ -213,62 +210,53 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     gap: 10,
     paddingLeft: Spacing.xs,
   },
+  logoBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
   headerLogo: {
-    width: 36,
-    height: 36,
+    width: 26,
+    height: 26,
   },
   headerBrandText: {
-    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     color: Colors.text,
-    fontSize: 15,
-    fontWeight: FontWeight.extrabold,
-    letterSpacing: 1.5,
-    lineHeight: 16,
-  },
-  subRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  subDash: {
-    width: 10,
-    height: 1.5,
-    backgroundColor: Colors.marigold,
-    borderRadius: 1,
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    letterSpacing: -0.3,
+    lineHeight: 18,
   },
   headerSubtitle: {
-    color: Colors.text,
-    fontSize: 8,
-    fontWeight: FontWeight.bold,
+    color: Colors.marigoldDark,
+    fontSize: 9,
+    fontWeight: FontWeight.extrabold,
     letterSpacing: 1.2,
+    marginTop: 1,
   },
   headerCallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginRight: Spacing.md,
-    backgroundColor: 'rgba(247, 163, 0, 0.12)',
+    backgroundColor: Colors.surfaceSubtle,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(247, 163, 0, 0.3)',
-  },
-  callIconBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: Colors.cardBorder,
   },
   headerCallText: {
     color: Colors.text,
-    fontSize: 11,
-    fontWeight: FontWeight.bold,
-    letterSpacing: 0.2,
+    fontSize: 12,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: -0.1,
   },
 });
