@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,11 +18,74 @@ import {
   Search,
   SlidersHorizontal,
 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { catalogApi } from '@/lib/api';
-import { DEFAULT_CATALOG, mergeServerCatalog, type RoomSection } from '@/constants/inventory';
+import { DEFAULT_CATALOG, mergeServerCatalog, type RoomItem, type RoomSection } from '@/constants/inventory';
+
+interface ItemRowProps {
+  item: RoomItem;
+  count: number;
+  onUpdate: (id: string, delta: number) => void;
+  Colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
+}
+
+const ItemRow = React.memo(
+  function ItemRow({ item, count, onUpdate, Colors, styles }: ItemRowProps) {
+    const ItemIcon = item.icon;
+    return (
+      <View style={styles.itemRow}>
+        <View style={[styles.itemIconContainer, count > 0 && styles.itemIconContainerActive]}>
+          <ItemIcon
+            size={18}
+            color={count > 0 ? Colors.text : Colors.textMuted}
+            strokeWidth={2}
+          />
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemMeta}>₹{item.baseRate}/unit</Text>
+        </View>
+        <View style={styles.counter}>
+          <TouchableOpacity
+            style={[styles.counterBtn, count === 0 && styles.counterBtnDisabled]}
+            onPress={() => onUpdate(item.id, -1)}
+            disabled={count === 0}
+            activeOpacity={0.6}
+            delayPressIn={0}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Minus
+              size={13}
+              color={count > 0 ? Colors.text : Colors.cardBorder}
+              strokeWidth={2.4}
+            />
+          </TouchableOpacity>
+          <Text style={[styles.counterVal, count > 0 && styles.counterValActive]}>
+            {count}
+          </Text>
+          <TouchableOpacity
+            style={[styles.counterBtn, styles.counterBtnAdd]}
+            onPress={() => onUpdate(item.id, 1)}
+            activeOpacity={0.6}
+            delayPressIn={0}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Plus size={13} color={Colors.white} strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  },
+  (prev, next) =>
+    prev.count === next.count &&
+    prev.item.id === next.item.id &&
+    prev.Colors === next.Colors &&
+    prev.styles === next.styles
+);
 
 export default function InventoryScreen() {
   const { colors: Colors } = useAppTheme();
@@ -60,28 +123,62 @@ export default function InventoryScreen() {
     return () => { active = false; };
   }, []);
 
-  const update = (id: string, delta: number) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: Math.min(100, Math.max(0, (prev[id] ?? 0) + delta)),
-    }));
-  };
+  const handleUpdate = useCallback((id: string, delta: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setQuantities((prev) => {
+      const current = prev[id] ?? 0;
+      const next = Math.min(100, Math.max(0, current + delta));
+      if (current === next) return prev;
+      return {
+        ...prev,
+        [id]: next,
+      };
+    });
+  }, []);
 
-  const totalItems = Object.values(quantities).reduce((a, b) => a + b, 0);
-  const selectedLines = useMemo(
-    () => catalog.flatMap((section) => section.items
-      .filter((item) => (quantities[item.id] ?? 0) > 0)
-      .map((item) => ({
-        id: item.id,
-        itemId: item.serverId,
-        name: item.name,
-        quantity: quantities[item.id],
-        defaultCft: item.defaultCft,
-        baseRate: item.baseRate,
-      }))),
-    [catalog, quantities]
-  );
-  const estimatedGoodsCost = selectedLines.reduce((total, item) => total + item.baseRate * item.quantity, 0);
+  // Pre-index items for O(1) lookups rather than flatMapping full catalog on each state change
+  const itemMap = useMemo(() => {
+    const map = new Map<string, RoomItem>();
+    for (const section of catalog) {
+      for (const item of section.items) {
+        map.set(item.id, item);
+      }
+    }
+    return map;
+  }, [catalog]);
+
+  const { selectedLines, estimatedGoodsCost, totalItems } = useMemo(() => {
+    let count = 0;
+    let cost = 0;
+    const lines: Array<{
+      id: string;
+      itemId?: string;
+      name: string;
+      quantity: number;
+      defaultCft: number;
+      baseRate: number;
+    }> = [];
+
+    for (const [id, qty] of Object.entries(quantities)) {
+      if (qty > 0) {
+        count += qty;
+        const item = itemMap.get(id);
+        if (item) {
+          cost += item.baseRate * qty;
+          lines.push({
+            id: item.id,
+            itemId: item.serverId,
+            name: item.name,
+            quantity: qty,
+            defaultCft: item.defaultCft,
+            baseRate: item.baseRate,
+          });
+        }
+      }
+    }
+    return { selectedLines: lines, estimatedGoodsCost: cost, totalItems: count };
+  }, [quantities, itemMap]);
+
   const moveCatalog = useMemo(() => {
     const preferred = isOfficeMove
       ? ['office', 'electronics', 'carton', 'storage', 'living room', 'bedroom', 'kitchen', 'dining', 'vehicles']
@@ -95,14 +192,19 @@ export default function InventoryScreen() {
       return rank(a.room) - rank(b.room);
     });
   }, [catalog, isOfficeMove]);
-  const categories = ['All', ...moveCatalog.map((section) => section.room)];
-  const visibleCatalog = useMemo(() => moveCatalog
-    .filter((section) => selectedCategory === 'All' || section.room === selectedCategory)
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase())),
-    }))
-    .filter((section) => section.items.length > 0), [moveCatalog, search, selectedCategory]);
+
+  const categories = useMemo(() => ['All', ...moveCatalog.map((section) => section.room)], [moveCatalog]);
+
+  const visibleCatalog = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return moveCatalog
+      .filter((section) => selectedCategory === 'All' || section.room === selectedCategory)
+      .map((section) => ({
+        ...section,
+        items: query ? section.items.filter((item) => item.name.toLowerCase().includes(query)) : section.items,
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [moveCatalog, search, selectedCategory]);
 
   return (
     <View style={styles.screen}>
@@ -112,148 +214,114 @@ export default function InventoryScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-      {/* Progress */}
-      <View style={styles.progressContainer}>
-        {['Locations', 'Items', 'Details', 'Schedule'].map((label, index) => (
-          <React.Fragment key={label}>
-            {index > 0 && <View style={[styles.progressLine, index <= 1 && styles.progressLineDone]} />}
-            <View style={styles.progressItem}>
-              <View style={[styles.progressCircle, index === 0 && styles.progressCircleDone, index === 1 && styles.progressCircleActive]}>
-                {index === 0 ? <Check size={13} color={Colors.white} strokeWidth={3} /> : <Text style={index === 1 ? styles.progressNumActive : styles.progressNum}>{index + 1}</Text>}
+        {/* Progress */}
+        <View style={styles.progressContainer}>
+          {['Locations', 'Items', 'Details', 'Schedule'].map((label, index) => (
+            <React.Fragment key={label}>
+              {index > 0 && <View style={[styles.progressLine, index <= 1 && styles.progressLineDone]} />}
+              <View style={styles.progressItem}>
+                <View style={[styles.progressCircle, index === 0 && styles.progressCircleDone, index === 1 && styles.progressCircleActive]}>
+                  {index === 0 ? <Check size={13} color={Colors.white} strokeWidth={3} /> : <Text style={index === 1 ? styles.progressNumActive : styles.progressNum}>{index + 1}</Text>}
+                </View>
+                <Text style={[styles.progressLabel, index <= 1 && styles.progressLabelDone, index === 1 && styles.progressLabelActive]}>{label}</Text>
               </View>
-              <Text style={[styles.progressLabel, index <= 1 && styles.progressLabelDone, index === 1 && styles.progressLabelActive]}>{label}</Text>
-            </View>
-          </React.Fragment>
-        ))}
-      </View>
+            </React.Fragment>
+          ))}
+        </View>
 
-      <View style={styles.titleGroup}>
-        <Text style={styles.stepBadge}>STEP 3 OF 4 · INVENTORY</Text>
-        <View style={styles.headingRow}>
-          <View style={styles.headingCopy}>
-            <Text style={styles.title}>Build your inventory</Text>
-            <Text style={styles.subtitle}>
-              Choose the goods you’re moving. All home and office items are available, with {isOfficeMove ? 'office' : 'home'} items shown first.
-            </Text>
-          </View>
-          <View style={styles.catalogCountBadge}>
-            <SlidersHorizontal size={14} color={Colors.text} />
-            <Text style={styles.catalogCountText}>{catalog.reduce((n, section) => n + section.items.length, 0)}</Text>
+        <View style={styles.titleGroup}>
+          <Text style={styles.stepBadge}>STEP 3 OF 4 · INVENTORY</Text>
+          <View style={styles.headingRow}>
+            <View style={styles.headingCopy}>
+              <Text style={styles.title}>Build your inventory</Text>
+              <Text style={styles.subtitle}>
+                Choose the goods you’re moving. All home and office items are available, with {isOfficeMove ? 'office' : 'home'} items shown first.
+              </Text>
+            </View>
+            <View style={styles.catalogCountBadge}>
+              <SlidersHorizontal size={14} color={Colors.text} />
+              <Text style={styles.catalogCountText}>{catalog.reduce((n, section) => n + section.items.length, 0)}</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.searchBox}>
-        <Search size={17} color={Colors.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search sofa, boxes, appliances…"
-          placeholderTextColor={Colors.textMuted}
-          returnKeyType="search"
-        />
-      </View>
+        <View style={styles.searchBox}>
+          <Search size={17} color={Colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search sofa, boxes, appliances…"
+            placeholderTextColor={Colors.textMuted}
+            returnKeyType="search"
+          />
+        </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-        {categories.map((category) => {
-          const active = selectedCategory === category;
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+          {categories.map((category) => {
+            const active = selectedCategory === category;
+            return (
+              <TouchableOpacity
+                key={category}
+                style={[styles.categoryChip, active && styles.categoryChipActive]}
+                onPress={() => setSelectedCategory(category)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>{category}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.selectionSummary}>
+          <View>
+            <Text style={styles.selectionEyebrow}>YOUR MOVE</Text>
+            <Text style={styles.selectionHeadline}>{totalItems} {totalItems === 1 ? 'item' : 'items'} selected</Text>
+          </View>
+          <View style={styles.selectionStats}>
+            <Text style={styles.selectionVolume}>{estimatedGoodsCost > 0 ? `Est. ₹${estimatedGoodsCost.toLocaleString('en-IN')}` : 'Select your goods'}</Text>
+            <Text style={styles.selectionCost}>Item quantities</Text>
+          </View>
+        </View>
+
+        {isCatalogLoading && (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color={Colors.text} />
+            <Text style={styles.loadingText}>Loading current item rates…</Text>
+          </View>
+        )}
+
+        {visibleCatalog.map((section) => {
+          const SectionIcon = section.icon;
           return (
-            <TouchableOpacity
-              key={category}
-              style={[styles.categoryChip, active && styles.categoryChipActive]}
-              onPress={() => setSelectedCategory(category)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>{category}</Text>
-            </TouchableOpacity>
+            <View key={section.room} style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <SectionIcon size={18} color={Colors.text} strokeWidth={2.2} />
+                <Text style={styles.roomTitle}>{section.room}</Text>
+                <Text style={styles.sectionItemCount}>{section.items.length} goods</Text>
+              </View>
+
+              {section.items.map((item) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  count={quantities[item.id] ?? 0}
+                  onUpdate={handleUpdate}
+                  Colors={Colors}
+                  styles={styles}
+                />
+              ))}
+            </View>
           );
         })}
-      </ScrollView>
 
-      <View style={styles.selectionSummary}>
-        <View>
-          <Text style={styles.selectionEyebrow}>YOUR MOVE</Text>
-          <Text style={styles.selectionHeadline}>{totalItems} {totalItems === 1 ? 'item' : 'items'} selected</Text>
-        </View>
-        <View style={styles.selectionStats}>
-          <Text style={styles.selectionVolume}>{estimatedGoodsCost > 0 ? `Est. ₹${estimatedGoodsCost.toLocaleString('en-IN')}` : 'Select your goods'}</Text>
-          <Text style={styles.selectionCost}>Item quantities</Text>
-        </View>
-      </View>
-
-      {isCatalogLoading && (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={Colors.text} />
-          <Text style={styles.loadingText}>Loading current item rates…</Text>
-        </View>
-      )}
-
-      {visibleCatalog.map((section) => {
-        const SectionIcon = section.icon;
-        return (
-          <View key={section.room} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <SectionIcon size={18} color={Colors.text} strokeWidth={2.2} />
-              <Text style={styles.roomTitle}>{section.room}</Text>
-              <Text style={styles.sectionItemCount}>{section.items.length} goods</Text>
-            </View>
-
-            {section.items.map((item) => {
-              const ItemIcon = item.icon;
-              const count = quantities[item.id] ?? 0;
-              return (
-                <View key={item.id} style={styles.itemRow}>
-                  <View style={[styles.itemIconContainer, count > 0 && styles.itemIconContainerActive]}>
-                    <ItemIcon
-                      size={18}
-                      color={count > 0 ? Colors.text : Colors.textMuted}
-                      strokeWidth={2}
-                    />
-                  </View>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemMeta}>₹{item.baseRate}/unit</Text>
-                  </View>
-                  <View style={styles.counter}>
-                    <TouchableOpacity
-                      style={[styles.counterBtn, count === 0 && styles.counterBtnDisabled]}
-                      onPress={() => update(item.id, -1)}
-                      disabled={count === 0}
-                      activeOpacity={0.7}
-                    >
-                      <Minus
-                        size={13}
-                        color={count > 0 ? Colors.text : Colors.cardBorder}
-                        strokeWidth={2.4}
-                      />
-                    </TouchableOpacity>
-                    <Text style={[styles.counterVal, count > 0 && styles.counterValActive]}>
-                      {count}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.counterBtn, styles.counterBtnAdd]}
-                      onPress={() => update(item.id, 1)}
-                      activeOpacity={0.7}
-                    >
-                      <Plus size={13} color={Colors.white} strokeWidth={2.5} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
+        {visibleCatalog.length === 0 && (
+          <View style={styles.emptyState}>
+            <Package size={24} color={Colors.textMuted} />
+            <Text style={styles.emptyTitle}>No goods found</Text>
+            <Text style={styles.emptyCopy}>Try another name or choose a different category.</Text>
           </View>
-        );
-      })}
-
-      {visibleCatalog.length === 0 && (
-        <View style={styles.emptyState}>
-          <Package size={24} color={Colors.textMuted} />
-          <Text style={styles.emptyTitle}>No goods found</Text>
-          <Text style={styles.emptyCopy}>Try another name or choose a different category.</Text>
-        </View>
-      )}
-
+        )}
       </ScrollView>
 
       <View style={styles.ctaArea}>
