@@ -324,6 +324,8 @@ export function GoogleMapsLocationModal({
   const mapHtml = useMemo(() => {
     const startLat = initialMapCoords.current.lat || 18.5679;
     const startLng = initialMapCoords.current.lng || 73.9143;
+    const isDark = mode === 'dark';
+    const mapBgColor = isDark ? '#091524' : '#F1F5F9';
     const mapsScript = GOOGLE_MAPS_API_KEY
       ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=places&loading=async&callback=initMap"></script>`
       : '';
@@ -340,7 +342,7 @@ export function GoogleMapsLocationModal({
         min-height: 100%;
         margin: 0;
         padding: 0;
-        background: #091524;
+        background: ${mapBgColor};
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
@@ -351,8 +353,8 @@ export function GoogleMapsLocationModal({
         align-items: center;
         justify-content: center;
         padding: 24px;
-        color: #fff;
-        background: #091524;
+        color: ${isDark ? '#fff' : '#0F172A'};
+        background: ${mapBgColor};
         text-align: center;
         font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
@@ -395,11 +397,11 @@ export function GoogleMapsLocationModal({
         var map = new google.maps.Map(document.getElementById('map'), {
           center: { lat: ${startLat}, lng: ${startLng} },
           zoom: 15,
-          backgroundColor: '#091524',
+          backgroundColor: '${mapBgColor}',
           disableDefaultUI: true,
           clickableIcons: false,
           gestureHandling: 'greedy',
-          styles: [
+          styles: ${isDark ? `[
             { elementType: 'geometry', stylers: [{ color: '#0d1f37' }] },
             { elementType: 'labels.text.fill', stylers: [{ color: '#d5dde8' }] },
             { elementType: 'labels.text.stroke', stylers: [{ color: '#091524' }] },
@@ -407,7 +409,10 @@ export function GoogleMapsLocationModal({
             { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#8b641f' }] },
             { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#091524' }] },
             { featureType: 'poi', stylers: [{ visibility: 'off' }] }
-          ]
+          ]` : `[
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'simplified' }] }
+          ]`}
         });
         window.map = map;
         window.__triveniMapLoaded = true;
@@ -478,7 +483,7 @@ export function GoogleMapsLocationModal({
     ${mapsScript}
   </body>
 </html>`;
-  }, [visible]);
+  }, [visible, mode]);
 
   return (
     <Modal
@@ -498,7 +503,7 @@ export function GoogleMapsLocationModal({
                 width: '100%',
                 height: '100%',
                 border: 'none',
-                background: '#091524',
+                background: isDark ? '#091524' : '#F1F5F9',
               }}
               title="Triveni Interactive Map"
             />
@@ -508,7 +513,7 @@ export function GoogleMapsLocationModal({
               source={{ html: mapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
               applicationNameForUserAgent="TriveniTransports/1.0.0"
               onMessage={handleNativeMessage}
-              style={{ flex: 1, width: '100%', height: '100%', backgroundColor: '#091524' }}
+              style={{ flex: 1, width: '100%', height: '100%', backgroundColor: isDark ? '#091524' : '#F1F5F9' }}
               javaScriptEnabled={true}
               domStorageEnabled={true}
               originWhitelist={['*']}
@@ -802,7 +807,7 @@ export function GoogleMapsLocationModal({
 const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: '#091524',
+    backgroundColor: Colors.background,
   },
   mapViewport: {
     position: 'absolute',
@@ -810,13 +815,13 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#091524',
+    backgroundColor: Colors.mapBg,
   },
   nativeMapGraphic: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#091524',
+    backgroundColor: Colors.mapBg,
   },
   nativeMapText: {
     color: '#FFFFFF',
@@ -825,7 +830,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     marginTop: Spacing.sm,
   },
   nativeCoordsText: {
-    color: '#829AB1',
+    color: Colors.textMuted,
     fontSize: FontSize.xs,
     marginTop: 4,
   },
@@ -946,7 +951,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     backgroundColor: '#1E3A8A',
   },
   modeTabText: {
-    color: '#829AB1',
+    color: Colors.textMuted,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
   },
@@ -958,11 +963,11 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderColor: Colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -974,12 +979,12 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   glassSearchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.md,
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: Colors.cardBorder,
     shadowColor: '#0D1F37',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
@@ -1007,11 +1012,11 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   // Autocomplete Suggestions Dropdown
   suggestionsGlassCard: {
     marginTop: Spacing.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: BorderRadius.lg,
     maxHeight: 220,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: Colors.cardBorder,
     shadowColor: '#0D1F37',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -1025,7 +1030,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   suggestionsLabel: {
     fontSize: 10,
     fontWeight: FontWeight.bold,
-    color: '#829AB1',
+    color: Colors.textMuted,
     letterSpacing: 0.5,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xs,
@@ -1037,7 +1042,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(13, 31, 55, 0.05)',
+    borderBottomColor: Colors.cardBorder,
   },
   suggestionPinBox: {
     width: 28,
@@ -1073,20 +1078,20 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   quickHubPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(13, 31, 55, 0.82)',
+    backgroundColor: Colors.surfaceElevated,
     paddingHorizontal: Spacing.sm + 4,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: Colors.cardBorder,
     gap: 5,
   },
   quickHubPillActive: {
-    backgroundColor: 'rgba(247, 163, 0, 0.22)',
+    backgroundColor: Colors.marigoldSubtle,
     borderColor: Colors.marigold,
   },
   quickHubText: {
-    color: '#FFFFFF',
+    color: Colors.textSecondary,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
   },
@@ -1103,11 +1108,11 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderColor: Colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
@@ -1122,14 +1127,14 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Platform.OS === 'ios' ? 36 : Spacing.lg,
     borderTopWidth: 1.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.8)',
+    borderTopColor: Colors.cardBorder,
     shadowColor: '#0D1F37',
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.14,
@@ -1141,7 +1146,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(13, 31, 55, 0.2)',
+    backgroundColor: Colors.cardBorder,
     alignSelf: 'center',
     marginBottom: Spacing.sm,
   },
@@ -1200,7 +1205,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   },
   coordsMuted: {
     fontSize: 10,
-    color: '#829AB1',
+    color: Colors.textMuted,
     marginTop: 4,
   },
   confirmBtn: {
