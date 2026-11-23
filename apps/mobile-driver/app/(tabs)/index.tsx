@@ -51,7 +51,10 @@ export default function DutiesScreen() {
   const acceptJob = useDriverStore((s) => s.acceptJob);
   const declineJob = useDriverStore((s) => s.declineJob);
   const vehicle = useOnboardingStore((s) => s.vehicle);
+  const verificationStatus = useOnboardingStore((s) => s.verificationStatus);
+  const reviewNotes = useOnboardingStore((s) => s.reviewNotes);
   const loadSavedOnboarding = useOnboardingStore((s) => s.loadSavedOnboarding);
+  const canReceiveOrders = verificationStatus === 'approved';
 
   // Keep the open job feed current while the driver is online. Push wakes the
   // app when backgrounded; polling is the foreground/reconnect fallback.
@@ -77,8 +80,7 @@ export default function DutiesScreen() {
   }, [fetchJobsFromBackend, isOnline, loadSavedOnboarding, vendorId]);
 
   // Computed stats from real data
-  const todaysMoves = completedJobs.length;
-  const todaysPayout = completedJobs.reduce((sum, j) => sum + j.payoutAmount, 0) + (activeJob?.payoutAmount || 0);
+  const completedMoveCount = completedJobs.length;
 
   const handleAccept = async (job: DriverJob) => {
     try {
@@ -120,6 +122,19 @@ export default function DutiesScreen() {
         </View>
       )}
 
+      {!canReceiveOrders && (
+        <View style={styles.offlineBanner}>
+          <Info size={16} color={Colors.warning} />
+          <Text style={styles.offlineBannerText}>
+            {verificationStatus === 'submitted' || verificationStatus === 'under_review'
+              ? 'Your application is under review. Orders unlock only after Triveni approves your driver and vehicle documents.'
+              : verificationStatus === 'rejected' || verificationStatus === 'needs_changes'
+                ? `${reviewNotes ? `${reviewNotes} ` : ''}Update your documents and resubmit. Orders remain locked until approval.`
+                : 'Complete driver and vehicle onboarding. You cannot receive or accept orders before approval.'}
+          </Text>
+        </View>
+      )}
+
       {/* Loading indicator */}
       {isLoading && (
         <View style={styles.loadingRow}>
@@ -146,18 +161,18 @@ export default function DutiesScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.vehicleTitle}>
-                {vehicle.type || activeJob?.vehicleType || 'Tata 407 · 600 CFT'}
+                {vehicle.type || activeJob?.vehicleType || 'Vehicle details not provided'}
               </Text>
               <View style={styles.shiftPlateRow}>
                 <View style={styles.miniIndianPlate}>
                   <Text style={styles.miniIndText}>IND</Text>
                   <Text style={styles.miniPlateNumber}>
-                    {vehicle.registrationNumber || activeJob?.vehicleReg || 'MH 12 CD 5678'}
+                    {vehicle.registrationNumber || activeJob?.vehicleReg || 'Not provided'}
                   </Text>
                 </View>
                 <View style={styles.verifiedTag}>
                   <ShieldCheck size={11} color={Colors.success} />
-                  <Text style={styles.verifiedTagText}>Onboarded</Text>
+                  <Text style={styles.verifiedTagText}>{canReceiveOrders ? 'Verified' : 'Pending review'}</Text>
                 </View>
               </View>
             </View>
@@ -175,17 +190,17 @@ export default function DutiesScreen() {
         <View style={styles.shiftStatsRow}>
           <View style={styles.shiftStatItem}>
             <Text style={styles.statLabel}>Completed</Text>
-            <Text style={styles.statValue}>{todaysMoves} Moves</Text>
+            <Text style={styles.statValue}>{completedMoveCount} Moves</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.shiftStatItem}>
-            <Text style={styles.statLabel}>Earnings</Text>
-            <Text style={[styles.statValue, { color: Colors.navyDark }]}>₹{todaysPayout.toLocaleString('en-IN')}</Text>
+            <Text style={styles.statLabel}>Settlement</Text>
+            <Text style={[styles.statValue, { color: Colors.navyDark }]}>Via operations</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.shiftStatItem}>
             <Text style={styles.statLabel}>Pending</Text>
-            <Text style={[styles.statValue, { color: Colors.navyDark }]}>{pendingJobs.length} Jobs</Text>
+            <Text style={[styles.statValue, { color: Colors.navyDark }]}>{canReceiveOrders ? `${pendingJobs.length} Jobs` : 'Locked'}</Text>
           </View>
         </View>
       </View>
@@ -212,8 +227,8 @@ export default function DutiesScreen() {
               <Text style={styles.trackingCode}>{activeJob.trackingCode}</Text>
             </View>
             <View style={styles.payoutBadge}>
-              <Text style={styles.payoutLabel}>Driver Payout</Text>
-              <Text style={styles.payoutValue}>₹{activeJob.payoutAmount}</Text>
+              <Text style={styles.payoutLabel}>Settlement</Text>
+              <Text style={styles.payoutValue}>From operations</Text>
             </View>
           </View>
 
@@ -292,12 +307,13 @@ export default function DutiesScreen() {
           <Truck size={36} color={Colors.textMuted} strokeWidth={1.5} />
           <Text style={styles.emptyTitle}>No Active Assignment</Text>
           <Text style={styles.emptySubtitle}>
-            You are ready to accept new jobs. Check incoming job requests below or wait for automated dispatch.
+            {canReceiveOrders ? 'You are ready to accept eligible pickup and truck jobs.' : 'Complete onboarding and wait for Triveni approval before receiving jobs.'}
           </Text>
         </View>
       )}
 
       {/* PENDING / NEW REQUESTS */}
+      {canReceiveOrders && <>
       <View style={[styles.sectionHeader, { marginTop: Spacing.md }]}>
         <View style={styles.sectionTitleRow}>
           <Layers size={17} color={Colors.navy} />
@@ -318,10 +334,6 @@ export default function DutiesScreen() {
               <View>
                 <Text style={styles.pendingTracking}>{job.trackingCode}</Text>
                 <Text style={styles.pendingConfig}>{job.configuration} · {job.totalCft} CFT</Text>
-              </View>
-              <View style={styles.pendingPayoutBadge}>
-                <Text style={styles.pendingPayoutText}>₹{job.payoutAmount}</Text>
-                <Text style={styles.pendingPayoutSub}>net payout</Text>
               </View>
             </View>
 
@@ -359,9 +371,9 @@ export default function DutiesScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.acceptBtn, (!isOnline || Boolean(activeJob) || acceptingJobIds.includes(job.id)) && styles.acceptBtnDisabled]}
+                style={[styles.acceptBtn, (!isOnline || Boolean(activeJob) || acceptingJobIds.includes(job.id) || !canReceiveOrders) && styles.acceptBtnDisabled]}
                 onPress={() => void handleAccept(job)}
-                disabled={!isOnline || Boolean(activeJob) || acceptingJobIds.includes(job.id)}
+                disabled={!isOnline || Boolean(activeJob) || acceptingJobIds.includes(job.id) || !canReceiveOrders}
                 activeOpacity={0.88}
               >
                 {acceptingJobIds.includes(job.id)
@@ -373,6 +385,7 @@ export default function DutiesScreen() {
           </View>
         ))
       )}
+      </>}
 
       {/* Safety & Protocol Card */}
       <View style={styles.safetyCard}>

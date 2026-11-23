@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, router } from 'expo-router';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -13,12 +13,16 @@ import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { useAuthStore } from '@/store/authStore';
+import { useOnboardingStore } from '@/store/onboardingStore';
 
 function DriverHeader() {
   const { colors: Colors } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   const isOnline = useAuthStore((s) => s.isOnline);
   const toggleOnline = useAuthStore((s) => s.toggleOnline);
+  const verificationStatus = useOnboardingStore((s) => s.verificationStatus);
+  const approved = verificationStatus === 'approved';
+  const dutyEnabled = approved && isOnline;
 
   return (
     <View style={styles.header}>
@@ -38,20 +42,20 @@ function DriverHeader() {
           </View>
         </View>
         <View style={styles.driverTag}>
-          <Text style={styles.driverTagText}>DRIVER</Text>
+          <Text style={styles.driverTagText}>PARTNER</Text>
         </View>
       </View>
 
-      {/* Online/Offline status switch + 24/7 hotline */}
+      {/* Online/Offline status switch and operations contact */}
       <View style={styles.headerRight}>
         <TouchableOpacity
-          style={[styles.dutyPill, isOnline ? styles.dutyPillOnline : styles.dutyPillOffline]}
-          onPress={() => toggleOnline()}
+          style={[styles.dutyPill, dutyEnabled ? styles.dutyPillOnline : styles.dutyPillOffline]}
+          onPress={() => approved ? toggleOnline() : router.push('/(auth)/onboarding' as any)}
           activeOpacity={0.8}
         >
-          <View style={[styles.statusDot, isOnline ? styles.dotGreen : styles.dotGray]} />
-          <Text style={[styles.dutyText, isOnline ? styles.dutyTextOnline : styles.dutyTextOffline]}>
-            {isOnline ? 'ONLINE' : 'OFFLINE'}
+          <View style={[styles.statusDot, dutyEnabled ? styles.dotGreen : styles.dotGray]} />
+          <Text style={[styles.dutyText, dutyEnabled ? styles.dutyTextOnline : styles.dutyTextOffline]}>
+            {approved ? (isOnline ? 'ONLINE' : 'OFFLINE') : 'VERIFY'}
           </Text>
         </TouchableOpacity>
 

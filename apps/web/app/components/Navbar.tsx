@@ -215,7 +215,7 @@ export default function Navbar() {
             {/* Work with us is shown for public visitors only */}
             {!isLoggedIn && (
               <li>
-                <Link href="/vendor/signup" onClick={closeMenu}>Work with Us</Link>
+                <Link href="/partners" onClick={closeMenu}>Partner with Us</Link>
               </li>
             )}
 

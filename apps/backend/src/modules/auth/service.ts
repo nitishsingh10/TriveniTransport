@@ -2,6 +2,7 @@ import { prisma } from '../../config/prisma';
 import { getEnv } from '../../config/env';
 import { isCustomerProfileComplete } from '../customer/profile';
 import { UserRole } from '@triveni/shared-types';
+import type { ServiceType } from '@triveni/shared-types';
 import { sendSmsOtp } from '../../services/msg91';
 import { EmailService } from '../../services/resend';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
@@ -159,7 +160,8 @@ export class AuthService {
   static async requestOtp(
     targetInput: AuthTargetInput | string,
     role: UserRole,
-    isSignup?: boolean
+    isSignup?: boolean,
+    serviceType?: ServiceType
   ): Promise<{ message: string; channel: 'email' | 'sms'; destination: string }> {
     const { OTP_EXPIRY_MINUTES } = getEnv();
     const target = resolveAuthTarget(targetInput);
@@ -167,6 +169,15 @@ export class AuthService {
 
     if (role === 'admin' && signup) {
       throw { statusCode: 403, code: 'FORBIDDEN', message: 'Admin accounts cannot be created through signup.' };
+    }
+    if (role === 'vendor' && !serviceType) {
+      throw { statusCode: 400, code: 'SERVICE_TYPE_REQUIRED', message: 'Choose the partner service app you are signing into.' };
+    }
+    if (role === 'vendor' && serviceType === 'transport' && signup && target.type !== 'phone') {
+      throw { statusCode: 400, code: 'PHONE_REQUIRED', message: 'Pickup and truck partners must verify a mobile number by OTP before applying.' };
+    }
+    if (role === 'supervisor' && target.type !== 'phone') {
+      throw { statusCode: 400, code: 'PHONE_REQUIRED', message: 'Supervisors must verify their mobile number by OTP.' };
     }
 
     await checkIdentifierOtpLimit(target.value);
@@ -177,9 +188,14 @@ export class AuthService {
         const vendor = await prisma.vendor.findUnique({ where: { email } });
         if (signup && vendor) throw accountExists('vendor', 'email');
         if (!signup && !vendor) throw userNotFound('email', 'vendor');
-        if (!signup && vendor?.status !== 'active') {
-          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
+        if (vendor && vendor.serviceType !== serviceType) {
+          throw { statusCode: 403, code: 'WRONG_SERVICE_APP', message: 'This account belongs to a different Triveni partner service.' };
         }
+        if (!signup && vendor?.status === 'suspended') {
+          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is suspended. Contact Triveni support.' };
+        }
+      } else if (role === 'supervisor') {
+        throw { statusCode: 400, code: 'PHONE_REQUIRED', message: 'Supervisors must verify their mobile number by OTP.' };
       } else if (role === 'admin') {
         let admin = await prisma.adminUser.findUnique({ where: { email } });
         if (!admin && process.env.NODE_ENV === 'development' && (email === 'admin@trivenitransports.com' || email.startsWith('admin@'))) {
@@ -197,8 +213,19 @@ export class AuthService {
         const vendor = await prisma.vendor.findFirst({ where: { OR: phoneVariants(phone) } });
         if (signup && vendor) throw accountExists('vendor', 'phone');
         if (!signup && !vendor) throw userNotFound('phone', 'vendor');
-        if (!signup && vendor?.status !== 'active') {
-          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is pending approval or inactive.' };
+        if (vendor && vendor.serviceType !== serviceType) {
+          throw { statusCode: 403, code: 'WRONG_SERVICE_APP', message: 'This account belongs to a different Triveni partner service.' };
+        }
+        if (!signup && vendor?.status === 'suspended') {
+          throw { statusCode: 403, code: 'INACTIVE', message: 'Your partner account is suspended. Contact Triveni support.' };
+        }
+      } else if (role === 'supervisor') {
+        const supervisor = await prisma.supervisor.findFirst({ where: { OR: phoneVariants(phone) } });
+        if (signup && (!supervisor || supervisor.status !== 'invited')) {
+          throw { statusCode: 403, code: 'SUPERVISOR_INVITE_REQUIRED', message: 'Ask your P&M vendor to invite this mobile number first.' };
+        }
+        if (!signup && (!supervisor || supervisor.status !== 'active' || !supervisor.phoneVerifiedAt)) {
+          throw { statusCode: 403, code: 'SUPERVISOR_NOT_VERIFIED', message: 'This supervisor account is not verified or active.' };
         }
       } else if (role === 'admin') {
         let admin = await prisma.adminUser.findFirst({ where: { OR: phoneVariants(phone) } });
@@ -225,6 +252,7 @@ export class AuthService {
         email: target.type === 'email' ? target.value : null,
         otpHash,
         role,
+        serviceType: role === 'vendor' ? serviceType : null,
         expiresAt,
         attempts: 0,
         purpose: signup ? 'signup' : 'login',
@@ -255,7 +283,8 @@ export class AuthService {
     role: UserRole,
     code: string,
     name?: string,
-    isSignup?: boolean
+    isSignup?: boolean,
+    serviceType?: ServiceType
   ) {
     const { OTP_MAX_ATTEMPTS } = getEnv();
     const target = resolveAuthTarget(targetInput);
@@ -263,11 +292,18 @@ export class AuthService {
     if (role === 'admin' && signup) {
       throw { statusCode: 403, code: 'FORBIDDEN', message: 'Admin accounts cannot be created through signup.' };
     }
+    if (role === 'vendor' && !serviceType) {
+      throw { statusCode: 400, code: 'SERVICE_TYPE_REQUIRED', message: 'Choose the partner service app you are signing into.' };
+    }
+    if (role === 'vendor' && serviceType === 'transport' && signup && target.type !== 'phone') {
+      throw { statusCode: 400, code: 'PHONE_REQUIRED', message: 'Pickup and truck partners must verify a mobile number by OTP before applying.' };
+    }
 
     const challenge = await prisma.otpChallenge.findFirst({
       where: {
         ...(target.type === 'email' ? { email: target.value } : { OR: phoneVariants(target.value) }),
         role,
+        serviceType: role === 'vendor' ? serviceType : null,
         purpose: signup ? 'signup' : 'login',
         verifiedAt: null,
       },
@@ -361,7 +397,9 @@ export class AuthService {
             data: {
               ...(target.type === 'email' ? { email: target.value } : { phone: target.value }),
               name: displayName || 'Driver Partner',
-              status: 'active',
+              serviceType: serviceType!,
+              status: 'pending',
+              onboardingStatus: 'draft',
               serviceAreas: [],
             },
           });
@@ -375,13 +413,43 @@ export class AuthService {
         }
       } else {
         if (!existing) throw userNotFound(target.type, 'vendor');
-        if (existing.status !== 'active') {
-          throw { statusCode: 403, code: 'INACTIVE', message: 'Partner account is inactive.' };
+        if (existing.serviceType !== serviceType) {
+          throw { statusCode: 403, code: 'WRONG_SERVICE_APP', message: 'This account belongs to a different Triveni partner service.' };
+        }
+        if (existing.status === 'suspended') {
+          throw { statusCode: 403, code: 'INACTIVE', message: 'Partner account is suspended.' };
         }
         userId = existing.id;
         userName = existing.name;
         userPhone = existing.phone || undefined;
         userEmail = existing.email || undefined;
+      }
+    } else if (role === 'supervisor') {
+      if (target.type !== 'phone') {
+        throw { statusCode: 400, code: 'PHONE_REQUIRED', message: 'Supervisors must verify their mobile number by OTP.' };
+      }
+      const supervisor = await prisma.supervisor.findFirst({ where: { OR: phoneVariants(target.value) } });
+      if (!supervisor) {
+        throw { statusCode: 404, code: 'SUPERVISOR_NOT_FOUND', message: 'Ask your P&M vendor to invite you first.' };
+      }
+      if (signup) {
+        if (supervisor.status !== 'invited') {
+          throw { statusCode: 409, code: 'SUPERVISOR_ALREADY_VERIFIED', message: 'This supervisor invitation has already been verified.' };
+        }
+        const verified = await prisma.supervisor.update({
+          where: { id: supervisor.id },
+          data: { status: 'active', phoneVerifiedAt: new Date() },
+        });
+        userId = verified.id;
+        userName = verified.name;
+        userPhone = verified.phone;
+      } else {
+        if (supervisor.status !== 'active' || !supervisor.phoneVerifiedAt) {
+          throw { statusCode: 403, code: 'SUPERVISOR_NOT_VERIFIED', message: 'This supervisor account is not verified or active.' };
+        }
+        userId = supervisor.id;
+        userName = supervisor.name;
+        userPhone = supervisor.phone;
       }
     } else {
       const admin = target.type === 'email'
@@ -423,7 +491,7 @@ export class AuthService {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Session expired or revoked' };
     }
 
-    const userId = session.customerId || session.vendorId || session.adminUserId;
+    const userId = session.customerId || session.vendorId || session.supervisorId || session.adminUserId;
     if (!userId || payload.sub !== userId || payload.role !== session.userRole) {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Invalid session state or token mismatch' };
     }
@@ -432,9 +500,15 @@ export class AuthService {
       throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Account is no longer available.' };
     }
     if (payload.role === 'vendor') {
-      const vendor = await prisma.vendor.findUnique({ where: { id: userId }, select: { status: true } });
-      if (!vendor || vendor.status !== 'active') {
+      const vendor = await prisma.vendor.findUnique({ where: { id: userId }, select: { status: true, serviceType: true } });
+      if (!vendor || vendor.status === 'suspended') {
         throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Partner account is no longer active.' };
+      }
+    }
+    if (payload.role === 'supervisor') {
+      const supervisor = await prisma.supervisor.findUnique({ where: { id: userId }, select: { status: true, phoneVerifiedAt: true } });
+      if (!supervisor || supervisor.status !== 'active' || !supervisor.phoneVerifiedAt) {
+        throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Supervisor account is no longer active.' };
       }
     }
     if (payload.role === 'admin' && !(await prisma.adminUser.findUnique({ where: { id: userId }, select: { id: true } }))) {
@@ -470,6 +544,7 @@ export class AuthService {
           OR: [
             { customerId: tokenOrUserId.userId },
             { vendorId: tokenOrUserId.userId },
+            { supervisorId: tokenOrUserId.userId },
             { adminUserId: tokenOrUserId.userId },
           ],
           revokedAt: null,
@@ -502,6 +577,7 @@ export class AuthService {
         customerId: role === 'customer' ? userId : null,
         vendorId: role === 'vendor' ? userId : null,
         adminUserId: role === 'admin' ? userId : null,
+        supervisorId: role === 'supervisor' ? userId : null,
       },
     });
 
@@ -512,7 +588,7 @@ export class AuthService {
       user: {
         id: userId,
         role,
-        name: name || (role === 'admin' ? 'Admin' : role === 'vendor' ? 'Partner' : 'Customer'),
+        name: name || (role === 'admin' ? 'Admin' : role === 'vendor' ? 'Partner' : role === 'supervisor' ? 'Supervisor' : 'Customer'),
         phone: contact.phone || '',
         email: contact.email,
         profileCompleted: contact.profileCompleted,

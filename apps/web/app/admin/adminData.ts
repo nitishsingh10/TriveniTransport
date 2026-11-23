@@ -14,19 +14,24 @@ export interface AdminBooking {
   pickupAddress: string;
   dropAddress: string;
   configurationType: string;
+  totalCft: number;
+  serviceType: 'packers_movers' | 'transport';
   floorNumber: number;
   liftAvailable: boolean;
   scheduledDate: string;
   scheduledSlot: string;
   status:
     | 'REQUESTED'
+    | 'QUOTED'
     | 'CONFIRMED'
     | 'ASSIGNED'
     | 'EN_ROUTE'
     | 'ARRIVED'
     | 'IN_PROGRESS'
+    | 'REVISION_PENDING'
     | 'COMPLETED'
-    | 'CANCELLED';
+    | 'CANCELLED'
+    | 'DISPUTED';
   baseQuoteAmount: number;
   finalAmount: number;
   advancePaid: number;
@@ -36,6 +41,8 @@ export interface AdminBooking {
   vehicleId?: string;
   vehicleType?: string;
   vehicleNumber?: string;
+  supervisorId?: string;
+  supervisorName?: string;
   createdAt: string;
   notes?: string;
   itemsCount: number;
@@ -45,21 +52,32 @@ export interface AdminVendor {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
   rating: number | null;
   totalTrips: number;
-  status: 'active' | 'suspended';
+  status: 'pending' | 'active' | 'suspended';
+  serviceType?: 'packers_movers' | 'transport' | null;
+  onboardingStatus: string;
+  driverLicenseExpiry?: string | null;
+  onboardingData?: Record<string, any>;
+  reviewNotes?: string | null;
+  documents?: Array<{ id: string; documentType: string; fileName: string; mimeType: string; status: string; reviewNotes?: string | null; uploadedAt: string }>;
+  contractSignatures?: Array<{ contractVersion: string; contractHash: string; signerName: string; signerRole: string; signedAt: string }>;
   assignedVehicle?: string;
 }
 
 export interface AdminVehicle {
   id: string;
+  vendorId: string;
   registrationNumber: string;
   type: string;
   capacityCft: number;
   vendorName: string;
   active: boolean;
+  verificationStatus?: string;
   permitExpiry: string;
   fitnessExpiry: string;
+  insuranceExpiry: string;
 }
 
 export interface AdminPricingItem {
@@ -105,9 +123,9 @@ export interface AdminNotification {
 
 // ── Exported Service API ───────────────────────────────────────────────
 export const AdminDataService = {
-  getMetrics: () => apiAdmin.getMetrics(),
+  getMetrics: (serviceType?: 'packers_movers' | 'transport') => apiAdmin.getMetrics(serviceType),
 
-  async listBookings(filter?: { status?: string; search?: string }) {
+  async listBookings(filter?: { status?: string; search?: string; serviceType?: 'packers_movers' | 'transport' }) {
     const live = await apiAdmin.listBookings(filter);
     return live.bookings.map((b: any) => ({
       // Keep the real database ID for all follow-up admin operations.
@@ -119,6 +137,8 @@ export const AdminDataService = {
       pickupAddress: b.pickupAddress,
       dropAddress: b.dropAddress,
       configurationType: b.configurationType || '—',
+      totalCft: Number((b.pricingSnapshot as any)?.totalCft ?? 0),
+      serviceType: b.serviceType || 'packers_movers',
       floorNumber: b.floorNumber ?? 0,
       liftAvailable: b.liftAvailable,
       scheduledDate: b.scheduledDate ? new Date(b.scheduledDate).toISOString().slice(0, 10) : '—',
@@ -135,6 +155,8 @@ export const AdminDataService = {
       vehicleId: b.vehicle?.id,
       vehicleType: b.vehicle?.type,
       vehicleNumber: b.vehicle?.registrationNumber,
+      supervisorId: b.supervisor?.id,
+      supervisorName: b.supervisor?.name,
       createdAt: b.createdAt,
       itemsCount: b._count?.items ?? 0,
     }));
@@ -152,8 +174,8 @@ export const AdminDataService = {
     return apiAdmin.assign(bookingId, vendorId, vehicleId);
   },
 
-  async listVendors() {
-    const live = await apiAdmin.listVendors();
+  async listVendors(serviceType?: 'packers_movers' | 'transport') {
+    const live = await apiAdmin.listVendors(serviceType);
     return live.map((v: any) => ({
       id: v.id,
       name: v.name,
@@ -161,22 +183,36 @@ export const AdminDataService = {
       rating: v.rating == null ? null : Number(v.rating),
       totalTrips: Number(v._count?.bookings ?? 0),
       status: v.status,
+      serviceType: v.serviceType,
+      onboardingStatus: v.onboardingStatus,
+      driverLicenseExpiry: v.driverLicenseExpiry ? new Date(v.driverLicenseExpiry).toISOString().slice(0, 10) : null,
+      onboardingData: v.onboardingData,
+      reviewNotes: v.reviewNotes,
+      documents: v.documents || [],
+      contractSignatures: v.contractSignatures || [],
       assignedVehicle: v.vehicles?.[0]?.registrationNumber,
     }));
   },
 
-  async listVehicles() {
-    const live = await apiAdmin.listVehicles();
+  async listVehicles(serviceType?: 'packers_movers' | 'transport') {
+    const live = await apiAdmin.listVehicles(serviceType);
     return live.map((v: any) => ({
       id: v.id,
+      vendorId: v.vendor?.id || '',
       registrationNumber: v.registrationNumber,
       type: v.type,
       capacityCft: Number(v.capacityCft),
       vendorName: v.vendor?.name || 'Unassigned',
       active: v.active,
-      permitExpiry: v.permitExpiry ? new Date(v.permitExpiry).toLocaleDateString('en-IN') : '—',
-      fitnessExpiry: v.fitnessCertExpiry ? new Date(v.fitnessCertExpiry).toLocaleDateString('en-IN') : '—',
+      verificationStatus: v.verificationStatus,
+      permitExpiry: v.permitExpiry ? new Date(v.permitExpiry).toISOString().slice(0, 10) : '',
+      fitnessExpiry: v.fitnessCertExpiry ? new Date(v.fitnessCertExpiry).toISOString().slice(0, 10) : '',
+      insuranceExpiry: v.insuranceExpiry ? new Date(v.insuranceExpiry).toISOString().slice(0, 10) : '',
     }));
+  },
+
+  getVendorContract(vendorId: string) {
+    return apiAdmin.getVendorContract(vendorId);
   },
 
   async listPricingItems() {
@@ -203,4 +239,7 @@ export const AdminDataService = {
   },
 
   retryNotification: (notifId: string) => apiAdmin.retryNotification(notifId),
+  reviewVendor: (id: string, status: 'under_review' | 'needs_changes' | 'approved' | 'rejected', notes?: string) => apiAdmin.reviewVendor(id, status, notes),
+  getVendorDocuments: (id: string) => apiAdmin.getVendorDocuments(id),
+  reviewVendorDocument: (id: string, status: 'approved' | 'rejected', notes?: string) => apiAdmin.reviewVendorDocument(id, status, notes),
 };

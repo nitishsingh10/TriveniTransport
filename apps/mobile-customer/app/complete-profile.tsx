@@ -262,7 +262,7 @@ export default function CompleteProfileScreen() {
                 )}
               </View>
               <Text style={styles.inputHelpText}>
-                We will send booking confirmations & driver contact via SMS & WhatsApp.
+                We will send booking updates and partner contact details by SMS & WhatsApp after assignment.
               </Text>
             </View>
 

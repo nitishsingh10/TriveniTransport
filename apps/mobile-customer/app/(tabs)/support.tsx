@@ -37,8 +37,8 @@ const FAQ_ITEMS = [
     a: 'We offer 100% Cash on Delivery with zero advance required! Your truck and moving crew are booked immediately, and you pay the full amount directly to your moving captain in cash or via UPI scanner on the day of delivery after safe inspection.',
   },
   {
-    q: 'Are household goods insured against transit damage?',
-    a: 'Yes! All Triveni Transports moves include transit insurance coverage up to ₹10 Lakhs. Dedicated claims specialists assist in rare cases of transit disruption.',
+    q: 'Does Triveni provide transit cover for household goods?',
+    a: 'Triveni does not currently provide or arrange transit cover for household goods. Please contact support promptly if an item is lost or damaged during a move.',
   },
 ];
 

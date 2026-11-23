@@ -16,7 +16,6 @@ import {
   User,
   Truck,
   ShieldCheck,
-  Award,
   FileText,
   PhoneCall,
   LogOut,
@@ -46,6 +45,8 @@ export default function DriverProfileScreen() {
   const driverKyc = useOnboardingStore((s) => s.driverKyc);
   const vehicle = useOnboardingStore((s) => s.vehicle);
   const bank = useOnboardingStore((s) => s.bank);
+  const verificationStatus = useOnboardingStore((s) => s.verificationStatus);
+  const reviewNotes = useOnboardingStore((s) => s.reviewNotes);
   const loadSavedOnboarding = useOnboardingStore((s) => s.loadSavedOnboarding);
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -68,11 +69,16 @@ export default function DriverProfileScreen() {
     ]);
   };
 
-  const displayName = driverKyc.fullName || user?.name || 'Rajesh Kumar';
-  const displayPhone = driverKyc.phone || user?.phone || '98888 88888';
-  const displayPlate = vehicle.registrationNumber || 'MH 12 CD 5678';
-  const displayModel = vehicle.type || 'Tata 407';
-  const displayCapacity = vehicle.capacityCft || 600;
+  const isApproved = verificationStatus === 'approved';
+  const documentStatus = isApproved ? 'Verified'
+    : verificationStatus === 'rejected' || verificationStatus === 'needs_changes' ? 'Changes requested'
+      : verificationStatus === 'submitted' || verificationStatus === 'under_review' ? 'Under review'
+        : 'Not submitted';
+  const displayName = driverKyc.fullName || user?.name || 'Driver Partner';
+  const displayPhone = driverKyc.phone || user?.phone || 'Phone not provided';
+  const displayPlate = vehicle.registrationNumber || 'Not provided';
+  const displayModel = vehicle.type || 'Not selected';
+  const displayCapacity = vehicle.capacityCft || null;
 
   // Collect existing vehicle inspection photos
   const vehiclePhotos = [
@@ -103,35 +109,38 @@ export default function DriverProfileScreen() {
               <Text style={styles.driverName}>{displayName}</Text>
               <View style={styles.verifiedBadge}>
                 <ShieldCheck size={11} color={Colors.success} />
-                <Text style={styles.verifiedText}>Verified</Text>
+                <Text style={styles.verifiedText}>{isApproved ? 'Verified' : documentStatus}</Text>
               </View>
             </View>
-            <Text style={styles.driverPhone}>+91 {displayPhone}</Text>
-            <Text style={styles.partnerId}>Captain ID: TRV-DRV-1049 · {driverKyc.city || 'Pune & PCMC'}</Text>
+            <Text style={styles.driverPhone}>{displayPhone}</Text>
+            <Text style={styles.partnerId}>{user?.id ? `Partner ID: ${user.id.slice(-8).toUpperCase()}` : 'Partner ID pending'} · {driverKyc.city || 'City not provided'}</Text>
           </View>
         </View>
 
-        {/* Badges / Metrics Row */}
+        {/* Verification and dispatch status */}
         <View style={styles.metricsRow}>
           <View style={styles.metricItem}>
-            <View style={styles.metricValueRow}>
-              <Award size={13} color={Colors.marigold} />
-              <Text style={styles.metricValue}>4.9/5</Text>
-            </View>
-            <Text style={styles.metricLabel}>Rating</Text>
+            <Text style={styles.metricValue}>Pickup &amp; truck</Text>
+            <Text style={styles.metricLabel}>Partner service</Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricValue}>340+</Text>
-            <Text style={styles.metricLabel}>Completed Moves</Text>
+            <Text style={styles.metricValue}>{documentStatus}</Text>
+            <Text style={styles.metricLabel}>Application</Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricValue}>99.4%</Text>
-            <Text style={styles.metricLabel}>On-Time Arrival</Text>
+            <Text style={styles.metricValue}>{isApproved ? 'Enabled' : 'Locked'}</Text>
+            <Text style={styles.metricLabel}>Orders</Text>
           </View>
         </View>
       </View>
+
+      {!!reviewNotes && !isApproved && (
+        <View style={{ marginTop: 14, padding: 13, borderRadius: 12, borderWidth: 1, borderColor: Colors.warning, backgroundColor: Colors.warning + '18' }}>
+          <Text style={{ color: Colors.text, fontSize: 12, lineHeight: 18 }}>{reviewNotes}</Text>
+        </View>
+      )}
 
       {/* Assigned Commercial Vehicle Card */}
       <View style={styles.vehicleCard}>
@@ -160,8 +169,8 @@ export default function DriverProfileScreen() {
             <Text style={styles.plateNumberText}>{displayPlate}</Text>
           </View>
           <View style={styles.plateVerifiedPill}>
-            <CheckCircle2 size={12} color={Colors.success} />
-            <Text style={styles.plateVerifiedText}>RTO Verified</Text>
+            <CheckCircle2 size={12} color={isApproved ? Colors.success : Colors.warning} />
+            <Text style={styles.plateVerifiedText}>{documentStatus}</Text>
           </View>
         </View>
 
@@ -172,32 +181,32 @@ export default function DriverProfileScreen() {
           </View>
           <View style={styles.vehicleSpecBox}>
             <Text style={styles.specLabel}>Capacity</Text>
-            <Text style={styles.specValue}>{displayCapacity} CFT</Text>
+            <Text style={styles.specValue}>{displayCapacity ? `${displayCapacity} CFT` : 'Not provided'}</Text>
           </View>
           <View style={styles.vehicleSpecBox}>
             <Text style={styles.specLabel}>Payload Class</Text>
-            <Text style={styles.specValue}>{vehicle.payloadTons || '2.5 Tons'}</Text>
+            <Text style={styles.specValue}>{vehicle.payloadTons || 'Not provided'}</Text>
           </View>
           <View style={styles.vehicleSpecBox}>
             <Text style={styles.specLabel}>Commercial Permit</Text>
-            <Text style={[styles.specValue, { color: Colors.success }]}>
-              {vehicle.permitExpiry ? `Valid: ${vehicle.permitExpiry}` : 'Active till 2028'}
+            <Text style={[styles.specValue, { color: isApproved ? Colors.success : Colors.warning }]}>
+              {vehicle.permitExpiry ? `Expiry: ${vehicle.permitExpiry}` : 'Not provided'}
             </Text>
           </View>
         </View>
 
         <View style={styles.complianceRow}>
           <View style={styles.complianceItem}>
-            <CheckCircle2 size={13} color={Colors.success} />
-            <Text style={styles.complianceText}>Fitness Certificate</Text>
+            <CheckCircle2 size={13} color={isApproved ? Colors.success : Colors.warning} />
+            <Text style={styles.complianceText}>Fitness · {documentStatus}</Text>
           </View>
           <View style={styles.complianceItem}>
-            <CheckCircle2 size={13} color={Colors.success} />
-            <Text style={styles.complianceText}>Commercial Insurance</Text>
+            <CheckCircle2 size={13} color={isApproved ? Colors.success : Colors.warning} />
+            <Text style={styles.complianceText}>Vehicle policy · {documentStatus}</Text>
           </View>
           <View style={styles.complianceItem}>
-            <CheckCircle2 size={13} color={Colors.success} />
-            <Text style={styles.complianceText}>Goods Permit</Text>
+            <CheckCircle2 size={13} color={isApproved ? Colors.success : Colors.warning} />
+            <Text style={styles.complianceText}>Permit · {documentStatus}</Text>
           </View>
         </View>
 
@@ -205,7 +214,7 @@ export default function DriverProfileScreen() {
         <View style={styles.photoSection}>
           <View style={styles.photoSectionHeader}>
             <Camera size={14} color={Colors.text} />
-            <Text style={styles.photoSectionTitle}>Vehicle Inspection Photos</Text>
+            <Text style={styles.photoSectionTitle}>Vehicle photos for review</Text>
           </View>
 
           {vehiclePhotos.length > 0 ? (
@@ -259,14 +268,14 @@ export default function DriverProfileScreen() {
         <View style={styles.docRow}>
           <View style={styles.docInfo}>
             <Text style={styles.docTitle}>Driving Licence (Commercial)</Text>
-            <Text style={styles.docCode}>{driverKyc.dlNumber || 'MH-12-2018-0045892'}</Text>
+            <Text style={styles.docCode}>{driverKyc.dlNumber || 'Not provided'}</Text>
             <Text style={styles.docMeta}>
-              Category: {driverKyc.dlCategory || 'Commercial Transport'} · Expiry: {driverKyc.dlExpiry || '2030'}
+              Category: {driverKyc.dlCategory || 'Not provided'} · Expiry: {driverKyc.dlExpiry || 'Not provided'}
             </Text>
           </View>
           <View style={styles.docStatusBadge}>
             <ShieldCheck size={12} color={Colors.success} />
-            <Text style={styles.docStatusText}>Verified</Text>
+            <Text style={styles.docStatusText}>{documentStatus}</Text>
           </View>
         </View>
 
@@ -274,13 +283,13 @@ export default function DriverProfileScreen() {
 
         <View style={styles.docRow}>
           <View style={styles.docInfo}>
-            <Text style={styles.docTitle}>Aadhaar Card / Government ID</Text>
-            <Text style={styles.docCode}>{driverKyc.aadhaarNumber || '7845 9012 3456'}</Text>
-            <Text style={styles.docMeta}>Identity & Address Authenticated</Text>
+            <Text style={styles.docTitle}>Government identity proof</Text>
+            <Text style={styles.docCode}>{driverKyc.identityProofUri ? 'Identity proof uploaded' : 'Not provided'}</Text>
+            <Text style={styles.docMeta}>Reviewed by Triveni before orders are enabled</Text>
           </View>
           <View style={styles.docStatusBadge}>
             <ShieldCheck size={12} color={Colors.success} />
-            <Text style={styles.docStatusText}>Verified</Text>
+            <Text style={styles.docStatusText}>{documentStatus}</Text>
           </View>
         </View>
 
@@ -289,12 +298,12 @@ export default function DriverProfileScreen() {
         <View style={styles.docRow}>
           <View style={styles.docInfo}>
             <Text style={styles.docTitle}>Vehicle RC Certificate Book</Text>
-            <Text style={styles.docCode}>{vehicle.rcNumber || 'MH12-RC-2021-9988'}</Text>
+            <Text style={styles.docCode}>{vehicle.rcNumber || 'Not provided'}</Text>
             <Text style={styles.docMeta}>RTO Registered to {displayName}</Text>
           </View>
           <View style={styles.docStatusBadge}>
             <ShieldCheck size={12} color={Colors.success} />
-            <Text style={styles.docStatusText}>Verified</Text>
+            <Text style={styles.docStatusText}>{documentStatus}</Text>
           </View>
         </View>
       </View>
@@ -303,27 +312,27 @@ export default function DriverProfileScreen() {
       <View style={styles.menuCard}>
         <View style={styles.cardTitleRow}>
           <CreditCard size={17} color={Colors.text} />
-          <Text style={styles.cardTitle}>Earnings Settlement Bank</Text>
+          <Text style={styles.cardTitle}>Bank details on file</Text>
         </View>
 
         <View style={styles.bankDetailsBox}>
           <View style={styles.bankDetailRow}>
             <Text style={styles.bankLabel}>Bank Name:</Text>
-            <Text style={styles.bankVal}>{bank.bankName || 'HDFC Bank'}</Text>
+            <Text style={styles.bankVal}>{bank.bankName || 'Not provided'}</Text>
           </View>
           <View style={styles.bankDetailRow}>
             <Text style={styles.bankLabel}>Account Number:</Text>
             <Text style={[styles.bankVal, styles.codeFont]}>
-              {bank.accountNumber ? `•••• •••• ${bank.accountNumber.slice(-4)}` : '•••• •••• 4788'}
+              {bank.accountLast4 ? `•••• •••• ${bank.accountLast4}` : 'Not provided'}
             </Text>
           </View>
           <View style={styles.bankDetailRow}>
             <Text style={styles.bankLabel}>IFSC Code:</Text>
-            <Text style={[styles.bankVal, styles.codeFont]}>{bank.ifscCode || 'HDFC0001234'}</Text>
+            <Text style={[styles.bankVal, styles.codeFont]}>{bank.ifscCode || 'Not provided'}</Text>
           </View>
           {bank.upiId && (
             <View style={styles.bankDetailRow}>
-              <Text style={styles.bankLabel}>Instant UPI:</Text>
+              <Text style={styles.bankLabel}>UPI ID:</Text>
               <Text style={styles.bankVal}>{bank.upiId}</Text>
             </View>
           )}
@@ -340,9 +349,9 @@ export default function DriverProfileScreen() {
           <Sparkles size={20} color={Colors.white} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.onboardBannerTitle}>Full Onboarding & Vehicle Inspection</Text>
+          <Text style={styles.onboardBannerTitle}>Update driver & vehicle details</Text>
           <Text style={styles.onboardBannerSub}>
-            Update commercial vehicle plate, capture high-res images & compliance renewal
+            Update vehicle photos, compliance dates, or documents for review.
           </Text>
         </View>
         <ChevronRight size={18} color={Colors.white} />
@@ -359,8 +368,8 @@ export default function DriverProfileScreen() {
             <PhoneCall size={16} color={Colors.text} />
           </View>
           <View style={styles.menuContent}>
-            <Text style={styles.menuTitle}>24/7 Operations Desk Helpline</Text>
-            <Text style={styles.menuSubtitle}>8828647785 · Direct Dispatcher Link</Text>
+            <Text style={styles.menuTitle}>Contact operations</Text>
+            <Text style={styles.menuSubtitle}>8828647785 · Phone support</Text>
           </View>
           <ChevronRight size={16} color={Colors.textMuted} />
         </TouchableOpacity>
@@ -395,7 +404,7 @@ export default function DriverProfileScreen() {
         <Text style={styles.signOutText}>Sign Out from Portal</Text>
       </TouchableOpacity>
 
-      <Text style={styles.appVersionText}>Triveni Driver App v1.2.0 · Verified Commercial Carrier</Text>
+      <Text style={styles.appVersionText}>Triveni Driver Partner · Verification required before dispatch</Text>
 
       {/* Fullscreen Photo Modal */}
       <Modal visible={!!previewImage} transparent animationType="fade">

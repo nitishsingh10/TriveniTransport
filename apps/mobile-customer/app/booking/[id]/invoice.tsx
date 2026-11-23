@@ -77,7 +77,7 @@ export default function BookingInvoiceScreen() {
         year: 'numeric',
       })
     : 'Scheduled Date';
-  const invoiceNum = booking ? `INV-${booking.id.slice(-6).toUpperCase()}` : 'INV-PROVISIONAL';
+  const invoiceNum = booking ? `REC-${booking.id.slice(-6).toUpperCase()}` : 'REC-PROVISIONAL';
 
   return (
     <ScrollView
@@ -117,7 +117,7 @@ export default function BookingInvoiceScreen() {
         {/* Invoice Meta */}
         <View style={styles.metaGrid}>
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>INVOICE NO.</Text>
+            <Text style={styles.metaLabel}>RECEIPT REF.</Text>
             <Text style={styles.metaVal}>{invoiceNum}</Text>
           </View>
           <View style={styles.metaItem}>
@@ -152,29 +152,12 @@ export default function BookingInvoiceScreen() {
 
         {/* Line Items */}
         <View style={styles.lines}>
-          <Text style={styles.sectionHeading}>PARTICULARS</Text>
-
+          <Text style={styles.sectionHeading}>BOOKING AMOUNT</Text>
           <View style={styles.lineRow}>
-            <Text style={styles.lineDesc}>
-              Dedicated Transport ({booking?.vehicle?.type || booking?.configurationType || 'Standard Truck'})
-            </Text>
-            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.45).toLocaleString('en-IN')}.00</Text>
+            <Text style={styles.lineDesc}>Confirmed moving service</Text>
+            <Text style={styles.linePrice}>₹{totalAmount.toLocaleString('en-IN')}.00</Text>
           </View>
 
-          <View style={styles.lineRow}>
-            <Text style={styles.lineDesc}>Household Goods Handling & Floor Service</Text>
-            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.35).toLocaleString('en-IN')}.00</Text>
-          </View>
-
-          <View style={styles.lineRow}>
-            <Text style={styles.lineDesc}>Crew Labour & Standard Packing</Text>
-            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.15).toLocaleString('en-IN')}.00</Text>
-          </View>
-
-          <View style={styles.lineRow}>
-            <Text style={styles.lineDesc}>Goods Transit Cover (Included)</Text>
-            <Text style={styles.linePrice}>₹{Math.round(totalAmount * 0.05).toLocaleString('en-IN')}.00</Text>
-          </View>
         </View>
 
         <View style={styles.divider} />
@@ -182,7 +165,7 @@ export default function BookingInvoiceScreen() {
         {/* Totals */}
         <View style={styles.summaryTotals}>
           <View style={styles.totalLine}>
-            <Text style={styles.totalLabel}>Gross Total (All Inclusive)</Text>
+            <Text style={styles.totalLabel}>Total amount</Text>
             <Text style={styles.totalAmount}>₹{totalAmount.toLocaleString('en-IN')}.00</Text>
           </View>
           <View style={styles.totalLine}>
@@ -191,7 +174,7 @@ export default function BookingInvoiceScreen() {
           </View>
           <View style={[styles.totalLine, styles.dueLine]}>
             <Text style={styles.dueLabel}>
-              {isCompleted ? 'Amount Paid on Delivery' : 'Payable on Safe Delivery (COD)'}
+              {isCompleted ? 'Amount paid on delivery' : 'Payable on delivery (COD)'}
             </Text>
             <Text style={styles.dueAmount}>₹{totalAmount.toLocaleString('en-IN')}.00</Text>
           </View>
@@ -200,7 +183,7 @@ export default function BookingInvoiceScreen() {
         {/* Trust Stamp */}
         <View style={styles.stampBox}>
           <ShieldCheck size={16} color={Colors.text} />
-          <Text style={styles.stampText}>Official Computer Generated Tax Invoice · Triveni Transports</Text>
+          <Text style={styles.stampText}>Booking payment summary · Triveni Transports</Text>
         </View>
       </View>
 

@@ -88,7 +88,7 @@ export const invoiceWorker = new Worker(
     });
 
     // Write PDF content
-    doc.fontSize(20).text('Triveni Transports - Invoice', { align: 'center' });
+    doc.fontSize(20).text('Triveni Transports - Booking Payment Summary', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text(`Booking ID: ${booking.id}`);
     doc.text(`Date: ${booking.scheduledDate.toISOString().split('T')[0]}`);

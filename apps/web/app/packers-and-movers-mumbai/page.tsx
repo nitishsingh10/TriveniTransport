@@ -18,7 +18,7 @@ import styles from '../components/CityLanding.module.css';
 export const metadata: Metadata = {
   title: 'Packers and Movers in Mumbai — Top Rated House Shifting & Relocation',
   description:
-    'Best packers and movers in Mumbai with transparent itemised pricing. Serving Bandra, Andheri, Powai, Borivali, Dadar, South Mumbai & suburbs. ₹5L transit insurance, verified captains, 0 hidden charges. Get quote!',
+    'Best packers and movers in Mumbai with transparent itemised pricing. Serving Bandra, Andheri, Powai, Borivali, Dadar, South Mumbai & suburbs. Verified captains and no hidden charges. Get quote!',
   alternates: {
     canonical: '/packers-and-movers-mumbai',
   },
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Packers and Movers in Mumbai | Triveni Transports',
     description:
-      'Transparent itemised pricing for house and office shifting in Mumbai. Verified moving captains, ₹5L insurance, zero surprise charges.',
+      'Transparent itemised pricing for house and office shifting in Mumbai. Verified moving captains and zero surprise charges.',
     url: 'https://trivenitransports.com/packers-and-movers-mumbai',
   },
 };

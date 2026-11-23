@@ -20,6 +20,10 @@ router.post('/bookings/:id/assign', AdminController.assignBooking);
 
 // Fleet & Drivers
 router.get('/vendors', AdminController.listVendors);
+router.get('/vendors/:id/documents', AdminController.listVendorDocuments);
+router.get('/vendors/:id/contract', AdminController.getVendorContract);
+router.patch('/vendors/:id/review', AdminController.reviewVendor);
+router.patch('/vendor-documents/:id/review', AdminController.reviewVendorDocument);
 router.get('/vehicles', AdminController.listVehicles);
 
 // Catalog & Rules

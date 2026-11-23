@@ -10,8 +10,8 @@ import styles from './page.module.css';
 
 const STATUSES = ['REQUESTED', 'QUOTED', 'CONFIRMED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
 const STATUS_LABELS: Record<string, string> = {
-  REQUESTED: 'Requested', QUOTED: 'Quoted', CONFIRMED: 'Assigning shortly',
-  ASSIGNED: 'Driver Assigned', EN_ROUTE: 'En Route', ARRIVED: 'Arrived',
+  REQUESTED: 'Requested', QUOTED: 'Quoted', CONFIRMED: 'Partner Assignment Pending',
+  ASSIGNED: 'Partner Assigned', EN_ROUTE: 'En Route', ARRIVED: 'Arrived',
   IN_PROGRESS: 'In Transit', COMPLETED: 'Completed',
   CANCELLED: 'Cancelled', DISPUTED: 'Disputed', REVISION_PENDING: 'Revision Pending',
 };
@@ -246,11 +246,11 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <h3 className={styles.cardTitle} style={{ margin: 0 }}>🚚 Driver & Vehicle</h3>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: '#FEF3C7', color: '#B45309' }}>
-                      Assigning shortly
+                      Partner assignment pending
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748B', lineHeight: 1.5 }}>
-                    Your booking is confirmed! We are assigning the nearest verified Triveni Captain and commercial vehicle. Driver contact details and vehicle registration will appear here automatically once accepted.
+                    Your booking is confirmed and partner assignment is pending. We will assign a verified service partner; their details will appear here after assignment.
                   </p>
                 </div>
               )}

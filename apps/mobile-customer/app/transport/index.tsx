@@ -281,8 +281,8 @@ export default function TransportBookingScreen() {
 
       if (res?.booking?.id) {
         showToast({
-          title: 'Truck Booked Successfully!',
-          message: `Booking #${res.booking.id.slice(-6).toUpperCase()} confirmed via Pay on Delivery.`,
+          title: 'Booking Received',
+          message: `Booking #${res.booking.id.slice(-6).toUpperCase()} is confirmed. Partner assignment is pending.`,
           variant: 'success',
         });
         router.push(`/booking/${res.booking.id}`);

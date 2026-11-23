@@ -353,7 +353,7 @@ export default function SummaryScreen() {
         <View style={styles.totalRow}>
           <View>
             <Text style={styles.totalLabel}>Estimated Total</Text>
-            <Text style={styles.taxInclusive}>Inclusive of GST & Transit Cover</Text>
+            <Text style={styles.taxInclusive}>Final charges confirmed before dispatch</Text>
           </View>
           <Text style={styles.totalAmount}>₹{estimatedTotal.toLocaleString('en-IN')}</Text>
         </View>

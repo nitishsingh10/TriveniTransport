@@ -49,15 +49,14 @@ export default function TermsPage() {
               </p>
               <ul className={styles.list}>
                 <li>We accept UPI, Net Banking, Credit/Debit Cards, and Cash.</li>
-                <li>Digital GST tax invoices are generated automatically upon job completion.</li>
                 <li>Advance payments are 100% refundable if cancelled up to 24 hours prior to the scheduled slot.</li>
               </ul>
             </section>
 
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>3. Transit Insurance &amp; Damage Protection</h2>
+              <h2 className={styles.sectionTitle}>3. Loss and damage reports</h2>
               <p className={styles.sectionText}>
-                Every confirmed move includes standard transit coverage against vehicular accident and fire up to ₹5,00,000. For high-value electronics and fragile antiques, all-risk packaging and insurance cover is strongly recommended and itemised during checkout.
+                Triveni does not currently provide or arrange transit cover for household goods. No cover or premium is included in the move price. Please contact support promptly if property is lost or damaged so the report can be recorded and reviewed under the applicable booking terms. Recording a report does not promise payment or reimbursement. Customers who want transit cover should arrange it independently with a suitable provider before the move.
               </p>
               <p className={styles.sectionText}>
                 Jewelry, cash, legal title deeds, and personal sovereign documents must be transported personally by the customer and cannot be handed over as packed cargo.

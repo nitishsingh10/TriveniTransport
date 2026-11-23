@@ -8,6 +8,8 @@ import { Platform, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { fetch as expoFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
 import type { BookingStatus } from '@triveni/shared-types';
 
 // Auto-detect development machine LAN IP when running in Expo Go on a local machine,
@@ -226,6 +228,7 @@ export const driverAuthApi = {
         identifier,
         ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
         role: 'vendor',
+        serviceType: 'transport',
         isSignup,
       }),
     });
@@ -245,6 +248,7 @@ export const driverAuthApi = {
         ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
         code,
         role: 'vendor',
+        serviceType: 'transport',
         isSignup,
         ...(name?.trim() ? { name: name.trim() } : {}),
       }),
@@ -303,6 +307,9 @@ export interface BackendVendorProfile {
   phone?: string;
   email?: string;
   status: string;
+  onboardingStatus: string;
+  onboardingData?: Record<string, any>;
+  reviewNotes?: string | null;
   vehicles: BackendVehicle[];
   _count?: { bookings: number };
 }
@@ -315,16 +322,35 @@ export const driverVendorApi = {
     return request<BackendVehicle[]>('/vendor/vehicles');
   },
   async saveOnboarding(data: {
-    name?: string;
-    vehicleNumber: string;
-    vehicleType: string;
-    capacityCft?: number;
-    permitExpiry?: string;
-    fitnessCertExpiry?: string;
+    driver: object;
+    vehicle: object;
+    bank: object;
+    agreementAccepted: boolean;
   }) {
     return request<{ success: boolean; message: string; vehicle: BackendVehicle }>('/vendor/onboarding', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+  async uploadDocument(documentType: string, uri: string) {
+    const file = new File(uri);
+    if (!file.exists || !file.size) throw new Error('The selected document is unavailable. Please select it again.');
+    const extension = file.extension.toLowerCase();
+    const mimeType = file.type || ({ '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.pdf': 'application/pdf' }[extension] || 'image/jpeg');
+    const fileName = file.name || `${documentType}${extension || '.jpg'}`;
+    const presigned = await request<{ uploadUrl: string; objectKey: string }>('/vendor/documents/presign', {
+      method: 'POST',
+      body: JSON.stringify({ documentType, fileName, mimeType, size: file.size }),
+    });
+    const uploaded = await expoFetch(presigned.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': mimeType },
+      body: file,
+    });
+    if (!uploaded.ok) throw new Error(`Could not upload ${documentType.replaceAll('_', ' ')}.`);
+    return request('/vendor/documents/complete', {
+      method: 'POST',
+      body: JSON.stringify({ documentType, fileName, mimeType, objectKey: presigned.objectKey }),
     });
   },
   async updatePushToken(pushToken: string | null): Promise<void> {

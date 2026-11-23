@@ -24,7 +24,7 @@ export default function BookingLayout() {
     >
       <Stack.Screen name="[id]/index" options={{ title: 'Track Your Move' }} />
       <Stack.Screen name="[id]/pay" options={{ title: 'Pay Advance', presentation: 'modal' }} />
-      <Stack.Screen name="[id]/invoice" options={{ title: 'Tax Invoice' }} />
+      <Stack.Screen name="[id]/invoice" options={{ title: 'Payment Summary' }} />
     </Stack>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CalendarDays, LogOut, MapPin, RefreshCw, Truck, UserRound } from 'lucide-react';
-import { ApiError, vendor, VendorJob, VendorProfile, VendorVehicle } from '../../lib/api';
+import { ApiError, vendor, VendorJob, VendorProfile, VendorVehicle, VendorSupervisor } from '../../lib/api';
 import { useAuth } from '../../lib/useAuth';
 import styles from './page.module.css';
 
@@ -21,6 +21,11 @@ export default function VendorPortalPage() {
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [vehicles, setVehicles] = useState<VendorVehicle[]>([]);
   const [jobs, setJobs] = useState<VendorJob[]>([]);
+  const [supervisors, setSupervisors] = useState<VendorSupervisor[]>([]);
+  const [supervisorName, setSupervisorName] = useState('');
+  const [supervisorPhone, setSupervisorPhone] = useState('');
+  const [supervisorError, setSupervisorError] = useState('');
+  const [supervisorBusy, setSupervisorBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -69,6 +74,49 @@ export default function VendorPortalPage() {
     return () => { active = false; };
   }, [authLoading, fetchPortal, isLoggedIn, role, router]);
 
+  useEffect(() => {
+    if (profile?.serviceType !== 'packers_movers' || profile.status !== 'active' || profile.onboardingStatus !== 'approved') {
+      return;
+    }
+    vendor.getSupervisors().then(setSupervisors).catch((cause) => {
+      setSupervisorError(cause instanceof Error ? cause.message : 'Could not load supervisors.');
+    });
+  }, [profile]);
+
+  const handleAddSupervisor = async (event: FormEvent) => {
+    event.preventDefault();
+    setSupervisorBusy(true); setSupervisorError('');
+    try {
+      await vendor.addSupervisor({ name: supervisorName.trim(), phone: supervisorPhone.replace(/\D/g, '') });
+      setSupervisorName(''); setSupervisorPhone('');
+      setSupervisors(await vendor.getSupervisors());
+    } catch (cause) {
+      setSupervisorError(cause instanceof ApiError ? cause.message : 'Could not invite this supervisor.');
+    } finally { setSupervisorBusy(false); }
+  };
+
+  const handleSupervisorAssignment = async (bookingId: string, supervisorId: string) => {
+    setSupervisorError('');
+    try {
+      await vendor.assignSupervisor(bookingId, supervisorId || null);
+      await loadPortal();
+    } catch (cause) {
+      setSupervisorError(cause instanceof ApiError ? cause.message : 'Could not assign this supervisor.');
+    }
+  };
+
+  const handleRevokeSupervisor = async (person: VendorSupervisor) => {
+    if (!window.confirm(`Revoke ${person.name}'s supervisor access and clear their open order assignments?`)) return;
+    setSupervisorError('');
+    try {
+      await vendor.revokeSupervisor(person.id);
+      setSupervisors(await vendor.getSupervisors());
+      await loadPortal();
+    } catch (cause) {
+      setSupervisorError(cause instanceof ApiError ? cause.message : 'Could not revoke this supervisor.');
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     router.replace('/vendor/login');
@@ -86,10 +134,10 @@ export default function VendorPortalPage() {
       <div className={styles.content}>
         <header className={styles.header}>
           <div>
-            <Link href="/" className={styles.brand}>TRIVENI <span>PARTNER PORTAL</span></Link>
+            <Link href="/" className={styles.brand}>TRIVENI <span>P&amp;M PARTNER</span></Link>
             <p className={styles.eyebrow}>Fleet operations</p>
             <h1>Welcome, {displayName}</h1>
-            <p className={styles.lede}>Your assignments, vehicles, and partner account in one place.</p>
+            <p className={styles.lede}>Manage your moving business, assigned orders, and field supervisors.</p>
           </div>
           <div className={styles.headerActions}>
             <button type="button" className={styles.secondaryButton} onClick={() => void loadPortal()} disabled={loading}>
@@ -102,6 +150,23 @@ export default function VendorPortalPage() {
             </button>
           </div>
         </header>
+
+        {profile?.onboardingStatus !== 'approved' || profile.status !== 'active' ? (
+          <section className={styles.panel} style={{ marginBottom: 18, borderColor: '#efd08e', background: '#fffaf0' }}>
+            <p className={styles.eyebrow}>Partner verification</p>
+            <h2 style={{ margin: '0 0 8px', color: '#0d1f37' }}>{profile?.onboardingStatus === 'submitted' || profile?.onboardingStatus === 'under_review' ? 'Application under review' : profile?.onboardingStatus === 'needs_changes' ? 'Changes requested' : 'Complete your business onboarding'}</h2>
+            <p className={styles.empty} style={{ marginTop: 0 }}>{profile?.reviewNotes || 'Your business documents must be reviewed and approved before orders or supervisor management become available.'}</p>
+            <Link href="/vendor/onboarding" className={styles.secondaryButton} style={{ textDecoration: 'none' }}>{profile?.onboardingStatus === 'submitted' ? 'Review application details' : 'Continue onboarding'} →</Link>
+          </section>
+        ) : null}
+
+        {profile?.onboardingStatus === 'approved' && profile.status === 'active' && profile.serviceType === 'packers_movers' && (
+          <section className={styles.panel} style={{ marginBottom: 18, borderColor: '#efd08e', background: '#fffaf0' }}>
+            <p className={styles.eyebrow}>Partner terms</p>
+            <p className={styles.empty} style={{ margin: '0 0 10px' }}>Review the current agreement and upload the commercial schedule signed by both parties. New assignments require an approved schedule.</p>
+            <Link href="/vendor/onboarding" className={styles.secondaryButton} style={{ textDecoration: 'none' }}>Review agreement and schedule →</Link>
+          </section>
+        )}
 
         <section className={styles.summaryGrid} aria-label="Partner account summary">
           <article className={styles.summaryCard}>
@@ -128,7 +193,7 @@ export default function VendorPortalPage() {
         <div className={styles.columns}>
           <section className={styles.panel}>
             <div className={styles.panelHeader}>
-              <div><p className={styles.eyebrow}>Assignments</p><h2>Available and assigned moves</h2></div>
+              <div><p className={styles.eyebrow}>Orders</p><h2>Orders assigned to your business</h2></div>
               <span className={styles.count}>{jobs.length}</span>
             </div>
             {loading && jobs.length === 0 ? (
@@ -137,7 +202,7 @@ export default function VendorPortalPage() {
               <p className={styles.empty}>There are no moves in your queue right now. New assignments will appear here.</p>
             ) : (
               <div className={styles.jobList}>
-                {jobs.map((job) => (
+                  {jobs.map((job) => (
                   <article className={styles.jobCard} key={job.id}>
                     <div className={styles.jobTop}>
                       <span className={styles.jobRef}>Move {job.id.slice(0, 8).toUpperCase()}</span>
@@ -154,6 +219,15 @@ export default function VendorPortalPage() {
                         {job.vehicle && <span>{job.vehicle.type} · {job.vehicle.registrationNumber}</span>}
                       </div>
                     )}
+                    {profile?.serviceType === 'packers_movers' && profile.onboardingStatus === 'approved' && (
+                      <label style={{ display: 'grid', gap: 6, marginTop: 12, color: '#627288', fontSize: 12, fontWeight: 700 }}>
+                        Field supervisor
+                        <select value={job.supervisorId || ''} onChange={(event) => void handleSupervisorAssignment(job.id, event.target.value)} style={{ minHeight: 40, border: '1px solid #dce3eb', borderRadius: 10, padding: '0 10px', background: '#fff', color: '#172a42' }}>
+                          <option value="">Assign later</option>
+                          {supervisors.filter((person) => person.status === 'active' && person.phoneVerifiedAt).map((person) => <option key={person.id} value={person.id}>{person.name} · {person.phone}</option>)}
+                        </select>
+                      </label>
+                    )}
                   </article>
                 ))}
               </div>
@@ -161,6 +235,22 @@ export default function VendorPortalPage() {
           </section>
 
           <aside className={styles.sideColumn}>
+            {profile?.serviceType === 'packers_movers' && profile.status === 'active' && profile.onboardingStatus === 'approved' && (
+              <section className={styles.panel}>
+                <div className={styles.panelHeader}><div><p className={styles.eyebrow}>Field team</p><h2>Supervisors</h2></div><UserRound size={18} color="#a66b00" /></div>
+                <p className={styles.empty}>Invite a supervisor by mobile number. They must verify the invitation with OTP before you can assign them to an order.</p>
+                {supervisorError && <p role="alert" style={{ color: '#b42332', fontSize: 12 }}>{supervisorError}</p>}
+                <form onSubmit={handleAddSupervisor} style={{ display: 'grid', gap: 9 }}>
+                  <input value={supervisorName} onChange={(event) => setSupervisorName(event.target.value)} placeholder="Supervisor full name" required minLength={2} maxLength={150} style={{ minHeight: 40, padding: '0 11px', borderRadius: 10, border: '1px solid #dce3eb' }} />
+                  <input value={supervisorPhone} onChange={(event) => setSupervisorPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number" inputMode="numeric" pattern="[6-9][0-9]{9}" required style={{ minHeight: 40, padding: '0 11px', borderRadius: 10, border: '1px solid #dce3eb' }} />
+                  <button type="submit" className={styles.secondaryButton} disabled={supervisorBusy}>{supervisorBusy ? 'Adding…' : 'Add supervisor'}</button>
+                </form>
+                <div style={{ display: 'grid', gap: 8, marginTop: 15 }}>
+                  {supervisors.map((person) => <div key={person.id} style={{ padding: 10, borderRadius: 11, background: '#f7f9fc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 12 }}><span><strong>{person.name}</strong><br /><span style={{ color: '#77869a' }}>{person.phone}</span></span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><strong style={{ color: person.status === 'suspended' ? '#b42332' : person.phoneVerifiedAt ? '#13824b' : '#a66b00', textTransform: 'capitalize' }}>{person.status === 'suspended' ? 'Access revoked' : person.phoneVerifiedAt ? 'OTP verified' : 'Awaiting OTP'}</strong>{person.status !== 'suspended' && <button type="button" onClick={() => void handleRevokeSupervisor(person)} style={{ border: '1px solid #e4bdc1', borderRadius: 8, padding: '5px 8px', background: '#fff', color: '#a12c39', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Revoke</button>}</span></div>)}
+                </div>
+                <Link href="/vendor/supervisor/login" style={{ display: 'inline-block', marginTop: 13, color: '#1768a5', fontSize: 12 }}>Supervisor sign-in link</Link>
+              </section>
+            )}
             <section className={styles.panel}>
               <div className={styles.panelHeader}><div><p className={styles.eyebrow}>Your fleet</p><h2>Vehicles</h2></div></div>
               {loading && vehicles.length === 0 ? (

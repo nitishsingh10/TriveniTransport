@@ -55,3 +55,8 @@ prisma/*.db
 # Local status / scratch notes (not for git)
 PROJECT_STATUS.txt
 project_status.txt
+project_status.md
+task.md
+Tech_Spec_packers_movers_platform*
+Triveni_Transports_Documentation*
+implementation_plan.md

@@ -24,17 +24,17 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────
 
 model Customer {
-  id             String    @id @default(uuid()) @db.Uuid
-  name           String    @db.VarChar(150)
-  phone          String?   @unique @db.VarChar(15)
-  email          String?   @unique @db.VarChar(254)
-  savedAddresses Json      @default("[]") @map("saved_addresses")
-  pushToken      String?   @map("push_token") @db.VarChar(500)
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(150)
+  phone          String?  @unique @db.VarChar(15)
+  email          String?  @unique @db.VarChar(254)
+  savedAddresses Json     @default("[]") @map("saved_addresses")
+  pushToken      String?  @map("push_token") @db.VarChar(500)
   /// WhatsApp opt-in (default true — primary channel for this market)
-  whatsappOptIn  Boolean   @default(true) @map("whatsapp_opt_in")
-  pushOptIn      Boolean   @default(true) @map("push_opt_in")
-  emailOptIn     Boolean   @default(true) @map("email_opt_in")
-  createdAt      DateTime  @default(now()) @map("created_at")
+  whatsappOptIn  Boolean  @default(true) @map("whatsapp_opt_in")
+  pushOptIn      Boolean  @default(true) @map("push_opt_in")
+  emailOptIn     Boolean  @default(true) @map("email_opt_in")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   bookings      Booking[]
   sessions      Session[]
@@ -44,22 +44,35 @@ model Customer {
 }
 
 model Vendor {
-  id           String       @id @default(uuid()) @db.Uuid
-  name         String       @db.VarChar(150)
-  phone        String?      @unique @db.VarChar(15)
-  email        String?      @unique @db.VarChar(254)
-  status       VendorStatus @default(active)
-  /// JSON array of LocationZone IDs this vendor services
-  serviceAreas Json         @default("[]") @map("service_areas")
-  pushToken    String?      @map("push_token") @db.VarChar(500)
-  createdAt    DateTime     @default(now()) @map("created_at")
+  id               String           @id @default(uuid()) @db.Uuid
+  name             String           @db.VarChar(150)
+  phone            String?          @unique @db.VarChar(15)
+  email            String?          @unique @db.VarChar(254)
+  serviceType      ServiceType      @map("service_type")
+  driverLicenseExpiry DateTime?     @map("driver_license_expiry") @db.Date
+  status           VendorStatus     @default(pending)
+  onboardingStatus OnboardingStatus @default(draft) @map("onboarding_status")
+  onboardingData   Json             @default("{}") @map("onboarding_data")
+  reviewNotes      String?          @map("review_notes") @db.Text
+  reviewedAt       DateTime?        @map("reviewed_at")
+  reviewedById     String?          @map("reviewed_by_id") @db.Uuid
+  /// JSON array of display labels for cities/areas this vendor serves
+  serviceAreas     Json             @default("[]") @map("service_areas")
+  pushToken        String?          @map("push_token") @db.VarChar(500)
+  createdAt        DateTime         @default(now()) @map("created_at")
 
-  vehicles      Vehicle[]
-  bookings      Booking[]
-  sessions      Session[]
-  notifications Notification[]
-  revisions     Revision[]
+  vehicles                    Vehicle[]
+  bookings                    Booking[]
+  supervisors                 Supervisor[]
+  supervisorAssignmentHistory BookingSupervisorHistory[]
+  documents                   VendorDocument[]
+  contractSignatures          VendorContractSignature[]
+  reviewHistory               VendorReviewHistory[]
+  sessions                    Session[]
+  notifications               Notification[]
+  revisions                   Revision[]
 
+  @@index([serviceType, status, onboardingStatus, driverLicenseExpiry], map: "idx_vendor_dispatch_eligibility")
   @@map("vendors")
 }
 
@@ -70,29 +83,32 @@ model AdminUser {
   email     String?  @unique @db.VarChar(254)
   createdAt DateTime @default(now()) @map("created_at")
 
-  sessions         Session[]
-  notifications    Notification[]
-  pricingAuditLogs PricingAuditLog[]
-  zonesCreated     LocationZone[]
-  zoneRates        ZoneRate[]
-  itemsCreated     Item[]
-  pricingRules     PricingRule[]
+  sessions                Session[]
+  notifications           Notification[]
+  pricingAuditLogs        PricingAuditLog[]
+  zonesCreated            LocationZone[]
+  zoneRates               ZoneRate[]
+  itemsCreated            Item[]
+  pricingRules            PricingRule[]
+  vendorReviewHistory     VendorReviewHistory[]
+  reviewedVendorDocuments VendorDocument[]
 
   @@map("admin_users")
 }
 
 /// Stores a single OTP challenge per request. Indexed on (phone, expires_at) and (email, expires_at).
 model OtpChallenge {
-  id         String     @id @default(uuid()) @db.Uuid
-  phone      String?    @db.VarChar(15)
-  email      String?    @db.VarChar(254)
-  otpHash    String     @map("otp_hash") @db.VarChar(255)
-  role       UserRole   @default(customer) @map("user_role")
-  purpose    OtpPurpose @default(login)
-  attempts   Int        @default(0)
-  expiresAt  DateTime   @map("expires_at")
-  verifiedAt DateTime?  @map("verified_at")
-  createdAt  DateTime   @default(now()) @map("created_at")
+  id          String       @id @default(uuid()) @db.Uuid
+  phone       String?      @db.VarChar(15)
+  email       String?      @db.VarChar(254)
+  otpHash     String       @map("otp_hash") @db.VarChar(255)
+  role        UserRole     @default(customer) @map("user_role")
+  serviceType ServiceType? @map("service_type")
+  purpose     OtpPurpose   @default(login)
+  attempts    Int          @default(0)
+  expiresAt   DateTime     @map("expires_at")
+  verifiedAt  DateTime?    @map("verified_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
 
   @@index([phone, expiresAt], map: "idx_otp_phone_expiry")
   @@index([email, expiresAt], map: "idx_otp_email_expiry")
@@ -110,17 +126,20 @@ model Session {
   createdAt        DateTime  @default(now()) @map("created_at")
 
   // One nullable FK per role — only the matching one is set
-  customerId  String?   @map("customer_id") @db.Uuid
-  vendorId    String?   @map("vendor_id") @db.Uuid
-  adminUserId String?   @map("admin_user_id") @db.Uuid
+  customerId   String? @map("customer_id") @db.Uuid
+  vendorId     String? @map("vendor_id") @db.Uuid
+  adminUserId  String? @map("admin_user_id") @db.Uuid
+  supervisorId String? @map("supervisor_id") @db.Uuid
 
-  customer  Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  vendor    Vendor?    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor     Vendor?     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  adminUser  AdminUser?  @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  supervisor Supervisor? @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
 
   @@index([customerId, userRole])
   @@index([vendorId, userRole])
   @@index([adminUserId, userRole])
+  @@index([supervisorId, userRole])
   @@map("sessions")
 }
 
@@ -129,19 +148,22 @@ model Session {
 // ─────────────────────────────────────────────────────────────────
 
 model Vehicle {
-  id                   String   @id @default(uuid()) @db.Uuid
-  vendorId             String   @map("vendor_id") @db.Uuid
-  type                 String   @db.VarChar(50) // e.g. "Tata Ace", "407", "Eicher 17ft"
-  capacityCft          Decimal  @map("capacity_cft") @db.Decimal(8, 2)
-  registrationNumber   String   @unique @map("registration_number") @db.VarChar(20)
-  permitExpiry         DateTime @map("permit_expiry") @db.Date
-  fitnessCertExpiry    DateTime @map("fitness_cert_expiry") @db.Date
-  active               Boolean  @default(true)
+  id                 String                    @id @default(uuid()) @db.Uuid
+  vendorId           String                    @map("vendor_id") @db.Uuid
+  type               String                    @db.VarChar(50) // e.g. "Tata Ace", "407", "Eicher 17ft"
+  capacityCft        Decimal                   @map("capacity_cft") @db.Decimal(8, 2)
+  registrationNumber String                    @unique @map("registration_number") @db.VarChar(20)
+  permitExpiry       DateTime                  @map("permit_expiry") @db.Date
+  fitnessCertExpiry  DateTime                  @map("fitness_cert_expiry") @db.Date
+  insuranceExpiry    DateTime?                 @map("insurance_expiry") @db.Date
+  active             Boolean                   @default(false)
+  verificationStatus VehicleVerificationStatus @default(pending) @map("verification_status")
 
   vendor   Vendor    @relation(fields: [vendorId], references: [id])
   bookings Booking[]
 
   @@index([vendorId, active])
+  @@index([vendorId, active, verificationStatus, insuranceExpiry], map: "idx_vehicle_dispatch_eligibility")
   @@map("vehicles")
 }
 
@@ -166,17 +188,17 @@ model LocationZone {
 /// Versioned zone rate — never updated in place. A new row with a new effective_from is inserted.
 /// Indexed on (from_zone_id, to_zone_id, effective_to) for fast "current rate" lookups.
 model ZoneRate {
-  id           String    @id @default(uuid()) @db.Uuid
-  fromZoneId   String?   @map("from_zone_id") @db.Uuid
-  toZoneId     String?   @map("to_zone_id") @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  fromZoneId    String?   @map("from_zone_id") @db.Uuid
+  toZoneId      String?   @map("to_zone_id") @db.Uuid
   /// Used when no zone-pair row exists — e.g. "10-25km"
-  distanceBand String?   @map("distance_band") @db.VarChar(30)
-  rate         Decimal   @db.Decimal(10, 2)
-  effectiveFrom DateTime @map("effective_from")
+  distanceBand  String?   @map("distance_band") @db.VarChar(30)
+  rate          Decimal   @db.Decimal(10, 2)
+  effectiveFrom DateTime  @map("effective_from")
   /// NULL = currently active row
-  effectiveTo  DateTime? @map("effective_to")
-  createdBy    String    @map("created_by") @db.Uuid
-  createdAt    DateTime  @default(now()) @map("created_at")
+  effectiveTo   DateTime? @map("effective_to")
+  createdBy     String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   fromZone LocationZone? @relation("FromZone", fields: [fromZoneId], references: [id])
   toZone   LocationZone? @relation("ToZone", fields: [toZoneId], references: [id])
@@ -230,16 +252,16 @@ model PricingRule {
 /// Append-only audit log for all pricing configuration changes.
 /// Application code MUST NEVER delete or update rows in this table.
 model PricingAuditLog {
-  id          String   @id @default(uuid()) @db.Uuid
-  entityType  String   @map("entity_type") @db.VarChar(50) // "zone_rate" | "item" | "pricing_rule"
-  entityId    String   @map("entity_id") @db.Uuid
-  fieldChanged String  @map("field_changed") @db.VarChar(100)
-  oldValue    String   @map("old_value") @db.Text
-  newValue    String   @map("new_value") @db.Text
-  changedBy   String   @map("changed_by") @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
+  entityType   String   @map("entity_type") @db.VarChar(50) // "zone_rate" | "item" | "pricing_rule"
+  entityId     String   @map("entity_id") @db.Uuid
+  fieldChanged String   @map("field_changed") @db.VarChar(100)
+  oldValue     String   @map("old_value") @db.Text
+  newValue     String   @map("new_value") @db.Text
+  changedBy    String   @map("changed_by") @db.Uuid
   /// Admin-entered reason for the change (optional but encouraged)
-  reason      String?  @db.Text
-  changedAt   DateTime @default(now()) @map("changed_at")
+  reason       String?  @db.Text
+  changedAt    DateTime @default(now()) @map("changed_at")
 
   admin AdminUser @relation(fields: [changedBy], references: [id])
 
@@ -253,47 +275,145 @@ model PricingAuditLog {
 // ─────────────────────────────────────────────────────────────────
 
 model Booking {
-  id                String        @id @default(uuid()) @db.Uuid
-  customerId        String        @map("customer_id") @db.Uuid
+  id                    String        @id @default(uuid()) @db.Uuid
+  customerId            String        @map("customer_id") @db.Uuid
   /// Set at ASSIGNED state
-  vendorId          String?       @map("vendor_id") @db.Uuid
-  vehicleId         String?       @map("vehicle_id") @db.Uuid
-  status            BookingStatus @default(REQUESTED)
-  pickupAddress     String        @map("pickup_address") @db.Text
-  dropAddress       String        @map("drop_address") @db.Text
-  alternateContactPhone String?   @map("alternate_contact_phone") @db.VarChar(15)
-  pickupZoneId      String        @map("pickup_zone_id") @db.Uuid
-  dropZoneId        String        @map("drop_zone_id") @db.Uuid
-  distanceKm        Decimal       @map("distance_km") @db.Decimal(8, 2)
-  configurationType String        @map("configuration_type") @db.VarChar(30)
-  floorNumber       Int           @default(0) @map("floor_number")
-  liftAvailable     Boolean       @default(false) @map("lift_available")
-  scheduledDate     DateTime      @map("scheduled_date") @db.Date
-  scheduledSlot     String        @map("scheduled_slot") @db.VarChar(30) // e.g. "morning", "afternoon"
-  baseQuoteAmount   Decimal       @map("base_quote_amount") @db.Decimal(10, 2)
-  finalAmount       Decimal       @map("final_amount") @db.Decimal(10, 2)
+  vendorId              String?       @map("vendor_id") @db.Uuid
+  vehicleId             String?       @map("vehicle_id") @db.Uuid
+  serviceType           ServiceType   @default(packers_movers) @map("service_type")
+  supervisorId          String?       @map("supervisor_id") @db.Uuid
+  status                BookingStatus @default(REQUESTED)
+  pickupAddress         String        @map("pickup_address") @db.Text
+  dropAddress           String        @map("drop_address") @db.Text
+  alternateContactPhone String?       @map("alternate_contact_phone") @db.VarChar(15)
+  pickupZoneId          String        @map("pickup_zone_id") @db.Uuid
+  dropZoneId            String        @map("drop_zone_id") @db.Uuid
+  distanceKm            Decimal       @map("distance_km") @db.Decimal(8, 2)
+  configurationType     String        @map("configuration_type") @db.VarChar(30)
+  floorNumber           Int           @default(0) @map("floor_number")
+  liftAvailable         Boolean       @default(false) @map("lift_available")
+  scheduledDate         DateTime      @map("scheduled_date") @db.Date
+  scheduledSlot         String        @map("scheduled_slot") @db.VarChar(30) // e.g. "morning", "afternoon"
+  baseQuoteAmount       Decimal       @map("base_quote_amount") @db.Decimal(10, 2)
+  finalAmount           Decimal       @map("final_amount") @db.Decimal(10, 2)
   /// JSONB snapshot of exact ZoneRate/Item/PricingRule IDs and values used at quote time.
   /// This is the mechanism that makes admin rate changes non-retroactive.
-  pricingSnapshot   Json          @map("pricing_snapshot")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  pricingSnapshot       Json          @map("pricing_snapshot")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
 
-  customer      Customer              @relation(fields: [customerId], references: [id])
-  vendor        Vendor?               @relation(fields: [vendorId], references: [id])
-  vehicle       Vehicle?              @relation(fields: [vehicleId], references: [id])
-  pickupZone    LocationZone          @relation("PickupZone", fields: [pickupZoneId], references: [id])
-  dropZone      LocationZone          @relation("DropZone", fields: [dropZoneId], references: [id])
-  items         BookingItem[]
-  revisions     Revision[]
-  payments      Payment[]
-  statusHistory BookingStatusHistory[]
-  notifications Notification[]
+  customer          Customer                   @relation(fields: [customerId], references: [id])
+  vendor            Vendor?                    @relation(fields: [vendorId], references: [id])
+  vehicle           Vehicle?                   @relation(fields: [vehicleId], references: [id])
+  supervisor        Supervisor?                @relation(fields: [supervisorId], references: [id])
+  pickupZone        LocationZone               @relation("PickupZone", fields: [pickupZoneId], references: [id])
+  dropZone          LocationZone               @relation("DropZone", fields: [dropZoneId], references: [id])
+  items             BookingItem[]
+  revisions         Revision[]
+  payments          Payment[]
+  statusHistory     BookingStatusHistory[]
+  supervisorHistory BookingSupervisorHistory[]
+  notifications     Notification[]
 
   @@index([customerId, status])
   @@index([vendorId, scheduledDate])
   @@index([status, scheduledDate])
   @@index([vehicleId, scheduledDate])
+  @@index([serviceType, status, scheduledDate])
+  @@index([supervisorId, scheduledDate])
   @@map("bookings")
+}
+
+model Supervisor {
+  id              String           @id @default(uuid()) @db.Uuid
+  vendorId        String           @map("vendor_id") @db.Uuid
+  name            String           @db.VarChar(150)
+  phone           String           @unique @db.VarChar(15)
+  status          SupervisorStatus @default(invited)
+  phoneVerifiedAt DateTime?        @map("phone_verified_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  vendor            Vendor                     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  sessions          Session[]
+  assignedBookings  Booking[]
+  assignmentHistory BookingSupervisorHistory[]
+
+  @@index([vendorId, status])
+  @@map("supervisors")
+}
+
+model BookingSupervisorHistory {
+  id                 String   @id @default(uuid()) @db.Uuid
+  bookingId          String   @map("booking_id") @db.Uuid
+  supervisorId       String?  @map("supervisor_id") @db.Uuid
+  assignedByVendorId String   @map("assigned_by_vendor_id") @db.Uuid
+  assignedAt         DateTime @default(now()) @map("assigned_at")
+
+  booking          Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  supervisor       Supervisor? @relation(fields: [supervisorId], references: [id], onDelete: SetNull)
+  assignedByVendor Vendor      @relation(fields: [assignedByVendorId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, assignedAt])
+  @@map("booking_supervisor_history")
+}
+
+model VendorDocument {
+  id                String               @id @default(uuid()) @db.Uuid
+  vendorId          String               @map("vendor_id") @db.Uuid
+  documentType      String               @map("document_type") @db.VarChar(60)
+  fileName          String               @map("file_name") @db.VarChar(255)
+  mimeType          String               @map("mime_type") @db.VarChar(100)
+  objectKey         String               @unique @map("object_key") @db.VarChar(500)
+  status            DocumentReviewStatus @default(pending)
+  reviewNotes       String?              @map("review_notes") @db.Text
+  uploadedAt        DateTime             @default(now()) @map("uploaded_at")
+  reviewedAt        DateTime?            @map("reviewed_at")
+  reviewedByAdminId String?              @map("reviewed_by_admin_id") @db.Uuid
+
+  vendor     Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  reviewedBy AdminUser? @relation(fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([vendorId, status])
+  @@map("vendor_documents")
+}
+
+/// Append-only copies of signed P&M contract versions and their electronic-signature audit data.
+model VendorContractSignature {
+  id             String   @id @default(uuid()) @db.Uuid
+  vendorId       String   @map("vendor_id") @db.Uuid
+  contractVersion String  @map("contract_version") @db.VarChar(40)
+  contractHash   String   @map("contract_hash") @db.VarChar(64)
+  contractText   String   @map("contract_text") @db.Text
+  signerName     String   @map("signer_name") @db.VarChar(150)
+  signerRole     String   @map("signer_role") @db.VarChar(100)
+  signatureText  String   @map("signature_text") @db.VarChar(150)
+  otpChallengeId String   @map("otp_challenge_id") @db.Uuid
+  ipAddress      String?  @map("ip_address") @db.VarChar(64)
+  userAgent      String?  @map("user_agent") @db.VarChar(500)
+  signedAt       DateTime @default(now()) @map("signed_at")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, contractVersion])
+  @@index([vendorId, signedAt])
+  @@map("vendor_contract_signatures")
+}
+
+model VendorReviewHistory {
+  id         String           @id @default(uuid()) @db.Uuid
+  vendorId   String           @map("vendor_id") @db.Uuid
+  adminId    String           @map("admin_id") @db.Uuid
+  fromStatus OnboardingStatus @map("from_status")
+  toStatus   OnboardingStatus @map("to_status")
+  notes      String?          @db.Text
+  changedAt  DateTime         @default(now()) @map("changed_at")
+
+  vendor Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  admin  AdminUser @relation(fields: [adminId], references: [id])
+
+  @@index([vendorId, changedAt])
+  @@map("vendor_review_history")
 }
 
 model BookingItem {
@@ -319,13 +439,14 @@ model BookingItem {
 /// Full booking state machine transition log — every state change is recorded.
 /// Enables full lifecycle reconstruction for support and disputes.
 model BookingStatusHistory {
-  id        String        @id @default(uuid()) @db.Uuid
-  bookingId String        @map("booking_id") @db.Uuid
+  id        String         @id @default(uuid()) @db.Uuid
+  bookingId String         @map("booking_id") @db.Uuid
   fromState BookingStatus? @map("from_state") // NULL for initial creation
-  toState   BookingStatus @map("to_state")
-  actorId   String        @map("actor_id") @db.Uuid
-  actorRole UserRole      @map("actor_role")
-  timestamp DateTime      @default(now())
+  toState   BookingStatus  @map("to_state")
+  actorId   String         @map("actor_id") @db.Uuid
+  actorRole UserRole       @map("actor_role")
+  notes     String?        @db.Text
+  timestamp DateTime       @default(now())
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
@@ -376,22 +497,22 @@ model Payment {
 /// Notification delivery record — one row per dispatch attempt.
 /// Uses separate nullable FK columns per role to avoid polymorphic FK conflicts.
 model Notification {
-  id            String               @id @default(uuid()) @db.Uuid
-  bookingId     String?              @map("booking_id") @db.Uuid
-  recipientRole UserRole             @map("recipient_role")
+  id            String              @id @default(uuid()) @db.Uuid
+  bookingId     String?             @map("booking_id") @db.Uuid
+  recipientRole UserRole            @map("recipient_role")
   channel       NotificationChannel
-  template      String               @db.VarChar(100)
+  template      String              @db.VarChar(100)
   /// Rendered payload for the channel (JSON)
-  payload       Json                 @default("{}")
+  payload       Json                @default("{}")
   status        NotificationStatus  @default(queued)
-  attempts      Int                  @default(0)
-  sentAt        DateTime?            @map("sent_at")
-  createdAt     DateTime             @default(now()) @map("created_at")
+  attempts      Int                 @default(0)
+  sentAt        DateTime?           @map("sent_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
 
   // One nullable FK per role
-  customerId  String?   @map("customer_id") @db.Uuid
-  vendorId    String?   @map("vendor_id") @db.Uuid
-  adminUserId String?   @map("admin_user_id") @db.Uuid
+  customerId  String? @map("customer_id") @db.Uuid
+  vendorId    String? @map("vendor_id") @db.Uuid
+  adminUserId String? @map("admin_user_id") @db.Uuid
 
   booking   Booking?   @relation(fields: [bookingId], references: [id])
   customer  Customer?  @relation(fields: [customerId], references: [id])
@@ -410,12 +531,47 @@ model Notification {
 enum UserRole {
   customer
   vendor
+  supervisor
   admin
 }
 
 enum VendorStatus {
+  pending
   active
   suspended
+}
+
+enum OnboardingStatus {
+  draft
+  submitted
+  under_review
+  needs_changes
+  approved
+  rejected
+}
+
+enum ServiceType {
+  packers_movers
+  transport
+}
+
+enum VehicleVerificationStatus {
+  pending
+  approved
+  rejected
+  expired
+}
+
+enum SupervisorStatus {
+  invited
+  active
+  suspended
+}
+
+enum DocumentReviewStatus {
+  pending
+  approved
+  rejected
 }
 
 enum ZoneType {
@@ -478,6 +634,7 @@ enum NotificationStatus {
 enum OtpPurpose {
   login
   signup
+  contract_signature
 }
 
 enum PricingRuleType {

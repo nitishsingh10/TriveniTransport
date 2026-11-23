@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Partner with Us — Join as a Verified Moving Captain | Triveni Transports',
-  description: 'Become a verified driver and moving captain partner with Triveni Transports. Guaranteed daily moves, instant weekly payouts, and zero commission cuts on driver labor.',
+  title: 'Apply as a Packers & Movers Partner | Triveni Transports',
+  description: 'Apply to join the Triveni Transports packers and movers network. Submit your business details and documents for review before receiving P&M orders.',
   alternates: {
     canonical: '/vendor/signup',
   },
   openGraph: {
-    title: 'Partner with Triveni Transports as a Moving Captain',
-    description: 'Guaranteed daily commercial & household moves across Mumbai and Thane. Steady income and transparent weekly payouts.',
+    title: 'Apply as a Packers & Movers Partner',
+    description: 'Submit your business details and documents for review before receiving P&M orders.',
     url: 'https://trivenitransports.com/vendor/signup',
   },
 };

@@ -76,23 +76,30 @@ function BookingCard({
   const isCancellable = status === 'CONFIRMED' || status === 'ASSIGNED';
   const isInTransit = ['IN_PROGRESS', 'EN_ROUTE', 'ARRIVED'].includes(status);
   const isLive = ['IN_PROGRESS', 'EN_ROUTE', 'ARRIVED', 'ASSIGNED'].includes(status);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const initialTimer = setTimeout(() => setCurrentTime(Date.now()), 0);
+    const interval = setInterval(() => setCurrentTime(Date.now()), 60_000);
+    return () => { clearTimeout(initialTimer); clearInterval(interval); };
+  }, []);
 
   // Calculate hours remaining for draft (24 hours visibility)
-  const draftHoursRemaining = React.useMemo(() => {
+  const draftHoursRemaining = (() => {
     if (!isDraft || !createdAt) return null;
     const createdMs = new Date(createdAt).getTime();
     if (isNaN(createdMs)) return null;
     const expiryMs = createdMs + 24 * 60 * 60 * 1000;
-    const remainingHours = Math.max(0, Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60)));
+    const remainingHours = Math.max(0, Math.ceil((expiryMs - (currentTime ?? createdMs)) / (1000 * 60 * 60)));
     return remainingHours;
-  }, [isDraft, createdAt]);
+  })();
 
   const STATUS_CONFIG: Record<
     string,
     { label: string; color: string; bg: string; icon: React.ComponentType<any> }
   > = {
-    CONFIRMED: { label: 'Driver Assigning', color: Colors.warning, bg: Colors.warningLight, icon: Clock },
-    ASSIGNED: { label: 'Driver Assigned', color: Colors.info, bg: Colors.infoLight, icon: Truck },
+    CONFIRMED: { label: 'Partner Assigning', color: Colors.warning, bg: Colors.warningLight, icon: Clock },
+    ASSIGNED: { label: 'Partner Assigned', color: Colors.info, bg: Colors.infoLight, icon: Truck },
     EN_ROUTE: { label: 'En Route', color: Colors.warning, bg: Colors.warningLight, icon: Navigation },
     IN_PROGRESS: { label: 'In Transit', color: Colors.warning, bg: Colors.warningLight, icon: Truck },
     COMPLETED: { label: 'Delivered', color: Colors.success, bg: Colors.successLight, icon: CheckCircle2 },
@@ -275,36 +282,32 @@ export default function BookingsScreen() {
     bookingStatus: 'CONFIRMED',
   });
 
+  const fetchBookings = async () => {
+    const list = await bookingApi.list();
+    if (!list || !Array.isArray(list)) return [];
+    return list.map((item) => ({
+      id: item.id,
+      pickup: item.pickupAddress,
+      drop: item.dropAddress,
+      date: new Date(item.scheduledDate).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+      amount: item.finalAmount || item.baseQuoteAmount || 0,
+      vehicle: item.vehicle?.type || (item.status === 'CONFIRMED' || !item.vendor ? 'Matching verified partner' : 'Commercial Goods Carrier'),
+      itemsCount: item.items?.length || 0,
+      status: item.status as BookingStatus,
+      createdAt: item.createdAt,
+      configurationType: item.configurationType,
+      pricingSnapshot: item.pricingSnapshot,
+    }));
+  };
+
   const loadBookings = async () => {
+    setIsLoading(true);
     try {
-      const list = await bookingApi.list();
-      if (list && Array.isArray(list)) {
-        setRealBookings(
-          list.map((item) => ({
-            id: item.id,
-            pickup: item.pickupAddress,
-            drop: item.dropAddress,
-            date: new Date(item.scheduledDate).toLocaleDateString('en-IN', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            }),
-            amount: item.finalAmount || item.baseQuoteAmount || 0,
-            vehicle:
-              item.vehicle?.type ||
-              (item.status === 'CONFIRMED' || !item.vendor
-                ? 'Assigning driver'
-                : 'Commercial Goods Carrier'),
-            itemsCount: item.items?.length || 0,
-            status: item.status as BookingStatus,
-            createdAt: item.createdAt,
-            configurationType: item.configurationType,
-            pricingSnapshot: item.pricingSnapshot,
-          }))
-        );
-      } else {
-        setRealBookings([]);
-      }
+      setRealBookings(await fetchBookings());
     } catch {
       setRealBookings([]);
     } finally {
@@ -313,9 +316,16 @@ export default function BookingsScreen() {
   };
 
   useEffect(() => {
-    loadBookings();
-    const interval = setInterval(loadBookings, 8000);
-    return () => clearInterval(interval);
+    let active = true;
+    const refresh = () => {
+      fetchBookings()
+        .then((bookings) => { if (active) setRealBookings(bookings); })
+        .catch(() => { if (active) setRealBookings([]); })
+        .finally(() => { if (active) setIsLoading(false); });
+    };
+    refresh();
+    const interval = setInterval(refresh, 8000);
+    return () => { active = false; clearInterval(interval); };
   }, []);
 
   const handleDeleteDraft = (bookingId: string) => {

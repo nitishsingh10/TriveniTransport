@@ -6,9 +6,9 @@ import Footer from '../components/Footer';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Why Choose Triveni Transports — Trust, Transparency & Safety Standards',
+  title: 'Why Choose Triveni Transports — Partner Review and Service Standards',
   description:
-    'Discover why 10,000+ families trust Triveni Transports. 100% itemised pricing, ₹5L transit insurance, background-verified crews, and zero hidden charges on moving day.',
+    'Learn about Triveni Transports pricing, partner document review, moving standards, and customer support.',
   alternates: {
     canonical: '/trust',
   },
@@ -17,33 +17,33 @@ export const metadata: Metadata = {
 const PILLARS = [
   {
     icon: ShieldCheck,
-    title: 'Zero Hidden Charges Guarantee',
-    desc: 'What you see in your itemised quote is what you pay. No last-minute extortion for stairs, packing tapes, or toll taxes.',
+    title: 'Clear Quote Scope',
+    desc: 'Review the quoted services and known charges before booking. Changes to move scope or additional services should be approved and priced before work begins.',
   },
   {
     icon: Users,
-    title: 'Background-Verified Captains',
-    desc: 'Every driver partner and packing crew member undergoes rigorous police background checks and training in handling delicate goods.',
+    title: 'Partner Document Review',
+    desc: 'Triveni reviews partner business, driver, and vehicle documents before enabling service assignments. Ask operations which checks apply to the partner for your move.',
   },
   {
     icon: Trophy,
-    title: 'Multi-Layer Packing Standard',
-    desc: 'Heavy-duty bubble wrap, corner guards, corrugated sheets, and stretch film ensure 100% scratch-free transport.',
+    title: 'Packing Scope by Service',
+    desc: 'Packing materials and handling depend on the service selected. Confirm the quoted scope and any special-item exclusions before booking.',
   },
   {
     icon: Clock,
-    title: 'Guaranteed On-Time Arrival',
-    desc: 'We value your schedule. Dedicated vehicles are dispatched to arrive at your door precisely in your chosen time slot.',
+    title: 'Scheduled Service Window',
+    desc: 'Your booking includes a scheduled service window. Contact operations if a delay or schedule change needs to be recorded.',
   },
   {
     icon: Truck,
-    title: 'Dedicated Fleet Vehicles',
-    desc: 'Never share space with random commercial freight. Your household items travel in a dedicated, sealed vehicle.',
+    title: 'Service-Matched Dispatch',
+    desc: 'P&M bookings are assigned to an approved moving business. Pickup and truck requests are offered to approved drivers with a compliant, capacity-fit vehicle.',
   },
   {
     icon: HeartHandshake,
-    title: 'Direct Claims Redressal',
-    desc: 'In the rare event of transit damage, our operations team processes claims swiftly under our ₹5,00,000 transit cover.',
+    title: 'Damage and Claims Support',
+    desc: 'Contact customer support promptly with your booking details and any relevant photos or documents if an item is lost or damaged. Triveni does not currently provide or arrange transit cover; reporting an issue does not promise reimbursement.',
   },
 ];
 

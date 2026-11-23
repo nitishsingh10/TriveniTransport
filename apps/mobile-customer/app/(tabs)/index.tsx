@@ -327,8 +327,8 @@ export default function HomeScreen() {
                 <ShieldCheck size={18} color={Colors.marigoldDark} strokeWidth={2.2} />
               </View>
               <View style={styles.trustCopy}>
-                <Text style={styles.trustTitle}>100% Insured</Text>
-                <Text style={styles.trustSub}>Transit safety covered</Text>
+                <Text style={styles.trustTitle}>Verified Crew</Text>
+                <Text style={styles.trustSub}>Partner details checked</Text>
               </View>
             </View>
 

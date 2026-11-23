@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: '%s | Triveni Transports',
   },
   description:
-    'Trusted packers & movers in Mumbai & Thane. Transparent itemised pricing, ₹5L transit insurance, verified captains, zero hidden charges. Get an instant quote online.',
+    'Trusted packers & movers in Mumbai & Thane. Transparent itemised pricing, verified captains, zero hidden charges. Get an instant quote online.',
   keywords: [
     'packers and movers in mumbai',
     'packers and movers in thane',
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     siteName: 'Triveni Transports',
     title: 'Triveni Transports | Packers & Movers Mumbai & Thane',
     description:
-      'Trusted packers & movers in Mumbai & Thane — transparent itemised pricing, ₹5L transit insurance, verified captains, zero hidden charges.',
+      'Trusted packers & movers in Mumbai & Thane — transparent itemised pricing, verified captains, zero hidden charges.',
     images: [
       {
         url: '/hero-movers.jpg',
@@ -188,7 +188,7 @@ const organizationSchema = {
           '@type': 'Service',
           name: 'Home Shifting & Household Relocation',
           description:
-            'End-to-end 1BHK, 2BHK, 3BHK house shifting with 3-layer bubble packaging, dedicated moving captain, and ₹5L transit insurance.',
+            'End-to-end 1BHK, 2BHK, 3BHK house shifting with 3-layer bubble packaging, dedicated moving captain, and verified moving partners.',
         },
       },
       {

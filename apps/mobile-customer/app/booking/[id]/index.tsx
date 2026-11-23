@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -57,8 +57,8 @@ interface Milestone {
 
 const MILESTONE_DEFINITIONS: Milestone[] = [
   { key: 'REQUESTED', label: 'Order Requested', desc: 'Slot held & awaiting verification', icon: Clock },
-  { key: 'CONFIRMED', label: 'Order Confirmed', desc: 'Vehicle & team reserved', icon: CheckCircle2 },
-  { key: 'ASSIGNED', label: 'Driver / Crew Assigned', desc: 'Captain allotted to your duty', icon: UserCheck },
+  { key: 'CONFIRMED', label: 'Booking Confirmed', desc: 'We are assigning a verified service partner. Assignment details will appear here once assigned.', icon: CheckCircle2 },
+  { key: 'ASSIGNED', label: 'Partner Assigned', desc: 'Your verified service partner is assigned to this move.', icon: UserCheck },
   { key: 'EN_ROUTE', label: 'Vehicle Dispatched', desc: 'Departed dispatch hub for pickup', icon: Car },
   { key: 'ARRIVED', label: 'Arrived at Pickup', desc: 'Loading & inspection commenced', icon: MapPin },
   { key: 'IN_PROGRESS', label: 'Loaded & In Transit', desc: 'Moving safely towards destination', icon: Truck },
@@ -91,10 +91,9 @@ export default function BookingTrackScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
-  const fetchDetails = async (isPolling = false) => {
+  const fetchDetails = useCallback(async (isPolling = false) => {
     if (!id) return;
     try {
-      if (!isPolling) setLoading(true);
       const data = await bookingApi.get(id);
       setBooking(data);
 
@@ -109,23 +108,24 @@ export default function BookingTrackScreen() {
     } finally {
       if (!isPolling) setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    let isMounted = true;
-    let pollInterval: any;
-
-    fetchDetails(false);
-
-    // Auto-poll every 5 seconds so customer sees live when a driver accepts the move
-    pollInterval = setInterval(() => {
-      if (isMounted) fetchDetails(true);
-    }, 5000);
-
-    return () => {
-      isMounted = false;
-      if (pollInterval) clearInterval(pollInterval);
+    let active = true;
+    const refresh = () => {
+      if (!id) return;
+      bookingApi.get(id)
+        .then((data) => {
+          if (!active) return;
+          setBooking(data);
+          return bookingApi.getTelemetry(id).then((telem) => { if (active) setTelemetry(telem); }).catch(() => {});
+        })
+        .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Unable to load booking details'); })
+        .finally(() => { if (active) setLoading(false); });
     };
+    refresh();
+    const pollInterval = setInterval(refresh, 5000);
+    return () => { active = false; clearInterval(pollInterval); };
   }, [id]);
 
   const isTransport = useMemo(() => {
@@ -153,23 +153,25 @@ export default function BookingTrackScreen() {
     ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(booking.status)
   );
 
+  const pickupAddress = booking?.pickupAddress;
+  const dropAddress = booking?.dropAddress;
   const pickupCoords = useMemo(() => {
-    if (!booking?.pickupAddress) return { lat: 18.5679, lng: 73.9143 };
-    const lower = booking.pickupAddress.toLowerCase();
+    if (!pickupAddress) return { lat: 18.5679, lng: 73.9143 };
+    const lower = pickupAddress.toLowerCase();
     const found = CURATED_LOCATIONS.find(
       (c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase())
     );
     return found ? { lat: found.lat, lng: found.lng } : { lat: 18.5679, lng: 73.9143 };
-  }, [booking?.pickupAddress]);
+  }, [pickupAddress]);
 
   const dropCoords = useMemo(() => {
-    if (!booking?.dropAddress) return { lat: 18.559, lng: 73.7868 };
-    const lower = booking.dropAddress.toLowerCase();
+    if (!dropAddress) return { lat: 18.559, lng: 73.7868 };
+    const lower = dropAddress.toLowerCase();
     const found = CURATED_LOCATIONS.find(
       (c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase())
     );
     return found ? { lat: found.lat, lng: found.lng } : { lat: 18.559, lng: 73.7868 };
-  }, [booking?.dropAddress]);
+  }, [dropAddress]);
 
   const truckCoords = useMemo(() => {
     if (telemetry?.latitude && telemetry?.longitude) {
@@ -339,7 +341,6 @@ export default function BookingTrackScreen() {
   const vehicleName = booking.vehicle?.type || '';
   const vehicleReg = booking.vehicle?.registrationNumber || '';
   const isCancellable = booking.status === 'CONFIRMED' || booking.status === 'ASSIGNED';
-  const isInTransit = ['IN_PROGRESS', 'EN_ROUTE', 'ARRIVED'].includes(booking.status);
 
   return (
     <>
@@ -696,7 +697,7 @@ export default function BookingTrackScreen() {
             onPress={() => router.push(`/booking/${booking.id}/invoice`)}
           >
             <FileText size={16} color={Colors.white} />
-            <Text style={styles.invoiceBtnText}>View Move Invoice</Text>
+            <Text style={styles.invoiceBtnText}>View payment summary</Text>
           </PressableScale>
 
           {isCancellable ? (

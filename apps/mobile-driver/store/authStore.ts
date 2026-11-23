@@ -20,7 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isAuthenticated: false,
   isHydrated: false,
-  isOnline: true,
+  isOnline: false,
 
   setAuth: async (user, accessToken, refreshToken) => {
     try {

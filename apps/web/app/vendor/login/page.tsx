@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Phone, Mail, ShieldCheck, ArrowLeft, AlertCircle } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/useAuth';
 import { getRoleSafeDestination } from '../../lib/authNavigation';
@@ -57,7 +57,7 @@ export default function VendorLoginPage() {
     setError('');
     setLoading(true);
     try {
-      await auth.requestOtp(resolvedIdentifier, 'vendor', false);
+      await auth.requestOtp(resolvedIdentifier, 'vendor', false, 'packers_movers');
       setOtpSent(true);
       setOtp('');
       startResendCooldown();
@@ -77,7 +77,7 @@ export default function VendorLoginPage() {
     setError('');
     setLoading(true);
     try {
-      await auth.requestOtp(resolvedIdentifier, 'vendor', false);
+      await auth.requestOtp(resolvedIdentifier, 'vendor', false, 'packers_movers');
       setOtp('');
       startResendCooldown();
     } catch (err) {
@@ -93,7 +93,7 @@ export default function VendorLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor');
+      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor', undefined, false, 'packers_movers');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('vendor');
       if (res.user) token.setUser(res.user);
@@ -361,16 +361,15 @@ export default function VendorLoginPage() {
           {/* Right Side: Showcase */}
           <div className={styles.rightPanel}>
             <div className={styles.showcaseContent}>
-              <h2 className={styles.showcaseTitle}>Grow your transport business.</h2>
+              <h2 className={styles.showcaseTitle}>Manage your P&amp;M operations.</h2>
               <div className={styles.quoteWrapper}>
-                <Quote size={40} className={styles.quoteIcon} />
-                <p className={styles.quoteText}>
-                  &quot;Partnering with Triveni as a vendor has boosted my bookings by 40%. The platform is seamless and the payments are always on time.&quot;
-                </p>
+                <ShieldCheck size={36} className={styles.quoteIcon} />
+                <p className={styles.quoteText}>Approval before orders</p>
                 <div className={styles.author}>
-                  <p className={styles.authorName}>Vikram Singh</p>
-                  <p className={styles.authorRole}>Fleet Owner, Thane • Verified Partner</p>
+                  <p className={styles.authorName}>P&amp;M partner process</p>
+                  <p className={styles.authorRole}>OTP · business documents · operations review</p>
                 </div>
+                <p className={styles.subtitle}>Your business receives P&amp;M orders only after the application is approved. You can then assign orders to OTP-verified supervisors.</p>
               </div>
             </div>
           </div>

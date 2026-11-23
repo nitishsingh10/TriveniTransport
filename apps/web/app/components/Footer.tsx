@@ -57,9 +57,9 @@ export default function Footer() {
               <li><Link href="/services">Relocation Services</Link></li>
               <li><Link href="/trust">Why Choose Us</Link></li>
               <li><Link href="/#faqs">Relocation FAQs</Link></li>
-              <li><Link href="/vendor/signup">Work with Us (Captains)</Link></li>
+              <li><Link href="/partners">Partner with Us</Link></li>
               <li><Link href="/login">Customer Login</Link></li>
-              <li><Link href="/vendor/login">Partner Portal</Link></li>
+              <li><Link href="/vendor/login">P&amp;M Partner Portal</Link></li>
             </ul>
           </div>
           <div className={styles.col}>
@@ -78,7 +78,7 @@ export default function Footer() {
             <ul>
               <li><Link href="/terms">Terms &amp; Conditions</Link></li>
               <li><Link href="/privacy">Privacy Policy</Link></li>
-              <li><Link href="/trust">₹5L Transit Insurance</Link></li>
+              <li><Link href="/trust">Our service standards</Link></li>
             </ul>
           </div>
         </div>

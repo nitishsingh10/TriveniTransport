@@ -6,7 +6,9 @@ import { z } from 'zod';
 export class AdminController {
   static async getMetrics(req: Request, res: Response, next: NextFunction) {
     try {
-      const metrics = await AdminService.getMetrics();
+      const serviceType = req.query.serviceType as 'packers_movers' | 'transport' | undefined;
+      if (serviceType && !['packers_movers', 'transport'].includes(serviceType)) return res.status(400).json({ error: { message: 'Invalid service type.' } });
+      const metrics = await AdminService.getMetrics(serviceType);
       res.status(200).json(metrics);
     } catch (e) {
       next(e);
@@ -17,10 +19,12 @@ export class AdminController {
     try {
       const status = req.query.status as string | undefined;
       const search = req.query.search as string | undefined;
+      const serviceType = req.query.serviceType as 'packers_movers' | 'transport' | undefined;
+      if (serviceType && !['packers_movers', 'transport'].includes(serviceType)) return res.status(400).json({ error: { message: 'Invalid service type.' } });
       const skip = req.query.skip ? parseInt(req.query.skip as string) : 0;
       const take = req.query.take ? parseInt(req.query.take as string) : 50;
 
-      const result = await AdminService.listBookings({ status, search, skip, take });
+      const result = await AdminService.listBookings({ status, search, skip, take, serviceType });
       res.status(200).json(result);
     } catch (e) {
       next(e);
@@ -40,15 +44,16 @@ export class AdminController {
     try {
       const adminId = req.user!.id;
       const bookingId = req.params.id as string;
-      const { status, notes } = req.body;
-
-      if (!status) {
-        return res.status(400).json({ error: { message: 'status is required' } });
-      }
+      const schema = z.object({
+        status: z.enum(['REQUESTED', 'QUOTED', 'CONFIRMED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'REVISION_PENDING', 'COMPLETED', 'CANCELLED', 'DISPUTED']),
+        notes: z.string().trim().max(2000).optional(),
+      });
+      const { status, notes } = schema.parse(req.body);
 
       const updated = await AdminService.updateBookingStatus(adminId, bookingId, status, notes);
       res.status(200).json(updated);
     } catch (e) {
+      if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Choose a valid booking status.', details: e.errors });
       next(e);
     }
   }
@@ -72,7 +77,9 @@ export class AdminController {
 
   static async listVendors(req: Request, res: Response, next: NextFunction) {
     try {
-      const vendors = await AdminService.listVendors();
+      const serviceType = req.query.serviceType as 'packers_movers' | 'transport' | undefined;
+      if (serviceType && !['packers_movers', 'transport'].includes(serviceType)) return res.status(400).json({ error: { message: 'Invalid service type.' } });
+      const vendors = await AdminService.listVendors(serviceType);
       res.status(200).json(vendors);
     } catch (e) {
       next(e);
@@ -81,9 +88,44 @@ export class AdminController {
 
   static async listVehicles(req: Request, res: Response, next: NextFunction) {
     try {
-      const vehicles = await AdminService.listVehicles();
+      const serviceType = req.query.serviceType as 'packers_movers' | 'transport' | undefined;
+      if (serviceType && !['packers_movers', 'transport'].includes(serviceType)) return res.status(400).json({ error: { message: 'Invalid service type.' } });
+      const vehicles = await AdminService.listVehicles(serviceType);
       res.status(200).json(vehicles);
     } catch (e) {
+      next(e);
+    }
+  }
+
+  static async reviewVendor(req: Request, res: Response, next: NextFunction) {
+    try {
+      const schema = z.object({
+        status: z.enum(['under_review', 'needs_changes', 'approved', 'rejected']),
+        notes: z.string().trim().max(2000).optional(),
+      });
+      const { status, notes } = schema.parse(req.body);
+      res.status(200).json(await AdminService.reviewVendor(req.user!.id, req.params.id as string, status, notes));
+    } catch (e) {
+      if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid partner review action.', details: e.errors });
+      next(e);
+    }
+  }
+
+  static async listVendorDocuments(req: Request, res: Response, next: NextFunction) {
+    try { res.status(200).json(await AdminService.listVendorDocuments(req.params.id as string)); } catch (e) { next(e); }
+  }
+
+  static async getVendorContract(req: Request, res: Response, next: NextFunction) {
+    try { res.status(200).json(await AdminService.getVendorContract(req.params.id as string)); } catch (e) { next(e); }
+  }
+
+  static async reviewVendorDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const schema = z.object({ status: z.enum(['approved', 'rejected']), notes: z.string().trim().max(2000).optional() });
+      const { status, notes } = schema.parse(req.body);
+      res.status(200).json(await AdminService.reviewVendorDocument(req.user!.id, req.params.id as string, status, notes));
+    } catch (e) {
+      if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: 'Invalid document review action.', details: e.errors });
       next(e);
     }
   }

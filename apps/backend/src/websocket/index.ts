@@ -41,14 +41,15 @@ export function setupWebsockets(io: Server) {
         try {
           const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
-            select: { customerId: true, vendorId: true },
+            select: { customerId: true, vendorId: true, supervisorId: true },
           });
 
           if (
             !booking ||
             (user.role === 'customer' && booking.customerId !== user.id) ||
             (user.role === 'vendor' && booking.vendorId !== user.id) ||
-            (user.role !== 'customer' && user.role !== 'vendor')
+            (user.role === 'supervisor' && booking.supervisorId !== user.id) ||
+            (user.role !== 'customer' && user.role !== 'vendor' && user.role !== 'supervisor')
           ) {
             socket.emit('error', { code: 'FORBIDDEN', message: 'Not authorized to subscribe to this booking' });
             return;

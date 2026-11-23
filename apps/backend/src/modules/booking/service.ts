@@ -8,15 +8,35 @@ import { acquireSlotLock, releaseSlotLock } from '../../config/redis';
 import { BookingStatus } from '@triveni/shared-types';
 import { EmailService } from '../../services/resend';
 
+function utcDayStart(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
 export class BookingService {
   private static async notifyAvailableDrivers(booking: {
     id: string;
     scheduledDate: Date;
     scheduledSlot: string;
-  }) {
+    pricingSnapshot: unknown;
+  }, serviceType: 'packers_movers' | 'transport') {
+    if (serviceType !== 'transport') return;
     try {
+      const cftRequired = Number((booking.pricingSnapshot as any)?.totalCft || 0);
       const vendors = await prisma.vendor.findMany({
-        where: { status: 'active' },
+        where: {
+          status: 'active',
+          onboardingStatus: 'approved',
+          serviceType: 'transport',
+          driverLicenseExpiry: { gte: utcDayStart(booking.scheduledDate) },
+          vehicles: { some: {
+            active: true,
+            verificationStatus: 'approved',
+            permitExpiry: { gte: utcDayStart(booking.scheduledDate) },
+            fitnessCertExpiry: { gte: utcDayStart(booking.scheduledDate) },
+            insuranceExpiry: { gte: utcDayStart(booking.scheduledDate) },
+            ...(cftRequired > 0 ? { capacityCft: { gte: cftRequired } } : {}),
+          } },
+        },
         select: { id: true },
       });
       if (vendors.length === 0) return;
@@ -75,6 +95,7 @@ export class BookingService {
       const created = await tx.booking.create({
         data: {
           customerId,
+          serviceType: 'packers_movers',
           status: initialStatus,
           pickupAddress: input.pickupAddress,
           dropAddress: input.dropAddress,
@@ -150,6 +171,7 @@ export class BookingService {
       const created = await tx.booking.create({
         data: {
           customerId,
+          serviceType: 'transport',
           status: initialStatus,
           pickupAddress: input.pickupAddress,
           dropAddress: input.dropAddress,
@@ -345,7 +367,7 @@ export class BookingService {
       console.warn('Could not enqueue booking_confirmed notification:', qErr);
     }
 
-    await this.notifyAvailableDrivers(booking);
+    await this.notifyAvailableDrivers(booking, booking.serviceType);
 
     return updated;
   }

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Download Triveni Transports Mobile App — Live Tracking & Instant Booking',
   description:
-    'Download the Triveni Transports Android and iOS app. Book home shifting, track moving truck live on map, manage item inventory, and download GST invoices seamlessly.',
+    'Download the Triveni Transports Android and iOS app. Book home shifting, track moving truck live on map, and manage your move details.',
   alternates: {
     canonical: '/download',
   },

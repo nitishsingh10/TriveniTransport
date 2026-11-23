@@ -139,7 +139,7 @@ export default function DriverLoginScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.authModeTab, authMode === 'signup' && styles.authModeTabActive]}
-                onPress={() => { setAuthMode('signup'); setErrorMsg(''); }}
+                onPress={() => { setAuthMode('signup'); setMethod('phone'); setIdentifier(''); setErrorMsg(''); }}
                 activeOpacity={0.8}
               >
                 <UserPlus size={14} color={authMode === 'signup' ? Colors.text : Colors.textMuted} />
@@ -150,8 +150,8 @@ export default function DriverLoginScreen() {
             <Text style={styles.cardTitle}>{authMode === 'login' ? 'Driver Sign In' : 'Create Partner Account'}</Text>
             <Text style={styles.cardSubtitle}>
               {authMode === 'login'
-                ? 'Enter your registered mobile number or email to access assignments and payouts.'
-                : 'Verify your mobile number or email, then add your vehicle and driver details.'}
+                ? 'Enter your registered mobile number or email to access pickup and truck assignments.'
+                : 'Verify your mobile number by OTP, then submit your driver, vehicle, and compliance documents for review.'}
             </Text>
 
             {!!errorMsg && (
@@ -191,16 +191,18 @@ export default function DriverLoginScreen() {
                   Mobile
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.methodTab, method === 'email' && styles.methodTabActive]}
-                onPress={() => switchMethod('email')}
-                activeOpacity={0.8}
-              >
-                <Mail size={13} color={method === 'email' ? Colors.text : Colors.textMuted} />
-                <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
-                  Email
-                </Text>
-              </TouchableOpacity>
+              {authMode === 'login' && (
+                <TouchableOpacity
+                  style={[styles.methodTab, method === 'email' && styles.methodTabActive]}
+                  onPress={() => switchMethod('email')}
+                  activeOpacity={0.8}
+                >
+                  <Mail size={13} color={method === 'email' ? Colors.text : Colors.textMuted} />
+                  <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
+                    Email
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Input */}
@@ -302,9 +304,7 @@ export default function DriverLoginScreen() {
             </TouchableOpacity>
 
             <Text style={styles.disclaimer}>
-              By signing in, you agree to the{' '}
-              <Text style={styles.link}>Driver Partner Agreement</Text> and{' '}
-              <Text style={styles.link}>Safety Guidelines</Text>
+              Pickup and truck partners must complete document review and receive approval before assignments are available.
             </Text>
           </View>
 
@@ -312,15 +312,15 @@ export default function DriverLoginScreen() {
           <View style={styles.trustRow}>
             <View style={styles.trustBadge}>
               <ShieldCheck size={14} color={Colors.text} />
-              <Text style={styles.trustBadgeText}>Verified Partner</Text>
+              <Text style={styles.trustBadgeText}>OTP protected</Text>
             </View>
             <View style={styles.trustBadge}>
               <Wallet size={14} color={Colors.marigold} />
-              <Text style={styles.trustBadgeText}>Daily Payouts</Text>
+              <Text style={styles.trustBadgeText}>Pickup &amp; truck</Text>
             </View>
             <View style={styles.trustBadge}>
               <Clock size={14} color={Colors.success} />
-              <Text style={styles.trustBadgeText}>24/7 Operations</Text>
+              <Text style={styles.trustBadgeText}>Approval before dispatch</Text>
             </View>
           </View>
         </ScrollView>

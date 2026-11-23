@@ -46,9 +46,9 @@ export class EmailService {
   /**
    * Sends an OTP verification email with a premium, email-client-safe layout.
    */
-  static async sendOtpEmail(email: string, otp: string, role = 'customer', isSignup = false) {
-    const roleLabel = role === 'admin' ? 'Admin Portal' : role === 'vendor' ? 'Partner Captain' : 'Customer Account';
-    const actionLabel = isSignup ? 'complete your registration' : 'sign in to your account';
+  static async sendOtpEmail(email: string, otp: string, role = 'customer', isSignup = false, isContractSignature = false) {
+    const roleLabel = role === 'admin' ? 'Admin Portal' : role === 'vendor' ? 'Partner Account' : role === 'supervisor' ? 'P&M Supervisor' : 'Customer Account';
+    const actionLabel = isContractSignature ? 'sign the P&M partner agreement' : isSignup ? 'complete your registration' : 'sign in to your account';
     const { OTP_EXPIRY_MINUTES } = getEnv();
     const subject = 'Your Triveni Transports verification code';
     const text = `Your Triveni Transports verification code is ${otp}.\n\nEnter this code to ${actionLabel} for your ${roleLabel}. It expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nNever share this code with anyone. If you did not request it, you can ignore this email.\n\nTriveni Transports Support\n+91 88286 47785 · support@trivenitransports.com`;
@@ -170,7 +170,7 @@ export class EmailService {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Booking Confirmed — Triveni Transports</title>
+  <title>Booking Received — Triveni Transports</title>
 </head>
 <body style="margin:0;padding:0;background-color:#070F1A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#FFFFFF;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#070F1A;padding:40px 16px;">
@@ -183,14 +183,14 @@ export class EmailService {
                 TRIVENI <span style="color:#F7A300;">TRANSPORTS</span>
               </div>
               <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.6);margin-top:4px;">
-                MOVE CONFIRMED &amp; SCHEDULED
+                BOOKING CONFIRMED · PARTNER ASSIGNMENT PENDING
               </div>
             </td>
           </tr>
           <tr>
             <td style="padding:32px;">
               <div style="font-size:18px;font-weight:700;color:#FFFFFF;margin-bottom:6px;">
-                Your move is confirmed! 🎉
+                Your booking is confirmed.
               </div>
               <div style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:20px;">
                 Booking ID: <strong>${details.bookingId}</strong>
@@ -213,7 +213,7 @@ export class EmailService {
               </div>
 
               <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6;">
-                🛡️ Your move is covered with <strong>₹5L Transit Insurance</strong>. Your assigned moving captain will contact you 24 hours prior to departure.
+                Partner assignment is pending. We’ll notify you when a verified service partner is assigned. You can check your booking status in the Triveni app.
               </div>
             </td>
           </tr>
@@ -232,7 +232,7 @@ export class EmailService {
 </html>
     `.trim();
 
-    return this.sendEmail(email, `Booking Confirmed #${details.bookingId.slice(0, 8).toUpperCase()} — Triveni Transports`, html);
+    return this.sendEmail(email, `Booking Received #${details.bookingId.slice(0, 8).toUpperCase()} — Partner assignment pending`, html);
   }
 
   static async sendAdminAlert(subject: string, message: string) {

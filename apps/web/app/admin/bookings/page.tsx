@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -24,6 +24,7 @@ export default function AdminBookingsPage() {
   const [vehicles, setVehicles] = useState<AdminVehicle[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [serviceType, setServiceType] = useState<'packers_movers' | 'transport'>('packers_movers');
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
   const [statusDraft, setStatusDraft] = useState<AdminBooking['status']>('REQUESTED');
   const [vendorDraft, setVendorDraft] = useState<string>('');
@@ -31,27 +32,48 @@ export default function AdminBookingsPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const moveDate = selectedBooking?.scheduledDate || '';
+  const vehicleIsEligible = (vehicle: AdminVehicle, partnerId: string) => vehicle.vendorId === partnerId
+    && vehicle.active && vehicle.verificationStatus === 'approved'
+    && vehicle.permitExpiry >= moveDate && vehicle.fitnessExpiry >= moveDate && vehicle.insuranceExpiry >= moveDate
+    && vehicle.capacityCft >= (selectedBooking?.totalCft || 0);
+  const eligibleVendors = vendors.filter((vendor) => vendor.status === 'active' && vendor.onboardingStatus === 'approved'
+    && (serviceType === 'packers_movers' || Boolean(vendor.driverLicenseExpiry && vendor.driverLicenseExpiry >= moveDate
+      && vehicles.some((vehicle) => vehicleIsEligible(vehicle, vendor.id)))));
 
-  useEffect(() => {
-    loadData();
-  }, [search, statusFilter]);
+  const requestBookingsData = useCallback(() => Promise.all([
+    AdminDataService.listBookings({ status: statusFilter, search, serviceType }),
+    AdminDataService.listVendors(serviceType),
+    AdminDataService.listVehicles(serviceType),
+  ]), [search, serviceType, statusFilter]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
-      const [b, ven, veh] = await Promise.all([
-        AdminDataService.listBookings({ status: statusFilter, search }),
-        AdminDataService.listVendors(),
-        AdminDataService.listVehicles(),
-      ]);
+      const [b, ven, veh] = await requestBookingsData();
+      setError(null);
       setBookings(b);
       setVendors(ven);
       setVehicles(veh);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load bookings.');
     } finally { setLoading(false); }
-  };
+  }, [requestBookingsData]);
+
+  useEffect(() => {
+    let active = true;
+    requestBookingsData()
+      .then(([b, ven, veh]) => {
+        if (!active) return;
+        setError(null);
+        setBookings(b);
+        setVendors(ven);
+        setVehicles(veh);
+      })
+      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : 'Could not load bookings.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [requestBookingsData]);
 
   const handleOpenDrawer = (b: AdminBooking) => {
     setSelectedBooking(b);
@@ -78,7 +100,7 @@ export default function AdminBookingsPage() {
     setError(null);
     try {
       await AdminDataService.assignBooking(selectedBooking.id, vendorDraft, vehicleDraft || undefined);
-      setActionSuccess(`Captain & vehicle assigned to ${selectedBooking.id}`);
+      setActionSuccess(`Partner assignment updated for ${selectedBooking.id}`);
       await loadData();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not assign driver and vehicle.');
@@ -139,11 +161,24 @@ export default function AdminBookingsPage() {
       {/* ── Page Header ─────────────────────────────────────────────── */}
       <div className={styles.pageHeader}>
         <div className={styles.pageTitleCol}>
-          <h1>Relocations & Dispatch Directory</h1>
-          <p>Complete lifecycle management, manual pricing overrides, and vehicle dispatching.</p>
+          <h1>{serviceType === 'packers_movers' ? 'Packers & Movers Operations' : 'Pickup & Truck Operations'}</h1>
+          <p>Service-separated bookings, eligible partners, and dispatch controls.</p>
         </div>
       </div>
       <AdminDataNotice loading={loading} error={error} onRetry={loadData} />
+
+      <div className={styles.filterChips} role="tablist" aria-label="Service line">
+        {([
+          ['packers_movers', 'Packers & Movers'],
+          ['transport', 'Pickup & Truck'],
+        ] as const).map(([value, label]) => (
+          <button key={value} type="button" role="tab" aria-selected={serviceType === value}
+            className={`${styles.chip} ${serviceType === value ? styles.chipActive : ''}`}
+            onClick={() => { setServiceType(value); setStatusFilter('ALL'); }}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* ── Filter / Search Bar ──────────────────────────────────────── */}
       <div className={styles.filterBar}>
@@ -186,7 +221,7 @@ export default function AdminBookingsPage() {
                 <th>Drop Destination</th>
                 <th>Scheduled Date & Slot</th>
                 <th>Configuration</th>
-                <th>Captain Assigned</th>
+                <th>Partner Assigned</th>
                 <th>Value (₹)</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -348,15 +383,15 @@ export default function AdminBookingsPage() {
 
               {/* Driver & Vehicle Assignment */}
               <div className={styles.drawerSection}>
-                <div className={styles.drawerSectionTitle}>Assign Fleet Captain & Vehicle</div>
+              <div className={styles.drawerSectionTitle}>{serviceType === 'packers_movers' ? 'Assign P&M partner' : 'Assign driver partner & truck'}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
                   <div>
                     <label style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                      Select Captain
+                      {serviceType === 'packers_movers' ? 'Select P&M partner' : 'Select driver partner'}
                     </label>
                     <select
                       value={vendorDraft}
-                      onChange={e => setVendorDraft(e.target.value)}
+                      onChange={e => { setVendorDraft(e.target.value); setVehicleDraft(''); }}
                       style={{
                         width: '100%',
                         background: '#08090B',
@@ -367,16 +402,16 @@ export default function AdminBookingsPage() {
                         fontSize: 13,
                       }}
                     >
-                      <option value="">-- Choose Captain --</option>
-                      {vendors.map(v => (
+                      <option value="">-- Choose approved partner --</option>
+                      {eligibleVendors.map(v => (
                         <option key={v.id} value={v.id}>
-                          {v.name} ({v.rating}★ • {v.totalTrips} moves)
+                          {v.name} ({v.totalTrips} orders)
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div>
+                  {serviceType === 'transport' && <div>
                     <label style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                       Select Vehicle
                     </label>
@@ -394,13 +429,13 @@ export default function AdminBookingsPage() {
                       }}
                     >
                       <option value="">-- Choose Vehicle --</option>
-                      {vehicles.map(v => (
+                      {vehicles.filter(v => vehicleIsEligible(v, vendorDraft)).map(v => (
                         <option key={v.id} value={v.id}>
                           {v.type} ({v.registrationNumber})
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div>}
 
                   <button
                     type="button"
@@ -418,7 +453,7 @@ export default function AdminBookingsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <select
                     value={statusDraft}
-                    onChange={e => setStatusDraft(e.target.value as any)}
+                    onChange={e => setStatusDraft(e.target.value as AdminBooking['status'])}
                     style={{
                       width: '100%',
                       background: '#08090B',
@@ -430,13 +465,16 @@ export default function AdminBookingsPage() {
                     }}
                   >
                     <option value="REQUESTED">REQUESTED</option>
+                    <option value="QUOTED">QUOTED</option>
                     <option value="CONFIRMED">CONFIRMED</option>
                     <option value="ASSIGNED">ASSIGNED</option>
                     <option value="EN_ROUTE">EN_ROUTE (Truck on the way)</option>
                     <option value="ARRIVED">ARRIVED (At Pickup point)</option>
                     <option value="IN_PROGRESS">IN_PROGRESS (Loading/Moving)</option>
+                    <option value="REVISION_PENDING">REVISION_PENDING</option>
                     <option value="COMPLETED">COMPLETED (Delivered & Verified)</option>
                     <option value="CANCELLED">CANCELLED</option>
+                    <option value="DISPUTED">DISPUTED</option>
                   </select>
 
                   <button

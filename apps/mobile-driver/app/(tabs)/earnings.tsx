@@ -1,63 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
-  Alert,
 } from 'react-native';
-import {
-  ArrowUpRight,
-  TrendingUp,
-  CheckCircle2,
-  Download,
-  Building,
-  ShieldCheck,
-} from 'lucide-react-native';
+import { CheckCircle2 } from 'lucide-react-native';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { useDriverStore } from '@/store/driverStore';
-import { showToast } from '@/components/ToastHost';
 
 export default function EarningsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = useThemedStyles(createStyles);
 
   const completedJobs = useDriverStore((s) => s.completedJobs);
-  const [withdrawing, setWithdrawing] = useState(false);
-
-  const totalEarned = completedJobs.reduce((sum, j) => sum + j.payoutAmount, 0);
-  const totalCft = completedJobs.reduce((sum, j) => sum + (j.totalCft || 0), 0);
-  const fuelAllowance = completedJobs.length > 0 ? Math.round(totalEarned * 0.15) : 0;
-  const incentive = completedJobs.length > 0 ? 500 * completedJobs.length : 0;
-  const availableBalance = totalEarned;
-
-  const handleWithdraw = () => {
-    if (availableBalance <= 0) {
-      showToast({ title: 'No balance to withdraw', message: 'Completed duty earnings will appear here.', variant: 'info' });
-      return;
-    }
-
-    Alert.alert(
-      'Instant Payout Transfer',
-      `Transfer ₹${availableBalance.toLocaleString('en-IN')} directly to your registered UPI ID (trivenipartner@oksbi)?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Transfer',
-          onPress: () => {
-            setWithdrawing(true);
-            setTimeout(() => {
-              setWithdrawing(false);
-              showToast({ title: 'Payout initiated', message: `₹${availableBalance.toLocaleString('en-IN')} sent via IMPS.`, variant: 'success' });
-            }, 800);
-          },
-        },
-      ]
-    );
-  };
+  const activeJob = useDriverStore((s) => s.activeJob);
 
   return (
     <ScrollView
@@ -65,97 +24,39 @@ export default function EarningsScreen() {
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
     >
-      {/* Wallet Balance Hero Card */}
+      {/* Settlement status */}
       <View style={styles.walletCard}>
         <View style={styles.balanceBlock}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceValue}>₹{availableBalance.toLocaleString('en-IN')}.00</Text>
-          <Text style={styles.balanceSub}>Cleared for withdrawal to registered account</Text>
+          <Text style={styles.balanceLabel}>Payout settlement</Text>
+          <Text style={styles.balanceValue}>Managed by operations</Text>
+          <Text style={styles.balanceSub}>This app does not record payout balances or initiate bank transfers. Confirm settlement amounts with Triveni operations.</Text>
         </View>
-
-        <TouchableOpacity
-          style={[styles.withdrawBtn, availableBalance <= 0 && { opacity: 0.6 }]}
-          onPress={handleWithdraw}
-          activeOpacity={0.88}
-          disabled={withdrawing || availableBalance <= 0}
-        >
-          <ArrowUpRight size={16} color={Colors.white} strokeWidth={2.4} />
-          <Text style={styles.withdrawBtnText}>
-            {withdrawing
-              ? 'Transferring...'
-              : availableBalance <= 0
-              ? 'No Balance to Withdraw'
-              : 'Withdraw to Bank Account'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Weekly Performance Stats Grid */}
+      {/* Recorded job activity */}
       <View style={styles.statsGrid}>
         <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Total Payout</Text>
-          <Text style={styles.statBoxValue}>₹{totalEarned.toLocaleString('en-IN')}</Text>
-          <View style={styles.trendRow}>
-            <TrendingUp size={11} color={Colors.success} />
-            <Text style={styles.trendText}>Verified duty earnings</Text>
-          </View>
+          <Text style={styles.statBoxLabel}>Completed moves</Text>
+          <Text style={styles.statBoxValue}>{completedJobs.length}</Text>
         </View>
 
         <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Completed Trips</Text>
-          <Text style={styles.statBoxValue}>{completedJobs.length} Moves</Text>
-          <Text style={styles.statBoxSub}>{totalCft > 0 ? `${totalCft} CFT Moved` : '0 CFT Moved'}</Text>
+          <Text style={styles.statBoxLabel}>Active assignment</Text>
+          <Text style={styles.statBoxValue}>{activeJob ? '1' : '0'}</Text>
         </View>
-
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Fuel Allowance</Text>
-          <Text style={styles.statBoxValue}>₹{fuelAllowance.toLocaleString('en-IN')}</Text>
-          <Text style={styles.statBoxSub}>Standard 15%</Text>
-        </View>
-
-        <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>Incentive Bonus</Text>
-          <Text style={[styles.statBoxValue, { color: Colors.marigoldDark }]}>
-            ₹{incentive.toLocaleString('en-IN')}
-          </Text>
-          <Text style={styles.statBoxSub}>Zero Damage Bonus</Text>
-        </View>
-      </View>
-
-      {/* Payout Account Info */}
-      <View style={styles.accountCard}>
-        <View style={styles.accountIconBox}>
-          <Building size={20} color={Colors.text} />
-        </View>
-        <View style={styles.accountDetails}>
-          <Text style={styles.accountTitle}>Registered Settlement Account</Text>
-          <Text style={styles.accountUpi}>UPI ID: trivenipartner@oksbi</Text>
-          <Text style={styles.accountBank}>State Bank of India · A/C **4928</Text>
-        </View>
-        <ShieldCheck size={18} color={Colors.success} />
       </View>
 
       {/* Completed Trip History */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Trip Settlement History</Text>
-        {completedJobs.length > 0 && (
-          <TouchableOpacity
-            style={styles.downloadStatementBtn}
-            onPress={() => showToast({ title: 'Statement download is coming soon', variant: 'info' })}
-            activeOpacity={0.8}
-          >
-            <Download size={13} color={Colors.text} />
-            <Text style={styles.downloadStatementText}>Statement</Text>
-          </TouchableOpacity>
-        )}
+        <Text style={styles.sectionTitle}>Completed assignments</Text>
       </View>
 
       {completedJobs.length === 0 ? (
         <View style={styles.emptySettlementCard}>
           <CheckCircle2 size={36} color={Colors.textMuted} strokeWidth={1.8} />
-          <Text style={styles.emptySettlementTitle}>No Settled Trips Yet</Text>
+          <Text style={styles.emptySettlementTitle}>No completed moves yet</Text>
           <Text style={styles.emptySettlementSub}>
-            Completed assignments and their respective driver payouts will be credited and listed here.
+            Completed assignments will appear here. This list is not a payout or bank settlement statement.
           </Text>
         </View>
       ) : (
@@ -166,13 +67,7 @@ export default function EarningsScreen() {
                 <Text style={styles.tripCode}>{job.trackingCode}</Text>
                 <Text style={styles.tripDate}>{job.scheduledDate} · {job.configuration}</Text>
               </View>
-              <View style={styles.payoutBadge}>
-                <Text style={styles.tripPayout}>+₹{job.payoutAmount}</Text>
-                <View style={styles.settledBadge}>
-                  <CheckCircle2 size={10} color={Colors.success} />
-                  <Text style={styles.settledText}>Settled</Text>
-                </View>
-              </View>
+              <Text style={styles.statBoxSub}>{job.status.replaceAll('_', ' ')}</Text>
             </View>
 
             <View style={styles.tripRoute}>

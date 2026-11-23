@@ -8,11 +8,15 @@ const RequestOtpSchema = z
     identifier: z.string().trim().optional(),
     phone: z.string().trim().optional(),
     email: z.string().trim().optional(),
-    role: z.enum(['customer', 'vendor', 'admin']).default('customer'),
+    role: z.enum(['customer', 'vendor', 'supervisor', 'admin']).default('customer'),
+    serviceType: z.enum(['packers_movers', 'transport']).optional(),
     isSignup: z.boolean().optional(),
   })
   .refine((data) => !!(data.identifier || data.phone || data.email), {
     message: 'Please provide either an email address or mobile phone number.',
+  })
+  .refine((data) => data.role !== 'vendor' || !!data.serviceType, {
+    message: 'Choose the partner service app you are signing into.',
   });
 
 const VerifyOtpSchema = z
@@ -20,7 +24,8 @@ const VerifyOtpSchema = z
     identifier: z.string().trim().optional(),
     phone: z.string().trim().optional(),
     email: z.string().trim().optional(),
-    role: z.enum(['customer', 'vendor', 'admin']).default('customer'),
+    role: z.enum(['customer', 'vendor', 'supervisor', 'admin']).default('customer'),
+    serviceType: z.enum(['packers_movers', 'transport']).optional(),
     code: z
       .string()
       .trim()
@@ -33,6 +38,9 @@ const VerifyOtpSchema = z
   })
   .refine((data) => !!(data.identifier || data.phone || data.email), {
     message: 'Please provide either an email address or mobile phone number.',
+  })
+  .refine((data) => data.role !== 'vendor' || !!data.serviceType, {
+    message: 'Choose the partner service app you are signing into.',
   });
 
 export class AuthController {
@@ -42,7 +50,8 @@ export class AuthController {
       const result = await AuthService.requestOtp(
         { identifier: data.identifier, phone: data.phone, email: data.email },
         data.role as UserRole,
-        data.isSignup
+        data.isSignup,
+        data.serviceType
       );
       res.status(200).json(result);
     } catch (e: any) {
@@ -66,7 +75,8 @@ export class AuthController {
         data.role as UserRole,
         data.code,
         data.name,
-        data.isSignup
+        data.isSignup,
+        data.serviceType
       );
       res.status(200).json(result);
     } catch (e: any) {

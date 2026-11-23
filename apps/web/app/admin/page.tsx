@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Package,
@@ -44,21 +44,28 @@ export default function AdminOverviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [serviceType, setServiceType] = useState<'packers_movers' | 'transport'>('packers_movers');
+  const moveDate = selectedBooking?.scheduledDate || '';
+  const vehicleIsEligible = (vehicle: AdminVehicle, partnerId: string) => vehicle.vendorId === partnerId
+    && vehicle.active && vehicle.verificationStatus === 'approved'
+    && vehicle.permitExpiry >= moveDate && vehicle.fitnessExpiry >= moveDate && vehicle.insuranceExpiry >= moveDate
+    && vehicle.capacityCft >= (selectedBooking?.totalCft || 0);
+  const eligibleVendors = vendors.filter((vendor) => vendor.status === 'active' && vendor.onboardingStatus === 'approved'
+    && (serviceType === 'packers_movers' || Boolean(vendor.driverLicenseExpiry && vendor.driverLicenseExpiry >= moveDate
+      && vehicles.some((vehicle) => vehicleIsEligible(vehicle, vendor.id)))));
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const requestDashboardData = useCallback(() => Promise.all([
+    AdminDataService.getMetrics(serviceType),
+    AdminDataService.listBookings({ serviceType }),
+    AdminDataService.listVendors(serviceType),
+    AdminDataService.listVehicles(serviceType),
+  ]), [serviceType]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setLoadError(null);
     try {
-      const [m, b, ven, veh] = await Promise.all([
-        AdminDataService.getMetrics(),
-        AdminDataService.listBookings(),
-        AdminDataService.listVendors(),
-        AdminDataService.listVehicles(),
-      ]);
+      const [m, b, ven, veh] = await requestDashboardData();
+      setLoadError(null);
       setMetrics(m);
       setBookings(b);
       setVendors(ven);
@@ -68,7 +75,23 @@ export default function AdminOverviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestDashboardData]);
+
+  useEffect(() => {
+    let active = true;
+    requestDashboardData()
+      .then(([m, b, ven, veh]) => {
+        if (!active) return;
+        setLoadError(null);
+        setMetrics(m);
+        setBookings(b);
+        setVendors(ven);
+        setVehicles(veh);
+      })
+      .catch((error) => { if (active) setLoadError(error instanceof Error ? error.message : 'Could not load live dashboard data.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [requestDashboardData]);
 
   const handleOpenDrawer = (b: AdminBooking) => {
     setSelectedBooking(b);
@@ -95,7 +118,7 @@ export default function AdminOverviewPage() {
     setActionError(null);
     try {
       await AdminDataService.assignBooking(selectedBooking.id, vendorDraft, vehicleDraft || undefined);
-      setActionSuccess(`Driver & vehicle assigned to ${selectedBooking.id}`);
+      setActionSuccess(`Partner assignment updated for ${selectedBooking.id}`);
       await loadData();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Could not assign driver and vehicle.');
@@ -168,13 +191,25 @@ export default function AdminOverviewPage() {
         </div>
       </div>
       <AdminDataNotice loading={loading} error={loadError} onRetry={loadData} />
+      <div className={styles.filterChips} role="tablist" aria-label="Service dashboard" style={{ marginBottom: 18 }}>
+        {([
+          ['packers_movers', 'Packers & Movers'],
+          ['transport', 'Pickup & Truck'],
+        ] as const).map(([value, label]) => (
+          <button key={value} type="button" role="tab" aria-selected={serviceType === value}
+            className={`${styles.chip} ${serviceType === value ? styles.chipActive : ''}`}
+            onClick={() => setServiceType(value)}>
+            {label}
+          </button>
+        ))}
+      </div>
       {actionError && <div className={styles.sectionCard} role="alert">{actionError}</div>}
 
       {/* ── 4-Up KPI Cards ──────────────────────────────────────────── */}
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
           <div className={styles.kpiTopRow}>
-            <span className={styles.kpiLabel}>Total Relocations</span>
+            <span className={styles.kpiLabel}>{serviceType === 'packers_movers' ? 'P&M Orders' : 'Pickup & Truck Orders'}</span>
             <div className={styles.kpiIconWrapper}>
               <Package size={20} />
             </div>
@@ -234,7 +269,7 @@ export default function AdminOverviewPage() {
       {/* ── Active Moves Stream Table ─────────────────────────────────── */}
       <div className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitle}>Recent Bookings & Dispatch Queue</div>
+          <div className={styles.sectionTitle}>{serviceType === 'packers_movers' ? 'Recent P&M Orders' : 'Recent Pickup & Truck Orders'}</div>
           <Link href="/admin/bookings" className={styles.tableActionBtn}>
             <span>View Full Log</span>
             <ChevronRight size={14} />
@@ -249,7 +284,7 @@ export default function AdminOverviewPage() {
                 <th>Customer Info</th>
                 <th>Route (Pickup ➔ Drop)</th>
                 <th>Scheduled Slot</th>
-                <th>Assigned Captain / Truck</th>
+                <th>Assigned partner / vehicle</th>
                 <th>Total Value</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -423,15 +458,15 @@ export default function AdminOverviewPage() {
 
               {/* Driver & Vehicle Assignment */}
               <div className={styles.drawerSection}>
-                <div className={styles.drawerSectionTitle}>Assign Fleet Captain & Vehicle</div>
+                <div className={styles.drawerSectionTitle}>{serviceType === 'packers_movers' ? 'Assign P&M partner' : 'Assign driver partner & truck'}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
                   <div>
                     <label style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                      Select Captain
+                      {serviceType === 'packers_movers' ? 'Select P&M partner' : 'Select driver partner'}
                     </label>
                     <select
                       value={vendorDraft}
-                      onChange={e => setVendorDraft(e.target.value)}
+                      onChange={e => { setVendorDraft(e.target.value); setVehicleDraft(''); }}
                       style={{
                         width: '100%',
                         background: '#08090B',
@@ -442,16 +477,16 @@ export default function AdminOverviewPage() {
                         fontSize: 13,
                       }}
                     >
-                      <option value="">-- Choose Captain --</option>
-                      {vendors.map(v => (
+                      <option value="">-- Choose approved partner --</option>
+                      {eligibleVendors.map(v => (
                         <option key={v.id} value={v.id}>
-                          {v.name} ({v.rating}★ • {v.totalTrips} moves)
+                          {v.name} ({v.totalTrips} orders)
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div>
+                  {serviceType === 'transport' && <div>
                     <label style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                       Select Vehicle
                     </label>
@@ -469,13 +504,13 @@ export default function AdminOverviewPage() {
                       }}
                     >
                       <option value="">-- Choose Vehicle --</option>
-                      {vehicles.map(v => (
+                      {vehicles.filter(v => vehicleIsEligible(v, vendorDraft)).map(v => (
                         <option key={v.id} value={v.id}>
                           {v.type} ({v.registrationNumber})
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div>}
 
                   <button
                     type="button"
@@ -494,7 +529,7 @@ export default function AdminOverviewPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <select
                     value={statusDraft}
-                    onChange={e => setStatusDraft(e.target.value as any)}
+                    onChange={e => setStatusDraft(e.target.value as AdminBooking['status'])}
                     style={{
                       width: '100%',
                       background: '#08090B',
@@ -506,13 +541,16 @@ export default function AdminOverviewPage() {
                     }}
                   >
                     <option value="REQUESTED">REQUESTED</option>
+                    <option value="QUOTED">QUOTED</option>
                     <option value="CONFIRMED">CONFIRMED</option>
                     <option value="ASSIGNED">ASSIGNED</option>
                     <option value="EN_ROUTE">EN_ROUTE (Truck on the way)</option>
                     <option value="ARRIVED">ARRIVED (At Pickup point)</option>
                     <option value="IN_PROGRESS">IN_PROGRESS (Loading/Moving)</option>
+                    <option value="REVISION_PENDING">REVISION_PENDING</option>
                     <option value="COMPLETED">COMPLETED (Delivered & Verified)</option>
                     <option value="CANCELLED">CANCELLED</option>
+                    <option value="DISPUTED">DISPUTED</option>
                   </select>
 
                   <button

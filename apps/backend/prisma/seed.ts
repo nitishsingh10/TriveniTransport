@@ -38,12 +38,14 @@ async function main() {
   const vendorId = randomUUID();
   const vendor = await prisma.vendor.upsert({
     where: { phone: '9888888888' },
-    update: {},
+    update: { name: 'Triveni Transports Driver Partner', serviceType: 'transport', status: 'pending', onboardingStatus: 'draft' },
     create: {
       id: vendorId,
-      name: 'Triveni Transports Packers & Movers',
+      name: 'Triveni Transports Driver Partner',
       phone: '9888888888',
-      status: 'active',
+      serviceType: 'transport',
+      status: 'pending',
+      onboardingStatus: 'draft',
       serviceAreas: [],
     },
   });
@@ -56,7 +58,7 @@ async function main() {
   const vehicles = await Promise.all([
     prisma.vehicle.upsert({
       where: { registrationNumber: 'MH12AB1234' },
-      update: {},
+      update: { active: false, verificationStatus: 'pending' },
       create: {
         vendorId: vendor.id,
         type: 'Tata Ace',
@@ -64,12 +66,13 @@ async function main() {
         registrationNumber: 'MH12AB1234',
         permitExpiry: futureDate,
         fitnessCertExpiry: futureDate,
-        active: true,
+        active: false,
+        verificationStatus: 'pending',
       },
     }),
     prisma.vehicle.upsert({
       where: { registrationNumber: 'MH12CD5678' },
-      update: {},
+      update: { active: false, verificationStatus: 'pending' },
       create: {
         vendorId: vendor.id,
         type: 'Tata 407',
@@ -77,12 +80,13 @@ async function main() {
         registrationNumber: 'MH12CD5678',
         permitExpiry: futureDate,
         fitnessCertExpiry: futureDate,
-        active: true,
+        active: false,
+        verificationStatus: 'pending',
       },
     }),
     prisma.vehicle.upsert({
       where: { registrationNumber: 'MH12EF9012' },
-      update: {},
+      update: { active: false, verificationStatus: 'pending' },
       create: {
         vendorId: vendor.id,
         type: 'Eicher 17ft',
@@ -90,7 +94,8 @@ async function main() {
         registrationNumber: 'MH12EF9012',
         permitExpiry: futureDate,
         fitnessCertExpiry: futureDate,
-        active: true,
+        active: false,
+        verificationStatus: 'pending',
       },
     }),
   ]);

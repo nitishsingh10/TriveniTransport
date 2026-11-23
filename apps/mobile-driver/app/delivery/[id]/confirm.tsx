@@ -66,7 +66,7 @@ export default function DeliveryConfirmScreen() {
 
     Alert.alert(
       'Move Marked Complete',
-      `The completion status was saved. Estimated payout ₹${activeJob?.payoutAmount ?? 0} will be reconciled by operations.`,
+      'The completion status was saved. Settlement is handled separately by Triveni operations.',
       [
         {
           text: 'View Earnings',
@@ -88,7 +88,7 @@ export default function DeliveryConfirmScreen() {
         </View>
         <Text style={styles.headerTitle}>Delivery & Handover</Text>
         <Text style={styles.headerSubtitle}>
-          Complete mandatory delivery inspection before closing move {activeJob?.trackingCode}
+          Complete the handover checklist for move {activeJob?.trackingCode}. This screen saves the move status only; it does not upload photos, signatures, or payment proof.
         </Text>
       </View>
 
@@ -139,7 +139,7 @@ export default function DeliveryConfirmScreen() {
             <View style={styles.checkTextCol}>
               <Text style={styles.checkLabel}>Proof of Delivery (Photo)</Text>
               <Text style={styles.checkSub}>
-                {photoAdded ? 'Photo captured & geo-tagged.' : 'Tap to take picture of unloaded goods at site.'}
+                {photoAdded ? 'Photo evidence collected outside this app.' : 'Collect the delivery photo using your approved operations process. It is not uploaded here.'}
               </Text>
             </View>
             <Camera size={20} color={photoAdded ? Colors.success : Colors.textMuted} />
@@ -155,8 +155,8 @@ export default function DeliveryConfirmScreen() {
               {paymentSettled && <CheckCircle2 size={16} color={Colors.white} />}
             </View>
             <View style={styles.checkTextCol}>
-              <Text style={styles.checkLabel}>Collect Pending Cash/UPI (₹{activeJob?.collectAtDelivery ?? 0})</Text>
-              <Text style={styles.checkSub}>Remaining balance collected before driver sign-off.</Text>
+              <Text style={styles.checkLabel}>Payment handled per booking instructions</Text>
+              <Text style={styles.checkSub}>This app does not process, verify, or save a payment confirmation.</Text>
             </View>
             <Banknote size={20} color={paymentSettled ? Colors.success : Colors.textMuted} />
           </TouchableOpacity>
@@ -184,7 +184,7 @@ export default function DeliveryConfirmScreen() {
           >
             <Signature size={24} color={signed ? Colors.success : Colors.textMuted} />
             <Text style={[styles.signLabel, signed && styles.signLabelActive]}>
-              {signed ? 'Customer Digital Signature Acknowledged ✓' : 'Tap to Record Customer Signature On Screen'}
+              {signed ? 'Acknowledgement marked complete' : 'Confirm acknowledgement was collected outside this app'}
             </Text>
           </TouchableOpacity>
         </View>

@@ -68,6 +68,7 @@ const EnvSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().default('ap-south-1'),
   AWS_S3_BUCKET_NAME: z.string().default('triveni-invoices'),
+  AWS_S3_DOCUMENTS_BUCKET_NAME: z.string().optional(),
 
   // ── Admin ─────────────────────────────────────────────────────
   ADMIN_PHONE: z.string().min(10, 'ADMIN_PHONE is required — initial admin user phone number'),

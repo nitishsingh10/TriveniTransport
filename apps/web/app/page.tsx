@@ -51,8 +51,8 @@ const HOME_FAQS = [
     a: 'No. Unlike traditional unorganised brokers who demand extra cash for packing tapes, stairs handling, or elevator delays, Triveni Transports locks your rate upon confirmation. What you see in your itemised quotation is what you pay.',
   },
   {
-    q: 'Do you provide transit insurance for household items?',
-    a: 'Yes. Every move includes standard transit damage coverage against vehicular accident and fire up to ₹5,00,000. All-risk packaging insurance is also available during checkout for fragile electronics, crockeries, and luxury furniture.',
+    q: 'Does Triveni provide transit cover for household items?',
+    a: 'Triveni does not currently provide or arrange transit cover for household goods. Please contact customer support promptly if something is lost or damaged during a move.',
   },
   {
     q: 'How much advance is required to book a move?',
@@ -86,14 +86,14 @@ const HOME_SERVICES = [
     icon: HomeIcon,
     title: 'Household Shifting',
     desc: 'Full-service apartment and villa moving in Mumbai & Thane. 3-layer bubble packaging, furniture dismantling, and careful handling of fragile crockeries.',
-    features: ['1BHK, 2BHK, 3BHK flats', '₹5L transit insurance', 'Doorstep reassembly'],
+    features: ['1BHK, 2BHK, 3BHK flats', 'Doorstep reassembly', 'Itemised pricing'],
     link: '/services',
   },
   {
     icon: Briefcase,
     title: 'Office Relocation',
     desc: 'Seamless commercial moving for workstations, server racks, electronics, and archives with scheduled night and weekend shifts to prevent downtime.',
-    features: ['Zero business downtime', 'Anti-static electronics wrap', 'Itemised GST invoice'],
+    features: ['Zero business downtime', 'Anti-static electronics wrap', 'Clear booking amount'],
     link: '/services',
   },
   {
@@ -107,7 +107,7 @@ const HOME_SERVICES = [
     icon: Car,
     title: 'Vehicle Transport',
     desc: 'Dedicated enclosed car and two-wheeler carriers. Scratch-free wheel-locking harnesses and comprehensive inspection report.',
-    features: ['Doorstep pickup & drop', 'Hydraulic ramp loading', 'All-India transit cover'],
+    features: ['Doorstep pickup & drop', 'Hydraulic ramp loading', 'Verified transport partners'],
     link: '/services',
   },
 ];
@@ -205,7 +205,7 @@ function FaqSection() {
         >
           <h2 className="section-heading">Frequently Asked Questions</h2>
           <p className="section-subheading" style={{ marginInline: 'auto' }}>
-            Transparent answers about relocation rates, packing, insurance, and booking in Mumbai &amp; Thane
+            Transparent answers about relocation rates, packing, and booking in Mumbai &amp; Thane
           </p>
         </motion.div>
 
@@ -341,7 +341,7 @@ export default function Home() {
               </motion.h1>
 
               <motion.p initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }} className={styles.heroDesc}>
-                Triveni Transports is your trusted packers and movers in Mumbai and Thane. Move smarter and pay fairly with transparent, itemised pricing for every home or office shifting — no hidden charges, verified captains, ₹5L transit insurance, and a professional crew that treats your belongings like their own.
+                Triveni Transports is your trusted packers and movers in Mumbai and Thane. Move smarter and pay fairly with transparent, itemised pricing for every home or office shifting — no hidden charges, verified captains, and a professional crew that treats your belongings like their own.
               </motion.p>
 
               <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.38 }} className={styles.heroActions}>

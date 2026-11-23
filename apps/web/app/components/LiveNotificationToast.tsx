@@ -30,8 +30,8 @@ const NOTIFICATIONS = [
   {
     icon: ShieldCheck,
     color: '#10B981',
-    title: 'Transit Insurance Active',
-    desc: '₹5,00,000 Safe Hands coverage — included with every move',
+    title: 'Your move is scheduled',
+    desc: 'A verified moving partner has been assigned to the booking',
     time: '18 mins ago',
   },
 ];

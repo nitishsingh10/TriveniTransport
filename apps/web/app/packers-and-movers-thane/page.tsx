@@ -18,7 +18,7 @@ import styles from '../components/CityLanding.module.css';
 export const metadata: Metadata = {
   title: 'Packers and Movers in Thane — Top Home & Office Relocation Services',
   description:
-    'Best packers and movers in Thane with transparent line-by-line pricing. Serving Ghodbunder Road, Majiwada, Hiranandani Estate, Vartak Nagar, Naupada & Wagle Estate. ₹5L insurance, verified crew, 0 hidden costs.',
+    'Best packers and movers in Thane with transparent line-by-line pricing. Serving Ghodbunder Road, Majiwada, Hiranandani Estate, Vartak Nagar, Naupada & Wagle Estate. Verified crew and no hidden costs.',
   alternates: {
     canonical: '/packers-and-movers-thane',
   },

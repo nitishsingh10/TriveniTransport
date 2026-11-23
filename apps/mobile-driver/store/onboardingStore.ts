@@ -13,11 +13,10 @@ export interface DriverKycData {
   dlNumber: string;
   dlExpiry: string;
   dlCategory: string;
-  aadhaarNumber: string;
   // Document photos (URIs or base64)
   dlFrontUri?: string;
   dlBackUri?: string;
-  aadhaarUri?: string;
+  identityProofUri?: string;
   profilePhotoUri?: string;
 }
 
@@ -38,6 +37,8 @@ export interface VehicleData {
   rearImageUri?: string;
   cargoImageUri?: string;
   rcDocUri?: string;
+  permitDocUri?: string;
+  fitnessDocUri?: string;
   insuranceDocUri?: string;
 }
 
@@ -47,12 +48,15 @@ export interface BankData {
   accountNumber: string;
   ifscCode: string;
   upiId?: string;
+  proofUri?: string;
+  accountLast4?: string;
 }
 
 export interface OnboardingState {
   currentStep: number;
   isCompleted: boolean;
-  verificationStatus: 'verified' | 'pending' | 'submitted';
+  verificationStatus: 'pending' | 'submitted' | 'under_review' | 'needs_changes' | 'approved' | 'rejected';
+  reviewNotes: string | null;
   driverKyc: DriverKycData;
   vehicle: VehicleData;
   bank: BankData;
@@ -74,49 +78,37 @@ export interface OnboardingState {
 const STORAGE_KEY = 'triveni_driver_onboarding_v1';
 
 const defaultDriverKyc: DriverKycData = {
-  fullName: 'Rajesh Kumar',
-  phone: '98888 88888',
-  email: 'rajesh.kumar@trivenitransports.com',
-  city: 'Pune & PCMC',
-  experienceYears: '6',
-  emergencyContact: 'Sunita Kumar',
-  emergencyPhone: '98765 43210',
-  dlNumber: 'MH-12-2018-0045892',
-  dlExpiry: '2030-05-15',
-  dlCategory: 'Commercial Transport (HMV/LMV)',
-  aadhaarNumber: '7845 9012 3456',
+  fullName: '', phone: '', email: '', city: '', experienceYears: '',
+  emergencyContact: '', emergencyPhone: '', dlNumber: '', dlExpiry: '', dlCategory: 'Commercial Transport (HMV/LMV)',
 };
 
 const defaultVehicle: VehicleData = {
-  registrationNumber: 'MH 12 CD 5678',
-  type: 'Tata 407',
-  makeModel: 'Tata Motors 407 LPT Heavy',
-  capacityCft: 600,
-  payloadTons: '2.5 Tons',
-  rcNumber: 'MH12-RC-2021-9988',
-  permitExpiry: '2028-11-20',
-  fitnessCertExpiry: '2027-08-10',
-  insurancePolicyNumber: 'NEW-IND-TRV-884920',
-  insuranceExpiry: '2027-04-30',
+  registrationNumber: '',
+  type: '',
+  makeModel: '',
+  capacityCft: 0,
+  payloadTons: '',
+  rcNumber: '',
+  permitExpiry: '',
+  fitnessCertExpiry: '',
+  insurancePolicyNumber: '',
+  insuranceExpiry: '',
 };
 
 const defaultBank: BankData = {
-  accountHolderName: 'Rajesh Kumar',
-  bankName: 'HDFC Bank',
-  accountNumber: '50100458921478',
-  ifscCode: 'HDFC0001234',
-  upiId: 'rajeshkumar@okhdfcbank',
+  accountHolderName: '', bankName: '', accountNumber: '', ifscCode: '', upiId: '',
 };
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   currentStep: 1,
-  isCompleted: true, // Default to onboarded with verified demo vehicle
-  verificationStatus: 'verified',
+  isCompleted: false,
+  verificationStatus: 'pending',
+  reviewNotes: null,
   driverKyc: defaultDriverKyc,
   vehicle: defaultVehicle,
   bank: defaultBank,
-  agreementAccepted: true,
-  submittedAt: new Date().toISOString(),
+  agreementAccepted: false,
+  submittedAt: null,
 
   setStep: (step) => {
     set({ currentStep: step });
@@ -158,7 +150,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
         verificationStatus: state.verificationStatus,
         driverKyc: state.driverKyc,
         vehicle: state.vehicle,
-        bank: state.bank,
+        bank: { ...state.bank, accountNumber: '' },
         agreementAccepted: state.agreementAccepted,
         submittedAt: state.submittedAt,
       };
@@ -173,16 +165,46 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
+        let savedDriverKyc = Object.fromEntries(Object.entries(parsed.driverKyc || {}).filter(([key]) => !['aadhaarNumber', 'aadhaarUri'].includes(key) && !(typeof parsed.driverKyc[key] === 'string' && parsed.driverKyc[key].includes('images.unsplash.com')))) as Partial<DriverKycData>;
+        let savedVehicle = Object.fromEntries(Object.entries(parsed.vehicle || {}).filter(([, value]) => !(typeof value === 'string' && value.includes('images.unsplash.com')))) as Partial<VehicleData>;
+        if (String(savedDriverKyc.phone || '').replace(/\D/g, '') === '9888888888') savedDriverKyc = defaultDriverKyc;
+        if (savedVehicle.registrationNumber?.replace(/\s/g, '').toUpperCase() === 'MH12CD5678') savedVehicle = defaultVehicle;
         set({
           currentStep: parsed.currentStep || 1,
-          isCompleted: parsed.isCompleted ?? true,
-          verificationStatus: parsed.verificationStatus || 'verified',
-          driverKyc: { ...defaultDriverKyc, ...(parsed.driverKyc || {}) },
-          vehicle: { ...defaultVehicle, ...(parsed.vehicle || {}) },
-          bank: { ...defaultBank, ...(parsed.bank || {}) },
-          agreementAccepted: parsed.agreementAccepted ?? true,
+          verificationStatus: parsed.verificationStatus === 'submitted' ? 'submitted' : 'pending',
+          driverKyc: { ...defaultDriverKyc, ...savedDriverKyc },
+          vehicle: { ...defaultVehicle, ...savedVehicle },
+        bank: {
+          ...defaultBank,
+          ...(String(parsed.bank?.accountNumber || '').replace(/\s/g, '') === '50100458921478' ? {} : parsed.bank || {}),
+          accountNumber: '',
+        },
+          agreementAccepted: parsed.agreementAccepted === true,
           submittedAt: parsed.submittedAt || null,
+          isCompleted: parsed.verificationStatus === 'submitted',
+          reviewNotes: null,
         });
+        await get().saveToStorage();
+      }
+      try {
+        const profile = await driverVendorApi.getProfile();
+        const isApproved = profile.status === 'active' && profile.onboardingStatus === 'approved';
+        const status: OnboardingState['verificationStatus'] = ['submitted', 'under_review', 'needs_changes', 'approved', 'rejected'].includes(profile.onboardingStatus)
+          ? profile.onboardingStatus as OnboardingState['verificationStatus'] : 'pending';
+        const data = profile.onboardingData || {};
+        const serverDriver = (data.driver || {}) as Partial<DriverKycData>;
+        const serverVehicle = (data.vehicle || {}) as Partial<VehicleData>;
+        const serverBank = (data.bank || {}) as Partial<BankData>;
+        set({
+          isCompleted: status !== 'pending',
+          verificationStatus: isApproved ? 'approved' : status,
+          reviewNotes: profile.reviewNotes || null,
+          driverKyc: { ...get().driverKyc, ...serverDriver, identityProofUri: get().driverKyc.identityProofUri },
+          vehicle: { ...get().vehicle, ...serverVehicle },
+          bank: { ...get().bank, ...serverBank, accountNumber: '', accountLast4: serverBank.accountLast4 || get().bank.accountLast4 },
+        });
+      } catch {
+        // Local drafts remain pending until the server confirms approval.
       }
     } catch (e) {
       console.warn('Failed to load saved onboarding:', e);
@@ -190,31 +212,40 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   },
 
   submitOnboarding: async () => {
-    const { driverKyc, vehicle } = get();
-    const now = new Date().toISOString();
+    const { driverKyc, vehicle, bank, agreementAccepted } = get();
+    const uploadedDocuments: Array<[string, string | undefined]> = [
+      ['driver_license_front', driverKyc.dlFrontUri],
+      ['identity_proof', driverKyc.identityProofUri],
+      ['vehicle_rc', vehicle.rcDocUri],
+      ['vehicle_permit', vehicle.permitDocUri],
+      ['vehicle_fitness', vehicle.fitnessDocUri],
+      ['vehicle_insurance', vehicle.insuranceDocUri],
+      ['vehicle_photo', vehicle.frontImageUri],
+      ['bank_proof', bank.proofUri],
+    ];
+    const missing = uploadedDocuments.filter(([, uri]) => !uri).map(([type]) => type);
+    if (missing.length) throw new Error(`Upload all required documents: ${missing.join(', ')}.`);
 
+    for (const [type, uri] of uploadedDocuments) {
+      await driverVendorApi.uploadDocument(type, uri!);
+    }
+
+    await driverVendorApi.saveOnboarding({
+      driver: driverKyc,
+      vehicle,
+      bank,
+      agreementAccepted,
+    });
+    const now = new Date().toISOString();
     set({
       isCompleted: true,
-      verificationStatus: 'verified',
+      verificationStatus: 'submitted',
+      reviewNotes: null,
       submittedAt: now,
       currentStep: 6,
+      bank: { ...bank, accountNumber: '', accountLast4: bank.accountNumber.slice(-4) },
     });
-
     await get().saveToStorage();
-
-    // Sync to backend if authenticated
-    try {
-      await driverVendorApi.saveOnboarding({
-        name: driverKyc.fullName,
-        vehicleNumber: vehicle.registrationNumber,
-        vehicleType: vehicle.type,
-        capacityCft: vehicle.capacityCft,
-        permitExpiry: vehicle.permitExpiry,
-        fitnessCertExpiry: vehicle.fitnessCertExpiry,
-      });
-    } catch (err) {
-      console.log('Driver onboarding backend sync deferred (saved locally):', err);
-    }
   },
 
   resetOnboarding: () => {
@@ -222,25 +253,25 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       currentStep: 1,
       isCompleted: false,
       verificationStatus: 'pending',
+      reviewNotes: null,
       driverKyc: {
         fullName: '',
         phone: '',
         email: '',
-        city: 'Pune & PCMC',
-        experienceYears: '3',
+        city: '',
+        experienceYears: '',
         emergencyContact: '',
         emergencyPhone: '',
         dlNumber: '',
         dlExpiry: '',
         dlCategory: 'Commercial Transport (HMV/LMV)',
-        aadhaarNumber: '',
       },
       vehicle: {
         registrationNumber: '',
-        type: 'Tata 407',
-        makeModel: 'Tata Motors 407',
-        capacityCft: 600,
-        payloadTons: '2.5 Tons',
+        type: '',
+        makeModel: '',
+        capacityCft: 0,
+        payloadTons: '',
         rcNumber: '',
         permitExpiry: '',
         fitnessCertExpiry: '',

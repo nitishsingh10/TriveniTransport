@@ -8,6 +8,7 @@
     "dev:web": "pnpm --filter @triveni/web dev",
     "dev:mobile": "pnpm --filter @triveni/mobile-customer start",
     "dev:driver": "pnpm --filter @triveni/mobile-driver start",
+    "dev:vendor": "pnpm --filter @triveni/mobile-vendor start",
     "dev:backend": "pnpm --filter @triveni/backend dev",
     "build": "turbo run build",
     "build:web": "pnpm --filter @triveni/web build",
@@ -18,6 +19,7 @@
     "typecheck:web": "pnpm --filter @triveni/web typecheck",
     "typecheck:mobile": "pnpm --filter @triveni/mobile-customer typecheck",
     "typecheck:driver": "pnpm --filter @triveni/mobile-driver typecheck",
+    "typecheck:vendor": "pnpm --filter @triveni/mobile-vendor typecheck",
     "typecheck:backend": "pnpm --filter @triveni/backend typecheck",
     "clean": "turbo run clean && rm -rf node_modules"
   },

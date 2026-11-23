@@ -28,7 +28,7 @@ const ACTIVITIES = [
   {
     icon: ShieldCheck,
     badge: 'PROTECTION',
-    text: 'Transit Coverage Active',
+    text: 'Move details confirmed',
     meta: '₹5,00,000 Safe Hands Guarantee',
     color: '#10B981',
   },

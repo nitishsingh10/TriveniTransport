@@ -91,7 +91,7 @@ async function apiFetch<T>(
     const role = token.getRole();
     token.clear();
     if (typeof window !== 'undefined') {
-      const loginPath = role === 'vendor' ? '/vendor/login' : role === 'admin' ? '/admin/login' : '/login';
+      const loginPath = role === 'vendor' ? '/vendor/login' : role === 'supervisor' ? '/vendor/supervisor/login' : role === 'admin' ? '/admin/login' : '/login';
       window.location.href = loginPath;
     }
     throw new Error('Session expired');
@@ -155,8 +155,9 @@ export class ApiError extends Error {
 export const auth = {
   requestOtp: (
     identifier: string,
-    role: 'customer' | 'vendor' | 'admin' = 'customer',
-    isSignup = false
+    role: 'customer' | 'vendor' | 'supervisor' | 'admin' = 'customer',
+    isSignup = false,
+    serviceType?: 'packers_movers' | 'transport'
   ) => {
     const isEmail = identifier.includes('@');
     return apiFetch<{ message: string; channel?: 'email' | 'sms'; destination?: string }>('/auth/otp/request', {
@@ -165,6 +166,7 @@ export const auth = {
         identifier,
         ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
         role,
+        serviceType,
         isSignup,
       }),
     });
@@ -173,9 +175,10 @@ export const auth = {
   verifyOtp: (
     identifier: string,
     code: string,
-    role: 'customer' | 'vendor' | 'admin' = 'customer',
+    role: 'customer' | 'vendor' | 'supervisor' | 'admin' = 'customer',
     name?: string,
-    isSignup = false
+    isSignup = false,
+    serviceType?: 'packers_movers' | 'transport'
   ) => {
     const isEmail = identifier.includes('@');
     return apiFetch<{
@@ -190,6 +193,7 @@ export const auth = {
         ...(isEmail ? { email: identifier.toLowerCase().trim() } : { phone: identifier.trim() }),
         code,
         role,
+        serviceType,
         name,
         isSignup,
       }),
@@ -209,7 +213,25 @@ export interface VendorProfile {
   phone?: string | null;
   email?: string | null;
   status?: string;
+  serviceType?: 'packers_movers' | 'transport' | null;
+  onboardingStatus?: string;
+  onboardingData?: Record<string, unknown>;
+  reviewNotes?: string | null;
   _count?: { bookings: number };
+  documents?: Array<{ documentType: string; fileName: string; status: string; uploadedAt: string }>;
+}
+
+export interface PartnerContract {
+  version: string;
+  hash: string;
+  text: string;
+  signature: null | {
+    signerName: string;
+    signerRole: string;
+    signatureText: string;
+    signedAt: string;
+    contractHash: string;
+  };
 }
 
 export interface VendorVehicle {
@@ -231,12 +253,62 @@ export interface VendorJob {
   dropAddress: string;
   customer?: { name: string; phone: string } | null;
   vehicle?: { type: string; registrationNumber: string } | null;
+  serviceType?: 'packers_movers' | 'transport';
+  supervisorId?: string | null;
+  supervisor?: { id: string; name: string; phone: string } | null;
+}
+
+export interface VendorSupervisor {
+  id: string;
+  name: string;
+  phone: string;
+  status: 'invited' | 'active' | 'suspended';
+  phoneVerifiedAt?: string | null;
+}
+
+async function uploadVendorDocument(file: File, documentType: string) {
+  const signed = await apiFetch<{ uploadUrl: string; objectKey: string; maxBytes: number }>('/vendor/documents/presign', {
+    method: 'POST',
+    body: JSON.stringify({ documentType, fileName: file.name, mimeType: file.type, size: file.size }),
+  });
+  if (file.size > signed.maxBytes) throw new Error('Each document must be 10 MB or smaller.');
+  const uploaded = await fetch(signed.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+  if (!uploaded.ok) throw new Error('Secure document upload failed. Please try again.');
+  return apiFetch('/vendor/documents/complete', {
+    method: 'POST',
+    body: JSON.stringify({ documentType, fileName: file.name, mimeType: file.type, objectKey: signed.objectKey }),
+  });
 }
 
 export const vendor = {
   getProfile: () => apiFetch<VendorProfile>('/vendor/profile'),
   getVehicles: () => apiFetch<VendorVehicle[]>('/vendor/vehicles'),
   getJobs: () => apiFetch<VendorJob[]>('/vendor/jobs'),
+  submitOnboarding: (body: Record<string, unknown>) => apiFetch<{ onboardingStatus: string }>('/vendor/onboarding', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }),
+  getPartnerContract: () => apiFetch<PartnerContract>('/vendor/partner-contract'),
+  requestPartnerContractOtp: () => apiFetch<{ message: string; channel: 'phone' | 'email'; destination: string }>('/vendor/partner-contract/otp', { method: 'POST' }),
+  signPartnerContract: (body: { version: string; hash: string; signerName: string; signerRole: string; signatureText: string; otp: string; acceptTerms: true }) =>
+    apiFetch<{ signed: boolean }>('/vendor/partner-contract/sign', { method: 'POST', body: JSON.stringify(body) }),
+  getSupervisors: () => apiFetch<VendorSupervisor[]>('/vendor/supervisors'),
+  getSupervisorJobs: () => apiFetch<VendorJob[]>('/vendor/supervisor/jobs'),
+  updateSupervisorJobStatus: (bookingId: string, status: string) => apiFetch(`/vendor/supervisor/jobs/${bookingId}/status`, {
+    method: 'PATCH', body: JSON.stringify({ status }),
+  }),
+  addSupervisor: (body: { name: string; phone: string }) => apiFetch<VendorSupervisor>('/vendor/supervisors', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }),
+  revokeSupervisor: (supervisorId: string) => apiFetch<VendorSupervisor>(`/vendor/supervisors/${supervisorId}/revoke`, {
+    method: 'PATCH',
+  }),
+  uploadDocument: uploadVendorDocument,
+  assignSupervisor: (bookingId: string, supervisorId: string | null) => apiFetch(`/vendor/bookings/${bookingId}/supervisor`, {
+    method: 'POST',
+    body: JSON.stringify({ supervisorId }),
+  }),
 };
 
 // ── Quotes ───────────────────────────────────────────────────────────
@@ -475,6 +547,7 @@ export interface AdminBookingListResponse {
     vendor?: { id: string; name: string; phone: string } | null;
     vehicle?: { id: string; type: string; registrationNumber: string } | null;
     _count?: { items: number; revisions: number };
+    supervisor?: { id: string; name: string; phone: string } | null;
   }>;
   total: number;
   skip: number;
@@ -482,11 +555,12 @@ export interface AdminBookingListResponse {
 }
 
 export const admin = {
-  getMetrics: () => apiFetch<AdminMetrics>('/admin/metrics'),
-  listBookings: (params?: { status?: string; search?: string; skip?: number; take?: number }) => {
+  getMetrics: (serviceType?: 'packers_movers' | 'transport') => apiFetch<AdminMetrics>(`/admin/metrics${serviceType ? `?serviceType=${serviceType}` : ''}`),
+  listBookings: (params?: { status?: string; search?: string; skip?: number; take?: number; serviceType?: 'packers_movers' | 'transport' }) => {
     const q = new URLSearchParams();
     if (params?.status) q.append('status', params.status);
     if (params?.search) q.append('search', params.search);
+    if (params?.serviceType) q.append('serviceType', params.serviceType);
     if (params?.skip !== undefined) q.append('skip', String(params.skip));
     if (params?.take !== undefined) q.append('take', String(params.take));
     const qs = q.toString();
@@ -503,8 +577,30 @@ export const admin = {
       method: 'POST',
       body: JSON.stringify({ vendorId, vehicleId }),
     }),
-  listVendors: () => apiFetch<any[]>('/admin/vendors'),
-  listVehicles: () => apiFetch<any[]>('/admin/vehicles'),
+  listVendors: (serviceType?: 'packers_movers' | 'transport') => apiFetch<any[]>(`/admin/vendors${serviceType ? `?serviceType=${serviceType}` : ''}`),
+  listVehicles: (serviceType?: 'packers_movers' | 'transport') => apiFetch<any[]>(`/admin/vehicles${serviceType ? `?serviceType=${serviceType}` : ''}`),
+  reviewVendor: (id: string, status: 'under_review' | 'needs_changes' | 'approved' | 'rejected', notes?: string) => apiFetch<any>(`/admin/vendors/${id}/review`, {
+    method: 'PATCH', body: JSON.stringify({ status, notes }),
+  }),
+  getVendorDocuments: (id: string) => apiFetch<any[]>(`/admin/vendors/${id}/documents`),
+  getVendorContract: (id: string) => apiFetch<{
+    currentVersion: string;
+    currentHash: string;
+    signature: {
+      contractVersion: string;
+      contractHash: string;
+      signerName: string;
+      signerRole: string;
+      signedAt: string;
+      otpChallengeId: string;
+      ipAddress: string | null;
+      userAgent: string | null;
+      contractText: string;
+    } | null;
+  }>(`/admin/vendors/${id}/contract`),
+  reviewVendorDocument: (id: string, status: 'approved' | 'rejected', notes?: string) => apiFetch<any>(`/admin/vendor-documents/${id}/review`, {
+    method: 'PATCH', body: JSON.stringify({ status, notes }),
+  }),
   listItems: () => apiFetch<any[]>('/admin/items'),
   listPricingRules: () => apiFetch<any[]>('/admin/pricing-rules'),
   listZones: () => apiFetch<any[]>('/admin/zones'),

@@ -820,7 +820,7 @@ export default function QuotePage() {
                 <div className={styles.totalBlock}>
                   <span className={styles.totalLabel}>Total Estimated Cost</span>
                   <span className={styles.totalAmount}>₹{quoteResult.quoteAmount.toLocaleString('en-IN')}</span>
-                  <span className={styles.totalNote}>Includes GST, toll charges, and basic insurance</span>
+                  <span className={styles.totalNote}>Estimate based on the selected services and listed charges</span>
                 </div>
 
                 <div className={styles.breakdownTable}>

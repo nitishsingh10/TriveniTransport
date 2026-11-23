@@ -23,9 +23,6 @@ export interface DriverJob {
   vehicleReg: string;
   scheduledDate: string;
   scheduledSlot: string;
-  payoutAmount: number;
-  advanceCollected: number;
-  collectAtDelivery: number;
   status: BookingStatus;
   itemsCount: number;
   floorNumber: number;
@@ -79,8 +76,6 @@ interface DriverState {
 function mapBackendJob(job: BackendJob): DriverJob {
   const snapshot = job.pricingSnapshot || {};
   const snapshotItems = Array.isArray(snapshot.items) ? snapshot.items : [];
-  const finalAmount = numeric(job.finalAmount);
-  const isCod = snapshot.paymentMethod === 'cash_on_delivery';
   const itemCount = Array.isArray(job.items)
     ? job.items.reduce((sum, item) => sum + numeric(item.quantity), 0)
     : snapshotItems.reduce((sum: number, item: any) => sum + numeric(item.quantity), 0);
@@ -102,9 +97,6 @@ function mapBackendJob(job: BackendJob): DriverJob {
       year: 'numeric',
     }),
     scheduledSlot: job.scheduledSlot || '09:00 AM – 12:00 PM',
-    payoutAmount: Math.round(finalAmount * 0.65),
-    advanceCollected: isCod ? 0 : Math.round(finalAmount * 0.2),
-    collectAtDelivery: isCod ? finalAmount : Math.max(0, finalAmount - Math.round(finalAmount * 0.2)),
     status: job.status,
     itemsCount: itemCount,
     floorNumber: job.floorNumber ?? 0,

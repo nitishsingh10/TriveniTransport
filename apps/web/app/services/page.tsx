@@ -34,7 +34,7 @@ const SERVICES = [
       'Dedicated moving captain on site',
       'Mattress and sofa dust-proof covers',
       'Electrical appliances unmounting & mounting support',
-      'Transit insurance coverage up to ₹5,00,000',
+      'Careful handling by verified moving partners',
     ],
   },
   {
@@ -45,7 +45,7 @@ const SERVICES = [
       'Weekend and after-hours shifting availability',
       'Anti-static bubble wrap for desktop PCs and servers',
       'Color-coded department and employee boxing',
-      'GST tax invoicing with line-item breakdown',
+      'Booking amount and service details',
     ],
   },
   {
@@ -56,7 +56,7 @@ const SERVICES = [
       'Comprehensive pre-transit photographic condition report',
       'Door-to-door vehicle pickup and delivery',
       'Wheel chocks & hydraulic ramp loading',
-      'All-India transit insurance',
+      'Pickup and delivery by verified transport partners',
     ],
   },
   {

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, Mail, ShieldCheck, Quote, ArrowLeft, UserCircle, AlertCircle } from 'lucide-react';
+import { Phone, Mail, ShieldCheck, ArrowLeft, UserCircle, AlertCircle } from 'lucide-react';
 import { auth, token, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/useAuth';
 import { getRoleSafeDestination } from '../../lib/authNavigation';
@@ -59,7 +59,7 @@ export default function VendorSignupPage() {
     setError('');
     setLoading(true);
     try {
-      await auth.requestOtp(resolvedIdentifier, 'vendor', true);
+      await auth.requestOtp(resolvedIdentifier, 'vendor', true, 'packers_movers');
       setOtpSent(true);
       setOtp('');
       startResendCooldown();
@@ -79,7 +79,7 @@ export default function VendorSignupPage() {
     setError('');
     setLoading(true);
     try {
-      await auth.requestOtp(resolvedIdentifier, 'vendor', true);
+      await auth.requestOtp(resolvedIdentifier, 'vendor', true, 'packers_movers');
       setOtp('');
       startResendCooldown();
     } catch (err) {
@@ -95,11 +95,11 @@ export default function VendorSignupPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor', name.trim(), true);
+      const res = await auth.verifyOtp(resolvedIdentifier, otp, 'vendor', name.trim(), true, 'packers_movers');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('vendor');
       if (res.user) token.setUser(res.user);
-      router.replace(getRoleSafeDestination('vendor'));
+      router.replace('/vendor/onboarding');
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -380,16 +380,15 @@ export default function VendorSignupPage() {
           {/* Left Side (visually): Showcase */}
           <div className={styles.rightPanel}>
             <div className={styles.showcaseContent}>
-              <h2 className={styles.showcaseTitle}>Join the most trusted network.</h2>
+              <h2 className={styles.showcaseTitle}>Apply to join the P&amp;M partner network.</h2>
               <div className={styles.quoteWrapper}>
-                <Quote size={40} className={styles.quoteIcon} />
-                <p className={styles.quoteText}>
-                  &quot;Partnering with Triveni as a vendor has boosted my bookings by 40%. The platform is seamless and the payments are always on time.&quot;
-                </p>
+                <ShieldCheck size={36} className={styles.quoteIcon} />
+                <p className={styles.quoteText}>How approval works</p>
                 <div className={styles.author}>
-                  <p className={styles.authorName}>Vikram Singh</p>
-                  <p className={styles.authorRole}>Fleet Owner, Thane • Verified Partner</p>
+                  <p className={styles.authorName}>1. Verify your contact</p>
+                  <p className={styles.authorRole}>2. Submit business details and documents</p>
                 </div>
+                <p className={styles.subtitle}>Triveni operations reviews the application. P&amp;M orders and supervisor tools stay locked until approval.</p>
               </div>
             </div>
           </div>

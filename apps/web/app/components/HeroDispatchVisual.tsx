@@ -133,7 +133,7 @@ export default function HeroDispatchVisual() {
             </span>
           </div>
           <p className={styles.captainSub}>
-            ₹0 Hidden Charges • ₹5 Lakh Transit Insurance Included
+            Clear itemised pricing • Verified moving partners
           </p>
         </div>
       </motion.div>

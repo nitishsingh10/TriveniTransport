@@ -2,9 +2,11 @@
 // Enums (mirror Prisma schema enums exactly)
 // ─────────────────────────────────────────────────────────────────
 
-export type UserRole = 'customer' | 'vendor' | 'admin';
+export type UserRole = 'customer' | 'vendor' | 'supervisor' | 'admin';
 
-export type VendorStatus = 'active' | 'suspended';
+export type VendorStatus = 'pending' | 'active' | 'suspended';
+
+export type OnboardingStatus = 'draft' | 'submitted' | 'under_review' | 'needs_changes' | 'approved' | 'rejected';
 
 export type ZoneType = 'core' | 'extended';
 
@@ -33,7 +35,7 @@ export type NotificationChannel = 'sms' | 'whatsapp' | 'push' | 'email';
 
 export type NotificationStatus = 'queued' | 'sent' | 'failed';
 
-export type OtpPurpose = 'login';
+export type OtpPurpose = 'login' | 'signup';
 
 export type PricingRuleType =
   | 'packing_tier_multiplier'
@@ -83,7 +85,11 @@ export interface Vendor {
   name: string;
   phone: string;
   email?: string | null;
+  serviceType?: ServiceType | null;
   status: VendorStatus;
+  onboardingStatus: OnboardingStatus;
+  onboardingData?: Record<string, unknown>;
+  reviewNotes?: string | null;
   serviceAreas: string[]; // zone IDs
   createdAt: string;
 }
@@ -168,6 +174,8 @@ export interface Booking {
   customerId: string;
   vendorId?: string | null;
   vehicleId?: string | null;
+  serviceType: ServiceType;
+  supervisorId?: string | null;
   status: BookingStatus;
   pickupAddress: string;
   dropAddress: string;
@@ -271,6 +279,7 @@ export interface OtpRequestBody {
   phone?: string;
   email?: string;
   role?: UserRole;
+  serviceType?: ServiceType;
   isSignup?: boolean;
 }
 
@@ -280,6 +289,7 @@ export interface OtpVerifyBody {
   email?: string;
   otp: string;
   role: UserRole;
+  serviceType?: ServiceType;
   fullName?: string;
   isSignup?: boolean;
 }
@@ -297,6 +307,16 @@ export interface AuthUser {
   phone?: string | null;
   email?: string | null;
   profileCompleted?: boolean;
+}
+
+export interface Supervisor {
+  id: string;
+  vendorId: string;
+  name: string;
+  phone: string;
+  status: 'invited' | 'active' | 'suspended';
+  phoneVerifiedAt?: string | null;
+  createdAt: string;
 }
 
 export interface AuthResponse {

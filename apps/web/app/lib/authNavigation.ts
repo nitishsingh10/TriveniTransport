@@ -3,6 +3,7 @@ const AUTH_ROUTES = new Set(['/login', '/signup', '/vendor/login', '/vendor/sign
 const ROLE_DESTINATIONS: Record<string, { fallback: string; allowedPaths: string[] }> = {
   customer: { fallback: '/bookings', allowedPaths: ['/', '/bookings', '/booking', '/quote'] },
   vendor: { fallback: '/vendor/portal', allowedPaths: ['/vendor/portal'] },
+  supervisor: { fallback: '/vendor/supervisor', allowedPaths: ['/vendor/supervisor'] },
   admin: { fallback: '/admin', allowedPaths: ['/admin'] },
 };
 

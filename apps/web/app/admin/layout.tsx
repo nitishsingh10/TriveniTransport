@@ -14,6 +14,7 @@ import {
   X,
   ExternalLink,
   RefreshCw,
+  UserRoundCheck,
 } from 'lucide-react';
 import { token } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
@@ -53,6 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Overview', href: '/admin', icon: LayoutDashboard },
     { label: 'Bookings Console', href: '/admin/bookings', icon: Package },
     { label: 'Fleet & Drivers', href: '/admin/fleet', icon: Truck },
+    { label: 'Partner Verification', href: '/admin/partners', icon: UserRoundCheck },
     { label: 'Pricing & Catalog', href: '/admin/pricing', icon: Tag },
     { label: 'Audit & Alerts', href: '/admin/audit', icon: ShieldCheck },
   ];
@@ -61,6 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (pathname === '/admin') return 'Executive Dashboard';
     if (pathname.startsWith('/admin/bookings')) return 'Relocations & Bookings';
     if (pathname.startsWith('/admin/fleet')) return 'Fleet & Driver Roster';
+    if (pathname.startsWith('/admin/partners')) return 'Partner Verification';
     if (pathname.startsWith('/admin/pricing')) return 'Pricing & Item Catalog';
     if (pathname.startsWith('/admin/audit')) return 'Security, Audit & Alerts';
     return 'Admin Console';

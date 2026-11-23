@@ -93,13 +93,13 @@ export default function ProfileScreen() {
     {
       icon: FileText,
       label: 'Invoices & Receipts',
-      subtitle: 'Tax invoices and GST documentation',
+      subtitle: 'Booking receipts and payment details',
       onPress: () => router.push('/(tabs)/bookings'),
     },
     {
       icon: ShieldCheck,
-      label: 'Insurance & Privacy Policy',
-      subtitle: '₹10L transit coverage terms',
+      label: 'Privacy Policy',
+      subtitle: 'How we handle your information',
       onPress: () => {},
     },
     {

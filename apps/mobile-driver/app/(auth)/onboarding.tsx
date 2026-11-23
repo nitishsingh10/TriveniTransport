@@ -29,7 +29,6 @@ import {
   AlertCircle,
   Eye,
   Trash2,
-  Sparkles,
   ArrowRight,
   Check,
 } from 'lucide-react-native';
@@ -41,18 +40,6 @@ import { useAuthStore } from '@/store/authStore';
 import { useDriverStore } from '@/store/driverStore';
 import { showToast } from '@/components/ToastHost';
 
-// Preset sample verified images for rapid testing without physical camera
-const SAMPLE_IMAGES = {
-  dlFront: 'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?auto=format&fit=crop&w=600&q=80',
-  dlBack: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
-  aadhaar: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
-  vehicleFront: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80',
-  vehicleSide: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80',
-  vehicleRear: 'https://images.unsplash.com/photo-1586191582152-32b04753041d?auto=format&fit=crop&w=800&q=80',
-  vehicleCargo: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
-  rcDoc: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
-};
-
 const VEHICLE_TYPES = [
   { label: 'Tata Ace (Chota Hathi)', capacity: 300, payload: '1.0 Ton', value: 'Tata Ace' },
   { label: 'Tata 407 (Medium Duty)', capacity: 600, payload: '2.5 Tons', value: 'Tata 407' },
@@ -61,6 +48,12 @@ const VEHICLE_TYPES = [
   { label: 'Eicher 17ft (High Deck)', capacity: 1000, payload: '5.5 Tons', value: 'Eicher 17ft' },
   { label: '20ft High-Cube Container', capacity: 1200, payload: '7.5 Tons', value: '20ft Container' },
 ];
+
+const VEHICLE_DOCUMENT_FIELDS = [
+  { key: 'permitDocUri', label: 'Commercial permit', help: 'Upload the current goods or commercial permit.' },
+  { key: 'fitnessDocUri', label: 'Fitness certificate', help: 'Upload the current vehicle fitness certificate.' },
+  { key: 'insuranceDocUri', label: 'Vehicle road-use document', help: 'Upload the current vehicle policy document held by your business for public-road use.' },
+] as const;
 
 export default function DriverOnboardingScreen() {
   const { colors: Colors } = useAppTheme();
@@ -88,8 +81,12 @@ export default function DriverOnboardingScreen() {
     loadSavedOnboarding();
   }, []);
 
+  useEffect(() => {
+    if (authUser?.phone) updateDriverKyc({ phone: authUser.phone });
+  }, [authUser?.phone, updateDriverKyc]);
+
   // Image upload handler
-  const handlePickImage = async (field: string, target: 'kyc' | 'vehicle', sampleKey?: keyof typeof SAMPLE_IMAGES) => {
+  const handlePickImage = async (field: string, target: 'kyc' | 'vehicle' | 'bank') => {
     Alert.alert(
       'Upload Document / Image',
       'Select a source for this image:',
@@ -107,8 +104,9 @@ export default function DriverOnboardingScreen() {
               quality: 0.8,
             });
             if (!result.canceled && result.assets[0]?.uri) {
-              if (target === 'kyc') updateDriverKyc({ [field]: result.assets[0].uri });
-              else updateVehicle({ [field]: result.assets[0].uri });
+              if (target === 'kyc') updateDriverKyc({ [field]: result.assets[0].uri } as Partial<DriverKycData>);
+              else if (target === 'vehicle') updateVehicle({ [field]: result.assets[0].uri } as Partial<VehicleData>);
+              else updateBank({ [field]: result.assets[0].uri } as Partial<BankData>);
             }
           },
         },
@@ -125,18 +123,9 @@ export default function DriverOnboardingScreen() {
               quality: 0.8,
             });
             if (!result.canceled && result.assets[0]?.uri) {
-              if (target === 'kyc') updateDriverKyc({ [field]: result.assets[0].uri });
-              else updateVehicle({ [field]: result.assets[0].uri });
-            }
-          },
-        },
-        {
-          text: 'Use Verified Sample',
-          onPress: () => {
-            if (sampleKey && SAMPLE_IMAGES[sampleKey]) {
-              const uri = SAMPLE_IMAGES[sampleKey];
-              if (target === 'kyc') updateDriverKyc({ [field]: uri });
-              else updateVehicle({ [field]: uri });
+              if (target === 'kyc') updateDriverKyc({ [field]: result.assets[0].uri } as Partial<DriverKycData>);
+              else if (target === 'vehicle') updateVehicle({ [field]: result.assets[0].uri } as Partial<VehicleData>);
+              else updateBank({ [field]: result.assets[0].uri } as Partial<BankData>);
             }
           },
         },
@@ -153,22 +142,26 @@ export default function DriverOnboardingScreen() {
       }
       setStep(2);
     } else if (currentStep === 2) {
-      if (!driverKyc.dlNumber.trim() || !driverKyc.aadhaarNumber.trim()) {
-        showToast({ title: 'Required fields', message: 'Enter your driving licence and Aadhaar number.', variant: 'error' });
+      if (!driverKyc.dlNumber.trim() || !driverKyc.dlExpiry.trim() || !driverKyc.dlFrontUri || !driverKyc.identityProofUri) {
+        showToast({ title: 'Required documents', message: 'Enter your licence details and upload the licence and government ID proof.', variant: 'error' });
         return;
       }
       setStep(3);
     } else if (currentStep === 3) {
-      if (!vehicle.registrationNumber.trim()) {
-        showToast({ title: 'Required field', message: 'Enter your vehicle registration number.', variant: 'error' });
+      if (!vehicle.registrationNumber.trim() || !vehicle.permitExpiry || !vehicle.fitnessCertExpiry || !vehicle.insuranceExpiry) {
+        showToast({ title: 'Required details', message: 'Enter the registration number and current permit, fitness, and motor policy expiry dates.', variant: 'error' });
         return;
       }
       setStep(4);
     } else if (currentStep === 4) {
+      if (!vehicle.frontImageUri || !vehicle.rcDocUri || !vehicle.permitDocUri || !vehicle.fitnessDocUri || !vehicle.insuranceDocUri) {
+        showToast({ title: 'Required documents', message: 'Upload a vehicle photo, RC, permit, fitness certificate, and motor policy proof.', variant: 'error' });
+        return;
+      }
       setStep(5);
     } else if (currentStep === 5) {
-      if (!bank.accountNumber.trim() || !bank.ifscCode.trim()) {
-        showToast({ title: 'Required fields', message: 'Enter your bank account and IFSC code.', variant: 'error' });
+      if (!bank.accountHolderName.trim() || !bank.accountNumber.trim() || !bank.ifscCode.trim() || !bank.proofUri) {
+        showToast({ title: 'Required payout details', message: 'Enter your bank details and upload a bank proof or cancelled cheque.', variant: 'error' });
         return;
       }
       setStep(6);
@@ -190,11 +183,10 @@ export default function DriverOnboardingScreen() {
     try {
       await submitOnboarding();
 
-      showToast({ title: 'Onboarding complete', message: 'Your driver documents have been submitted.', variant: 'success' });
+      showToast({ title: 'Application submitted', message: 'Orders remain locked while Triveni reviews your driver and vehicle documents.', variant: 'success' });
       router.replace('/(tabs)');
     } catch (e: any) {
-      showToast({ title: 'Submission saved', message: 'We will sync your details when the connection is available.', variant: 'info' });
-      router.replace('/(tabs)');
+      showToast({ title: 'Could not submit', message: e?.message || 'Check your connection and required documents, then try again.', variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -267,8 +259,8 @@ export default function DriverOnboardingScreen() {
             {currentStep === 1 && 'Step 1: Driver Profile & Experience'}
             {currentStep === 2 && 'Step 2: KYC & Government Documents'}
             {currentStep === 3 && 'Step 3: Vehicle Specs & Registration Plate'}
-            {currentStep === 4 && 'Step 4: Vehicle Inspection Photos'}
-            {currentStep === 5 && 'Step 5: Direct Payout Bank Account'}
+            {currentStep === 4 && 'Step 4: Vehicle Photos for Review'}
+            {currentStep === 5 && 'Step 5: Bank Details for Review'}
             {currentStep === 6 && 'Step 6: Compliance Pledge & Review'}
           </Text>
         </View>
@@ -295,7 +287,7 @@ export default function DriverOnboardingScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Legal Name (as on DL/Aadhaar) *</Text>
+                  <Text style={styles.label}>Full Legal Name (as on driving licence) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Rajesh Kumar"
@@ -314,8 +306,9 @@ export default function DriverOnboardingScreen() {
                   keyboardType="phone-pad"
                   maxLength={10}
                   placeholderTextColor={Colors.inputPlaceholder}
-                  value={driverKyc.phone}
-                  onChangeText={(text) => updateDriverKyc({ phone: text })}
+                  value={authUser?.phone || driverKyc.phone}
+                  editable={!authUser?.phone}
+                onChangeText={(text) => updateDriverKyc({ phone: text })}
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -422,15 +415,7 @@ export default function DriverOnboardingScreen() {
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Aadhaar / National ID *</Text>
-                <TextInput
-                  style={[styles.input, styles.codeFont]}
-                  placeholder="7845 9012 3456"
-                  keyboardType="number-pad"
-                  placeholderTextColor={Colors.inputPlaceholder}
-                  value={driverKyc.aadhaarNumber}
-                  onChangeText={(text) => updateDriverKyc({ aadhaarNumber: text })}
-                />
+                <Text style={styles.label}>Upload a government identity proof below</Text>
               </View>
             </View>
 
@@ -465,7 +450,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.uploadPlaceholder}
-                    onPress={() => handlePickImage('dlFrontUri', 'kyc', 'dlFront')}
+                    onPress={() => handlePickImage('dlFrontUri', 'kyc')}
                     activeOpacity={0.8}
                   >
                     <Camera size={22} color={Colors.text} />
@@ -490,7 +475,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.uploadPlaceholder}
-                    onPress={() => handlePickImage('dlBackUri', 'kyc', 'dlBack')}
+                    onPress={() => handlePickImage('dlBackUri', 'kyc')}
                     activeOpacity={0.8}
                   >
                     <Upload size={22} color={Colors.text} />
@@ -501,13 +486,13 @@ export default function DriverOnboardingScreen() {
 
               {/* Aadhaar Card */}
               <View style={styles.docBox}>
-                <Text style={styles.docBoxTitle}>Aadhaar Card / ID Proof</Text>
-                {driverKyc.aadhaarUri ? (
+                <Text style={styles.docBoxTitle}>Government ID Proof</Text>
+                {driverKyc.identityProofUri ? (
                   <View style={styles.thumbnailWrapper}>
-                    <Image source={{ uri: driverKyc.aadhaarUri }} style={styles.thumbnail} />
+                    <Image source={{ uri: driverKyc.identityProofUri }} style={styles.thumbnail} />
                     <TouchableOpacity
                       style={styles.viewThumbBtn}
-                      onPress={() => setPreviewImage(driverKyc.aadhaarUri || null)}
+                      onPress={() => setPreviewImage(driverKyc.identityProofUri || null)}
                     >
                       <Eye size={12} color={Colors.white} />
                     </TouchableOpacity>
@@ -515,11 +500,11 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.uploadPlaceholder}
-                    onPress={() => handlePickImage('aadhaarUri', 'kyc', 'aadhaar')}
+                    onPress={() => handlePickImage('identityProofUri', 'kyc')}
                     activeOpacity={0.8}
                   >
                     <FileText size={22} color={Colors.text} />
-                    <Text style={styles.uploadPlaceholderText}>Upload Aadhaar</Text>
+                    <Text style={styles.uploadPlaceholderText}>Upload ID Proof</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -602,7 +587,7 @@ export default function DriverOnboardingScreen() {
                 <TextInput
                   style={styles.input}
                   keyboardType="number-pad"
-                  value={String(vehicle.capacityCft || 600)}
+                  value={String(vehicle.capacityCft || '')}
                   onChangeText={(text) => updateVehicle({ capacityCft: parseInt(text) || 0 })}
                 />
               </View>
@@ -647,11 +632,31 @@ export default function DriverOnboardingScreen() {
                 />
               </View>
             </View>
+
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Commercial motor policy number</Text>
+                <TextInput
+                  style={styles.input}
+                  value={vehicle.insurancePolicyNumber}
+                  onChangeText={(text) => updateVehicle({ insurancePolicyNumber: text })}
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Motor policy expiry *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={vehicle.insuranceExpiry}
+                  onChangeText={(text) => updateVehicle({ insuranceExpiry: text })}
+                />
+              </View>
+            </View>
           </View>
         )}
 
         {/* ════════════════════════════════════════════════════════════════
-            STEP 4: VEHICLE IMAGES & INSPECTION PROOF
+            STEP 4: VEHICLE IMAGES FOR REVIEW
         ════════════════════════════════════════════════════════════════ */}
         {currentStep === 4 && (
           <View style={styles.card}>
@@ -660,31 +665,12 @@ export default function DriverOnboardingScreen() {
                 <Camera size={20} color={Colors.text} />
               </View>
               <View>
-                <Text style={styles.sectionTitle}>Vehicle Inspection Photos</Text>
+                <Text style={styles.sectionTitle}>Vehicle photos for review</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Provide real vehicle images with registration number clearly visible
+                  Provide current vehicle images with the registration number clearly visible.
                 </Text>
               </View>
             </View>
-
-            {/* Quick Demo Pre-fill Pill */}
-            <TouchableOpacity
-              style={styles.presetPill}
-              onPress={() => {
-                updateVehicle({
-                  frontImageUri: SAMPLE_IMAGES.vehicleFront,
-                  sideImageUri: SAMPLE_IMAGES.vehicleSide,
-                  rearImageUri: SAMPLE_IMAGES.vehicleRear,
-                  cargoImageUri: SAMPLE_IMAGES.vehicleCargo,
-                  rcDocUri: SAMPLE_IMAGES.rcDoc,
-                });
-                showToast({ title: 'Sample photos added', message: 'Verified vehicle inspection photos are ready.', variant: 'success' });
-              }}
-              activeOpacity={0.8}
-            >
-              <Sparkles size={14} color={Colors.text} />
-              <Text style={styles.presetPillText}>Auto-fill Verified Sample Vehicle Photos</Text>
-            </TouchableOpacity>
 
             <View style={styles.photoUploadList}>
               {/* Front Photo with Plate */}
@@ -692,7 +678,7 @@ export default function DriverOnboardingScreen() {
                 <View style={styles.photoInfo}>
                   <Text style={styles.photoCardTitle}>Front View (Number Plate Visible) *</Text>
                   <Text style={styles.photoCardDesc}>
-                    Required for AI registration plate validation & customer trust
+                    Operations uses this photo to review the vehicle and registration number.
                   </Text>
                 </View>
                 {vehicle.frontImageUri ? (
@@ -708,7 +694,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.cameraActionBtn}
-                    onPress={() => handlePickImage('frontImageUri', 'vehicle', 'vehicleFront')}
+                    onPress={() => handlePickImage('frontImageUri', 'vehicle')}
                     activeOpacity={0.8}
                   >
                     <Camera size={16} color={Colors.text} />
@@ -736,7 +722,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.cameraActionBtn}
-                    onPress={() => handlePickImage('sideImageUri', 'vehicle', 'vehicleSide')}
+                    onPress={() => handlePickImage('sideImageUri', 'vehicle')}
                     activeOpacity={0.8}
                   >
                     <Upload size={16} color={Colors.text} />
@@ -764,7 +750,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.cameraActionBtn}
-                    onPress={() => handlePickImage('rearImageUri', 'vehicle', 'vehicleRear')}
+                    onPress={() => handlePickImage('rearImageUri', 'vehicle')}
                     activeOpacity={0.8}
                   >
                     <Camera size={16} color={Colors.text} />
@@ -792,7 +778,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.cameraActionBtn}
-                    onPress={() => handlePickImage('cargoImageUri', 'vehicle', 'vehicleCargo')}
+                    onPress={() => handlePickImage('cargoImageUri', 'vehicle')}
                     activeOpacity={0.8}
                   >
                     <Upload size={16} color={Colors.text} />
@@ -820,7 +806,7 @@ export default function DriverOnboardingScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.cameraActionBtn}
-                    onPress={() => handlePickImage('rcDocUri', 'vehicle', 'rcDoc')}
+                    onPress={() => handlePickImage('rcDocUri', 'vehicle')}
                     activeOpacity={0.8}
                   >
                     <FileText size={16} color={Colors.text} />
@@ -828,6 +814,33 @@ export default function DriverOnboardingScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              {VEHICLE_DOCUMENT_FIELDS.map((document) => {
+                const uri = vehicle[document.key] as string | undefined;
+                return (
+                  <View style={styles.photoCard} key={document.key}>
+                    <View style={styles.photoInfo}>
+                      <Text style={styles.photoCardTitle}>{document.label} *</Text>
+                      <Text style={styles.photoCardDesc}>{document.help}</Text>
+                    </View>
+                    {uri ? (
+                      <View style={styles.previewContainer}>
+                        <Image source={{ uri }} style={styles.photoThumbnail} />
+                        <TouchableOpacity
+                          style={styles.deletePhotoBtn}
+                          onPress={() => updateVehicle({ [document.key]: undefined } as Partial<VehicleData>)}
+                        >
+                          <Trash2 size={14} color={Colors.error} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity style={styles.cameraActionBtn} onPress={() => handlePickImage(document.key, 'vehicle')} activeOpacity={0.8}>
+                        <FileText size={16} color={Colors.text} />
+                        <Text style={styles.cameraActionText}>Upload</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}
@@ -843,7 +856,7 @@ export default function DriverOnboardingScreen() {
               </View>
               <View>
                 <Text style={styles.sectionTitle}>Driver Payout Settlement Account</Text>
-                <Text style={styles.sectionSubtitle}>Direct daily earnings and incentive bank deposits</Text>
+                <Text style={styles.sectionSubtitle}>Used for payout verification after approval; settlement terms are confirmed separately.</Text>
               </View>
             </View>
 
@@ -894,7 +907,7 @@ export default function DriverOnboardingScreen() {
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>UPI ID (Instant Settlement)</Text>
+                <Text style={styles.label}>UPI ID (optional)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="rajesh@okhdfc"
@@ -906,10 +919,30 @@ export default function DriverOnboardingScreen() {
               </View>
             </View>
 
+            <View style={styles.photoCard}>
+              <View style={styles.photoInfo}>
+                <Text style={styles.photoCardTitle}>Bank proof or cancelled cheque *</Text>
+                <Text style={styles.photoCardDesc}>Upload a document that confirms the account holder and bank details.</Text>
+              </View>
+              {bank.proofUri ? (
+                <View style={styles.previewContainer}>
+                  <Image source={{ uri: bank.proofUri }} style={styles.photoThumbnail} />
+                  <TouchableOpacity style={styles.deletePhotoBtn} onPress={() => updateBank({ proofUri: undefined })}>
+                    <Trash2 size={14} color={Colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.cameraActionBtn} onPress={() => handlePickImage('proofUri', 'bank')} activeOpacity={0.8}>
+                  <FileText size={16} color={Colors.text} />
+                  <Text style={styles.cameraActionText}>Upload proof</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <View style={styles.payoutNoticeBox}>
               <ShieldCheck size={16} color={Colors.success} />
               <Text style={styles.payoutNoticeText}>
-                Triveni Transports operates 100% automated payouts within 24 hours of successful move completion.
+                Bank proof is reviewed during onboarding. Settlement amounts and timing are confirmed separately by operations.
               </Text>
             </View>
           </View>
@@ -934,9 +967,9 @@ export default function DriverOnboardingScreen() {
             <View style={styles.statusBanner}>
               <CheckCircle2 size={18} color={Colors.success} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusBannerTitle}>Driver Verification Passed</Text>
+                <Text style={styles.statusBannerTitle}>Awaiting Triveni Review</Text>
                 <Text style={styles.statusBannerSubtitle}>
-                  Vehicle {vehicle.registrationNumber} is approved for logistics duty
+                  You will not receive or accept orders until the driver and vehicle checks are approved.
                 </Text>
               </View>
             </View>
@@ -951,11 +984,11 @@ export default function DriverOnboardingScreen() {
               <View style={styles.summaryDetails}>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>Registration Plate</Text>
-                  <Text style={styles.summaryPlateText}>{vehicle.registrationNumber || 'MH 12 CD 5678'}</Text>
+                  <Text style={styles.summaryPlateText}>{vehicle.registrationNumber || 'Not entered'}</Text>
                 </View>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>Model</Text>
-                  <Text style={styles.summaryDetailVal}>{vehicle.type || 'Tata 407'}</Text>
+                  <Text style={styles.summaryDetailVal}>{vehicle.type || 'Not selected'}</Text>
                 </View>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>Cargo Capacity</Text>
@@ -963,12 +996,12 @@ export default function DriverOnboardingScreen() {
                 </View>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>Permit Status</Text>
-                  <Text style={[styles.summaryDetailVal, { color: Colors.success }]}>Active till 2028</Text>
+                  <Text style={styles.summaryDetailVal}>{vehicle.permitExpiry || 'Not submitted'}</Text>
                 </View>
               </View>
 
               {/* Photo Previews */}
-              <Text style={styles.summarySectionLabel}>Vehicle Inspection Photos</Text>
+              <Text style={styles.summarySectionLabel}>Vehicle photos for review</Text>
               <View style={styles.thumbnailRow}>
                 {vehicle.frontImageUri && (
                   <Image source={{ uri: vehicle.frontImageUri }} style={styles.summaryThumb} />
@@ -995,19 +1028,15 @@ export default function DriverOnboardingScreen() {
               <View style={styles.summaryDetails}>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>Captain Name</Text>
-                  <Text style={styles.summaryDetailVal}>{driverKyc.fullName || 'Rajesh Kumar'}</Text>
+                  <Text style={styles.summaryDetailVal}>{driverKyc.fullName || 'Not provided'}</Text>
                 </View>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>Mobile</Text>
-                  <Text style={styles.summaryDetailVal}>{driverKyc.phone || '98888 88888'}</Text>
+                  <Text style={styles.summaryDetailVal}>{driverKyc.phone || 'Not provided'}</Text>
                 </View>
                 <View style={styles.summaryDetailItem}>
                   <Text style={styles.summaryDetailLabel}>DL Number</Text>
                   <Text style={[styles.summaryDetailVal, styles.codeFont]}>{driverKyc.dlNumber}</Text>
-                </View>
-                <View style={styles.summaryDetailItem}>
-                  <Text style={styles.summaryDetailLabel}>Aadhaar</Text>
-                  <Text style={[styles.summaryDetailVal, styles.codeFont]}>{driverKyc.aadhaarNumber}</Text>
                 </View>
               </View>
             </View>
@@ -1022,7 +1051,7 @@ export default function DriverOnboardingScreen() {
                 {agreementAccepted && <Check size={14} color={Colors.white} strokeWidth={3} />}
               </View>
               <Text style={styles.checkboxLabel}>
-                I declare that the commercial vehicle number, insurance documents, and driving licence provided are valid and genuine. I pledge to follow Triveni Transports safety standards.
+                I declare that the commercial vehicle number, motor policy documents, and driving licence provided are valid and genuine. I pledge to follow Triveni Transports safety standards.
               </Text>
             </TouchableOpacity>
           </View>
