@@ -82,7 +82,19 @@ export class BookingController {
     try {
       const customerId = req.user!.id;
       const bookingId = req.params.id as string;
-      const result = await BookingService.cancelBooking(bookingId, customerId);
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined;
+      const result = await BookingService.cancelBooking(bookingId, customerId, reason);
+      res.status(200).json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  static async deleteDraft(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = req.user!.id;
+      const bookingId = req.params.id as string;
+      const result = await BookingService.deleteDraftBooking(bookingId, customerId);
       res.status(200).json(result);
     } catch (e) {
       next(e);

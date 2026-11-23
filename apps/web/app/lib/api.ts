@@ -427,8 +427,16 @@ export const bookings = {
 
   get: (id: string) => apiFetch<Booking>(`/bookings/${id}`),
 
-  cancel: (id: string) =>
-    apiFetch<Booking>(`/bookings/${id}/cancel`, { method: 'POST' }),
+  cancel: (id: string, reason?: string) =>
+    apiFetch<Booking>(`/bookings/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  deleteDraft: (id: string) =>
+    apiFetch<{ success: boolean; message: string }>(`/bookings/${id}`, {
+      method: 'DELETE',
+    }),
 
   confirmCod: (id: string) =>
     apiFetch<Booking>(`/bookings/${id}/confirm-cod`, { method: 'POST' }),

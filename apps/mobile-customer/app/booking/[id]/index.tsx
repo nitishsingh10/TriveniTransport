@@ -31,6 +31,10 @@ import {
   ArrowRight,
   Calendar,
   AlertCircle,
+  XCircle,
+  Layers,
+  Building,
+  CreditCard,
 } from 'lucide-react-native';
 import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
@@ -39,6 +43,8 @@ import { bookingApi, CURATED_LOCATIONS, type BookingItem } from '@/lib/api';
 import { PressableScale } from '@/components/PressableScale';
 import { FadeInUp } from '@/components/FadeInUp';
 import { PulsingDot } from '@/components/PulsingDot';
+import { CancellationProtocolModal } from '@/components/CancellationProtocolModal';
+import type { BookingStatus } from '@triveni/shared-types';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
@@ -50,13 +56,13 @@ interface Milestone {
 }
 
 const MILESTONE_DEFINITIONS: Milestone[] = [
-  { key: 'REQUESTED', label: 'Booking Requested', desc: 'Slot held & awaiting verification', icon: Clock },
-  { key: 'CONFIRMED', label: 'Booking Confirmed', desc: 'Advance received & vehicle reserved', icon: CheckCircle2 },
-  { key: 'ASSIGNED', label: 'Driver & Crew Assigned', desc: 'Captain & helpers allotted to duty', icon: UserCheck },
-  { key: 'EN_ROUTE', label: 'Vehicle Dispatched', desc: 'Vehicle departed dispatch hub', icon: Car },
-  { key: 'ARRIVED', label: 'Arrived at Pickup', desc: 'Inspection & loading commenced', icon: MapPin },
+  { key: 'REQUESTED', label: 'Order Requested', desc: 'Slot held & awaiting verification', icon: Clock },
+  { key: 'CONFIRMED', label: 'Order Confirmed', desc: 'Vehicle & team reserved', icon: CheckCircle2 },
+  { key: 'ASSIGNED', label: 'Driver / Crew Assigned', desc: 'Captain allotted to your duty', icon: UserCheck },
+  { key: 'EN_ROUTE', label: 'Vehicle Dispatched', desc: 'Departed dispatch hub for pickup', icon: Car },
+  { key: 'ARRIVED', label: 'Arrived at Pickup', desc: 'Loading & inspection commenced', icon: MapPin },
   { key: 'IN_PROGRESS', label: 'Loaded & In Transit', desc: 'Moving safely towards destination', icon: Truck },
-  { key: 'COMPLETED', label: 'Delivered & Unpacked', desc: 'Final placement and handover complete', icon: Home },
+  { key: 'COMPLETED', label: 'Delivered & Unpacked', desc: 'Handover complete with proof of delivery', icon: Home },
 ];
 
 const STATUS_PROGRESS: Record<string, number> = {
@@ -83,36 +89,37 @@ export default function BookingTrackScreen() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  const fetchDetails = async (isPolling = false) => {
+    if (!id) return;
+    try {
+      if (!isPolling) setLoading(true);
+      const data = await bookingApi.get(id);
+      setBooking(data);
+
+      try {
+        const telem = await bookingApi.getTelemetry(id);
+        setTelemetry(telem);
+      } catch {
+        // Non-critical telemetry fallback
+      }
+    } catch (err: any) {
+      if (!isPolling) setError(err.message || 'Unable to load booking details');
+    } finally {
+      if (!isPolling) setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
     let pollInterval: any;
 
-    const fetchDetails = async (isPolling = false) => {
-      if (!id) return;
-      try {
-        if (!isPolling) setLoading(true);
-        const data = await bookingApi.get(id);
-        if (isMounted) setBooking(data);
-
-        try {
-          const telem = await bookingApi.getTelemetry(id);
-          if (isMounted) setTelemetry(telem);
-        } catch {
-          // Non-critical telemetry fallback
-        }
-      } catch (err: any) {
-        if (isMounted && !isPolling) setError(err.message || 'Unable to load booking details');
-      } finally {
-        if (isMounted && !isPolling) setLoading(false);
-      }
-    };
-
     fetchDetails(false);
 
     // Auto-poll every 5 seconds so customer sees live when a driver accepts the move
     pollInterval = setInterval(() => {
-      fetchDetails(true);
+      if (isMounted) fetchDetails(true);
     }, 5000);
 
     return () => {
@@ -121,58 +128,48 @@ export default function BookingTrackScreen() {
     };
   }, [id]);
 
-  if (loading) {
+  const isTransport = useMemo(() => {
+    if (!booking) return false;
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.text} />
-        <Text style={styles.loadingText}>Fetching live move details...</Text>
-      </View>
+      booking.pricingSnapshot?.serviceType === 'transport' ||
+      ['tata_ace', 'tata_407', 'eicher_17ft', 'eicher_14ft', 'transport', 'bolero'].includes(
+        booking.configurationType
+      )
     );
-  }
-
-  if (error || !booking) {
-    return (
-      <View style={styles.centerContainer}>
-        <AlertCircle size={44} color={Colors.error} />
-        <Text style={styles.errorTitle}>Booking Not Found</Text>
-        <Text style={styles.errorSub}>{error || `Unable to locate booking #${id}`}</Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.88}
-        >
-          <Text style={styles.backButtonText}>Return to Bookings</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  }, [booking]);
 
   const isDriverAssigned = Boolean(
-    booking.vendor?.name &&
-    booking.status !== 'REQUESTED' &&
-    booking.status !== 'QUOTED' &&
-    booking.status !== 'CONFIRMED'
+    booking?.vendor?.name &&
+    booking?.status !== 'REQUESTED' &&
+    booking?.status !== 'QUOTED' &&
+    booking?.status !== 'CONFIRMED'
   );
 
-  const currentStep = !isDriverAssigned && booking.status === 'CONFIRMED' ? 1 : (STATUS_PROGRESS[booking.status] ?? 0);
-  const pickupCity = booking.pickupAddress.split(',')[0] || 'Pickup';
-  const dropCity = booking.dropAddress.split(',')[0] || 'Destination';
-  const driverName = booking.vendor?.name || '';
-  const driverPhone = booking.vendor?.phone || '';
-  const vehicleName = booking.vehicle?.type || '';
-  const vehicleReg = booking.vehicle?.registrationNumber || '';
+  // Map tracking is ONLY available for trucks/pickups to track location of driver AFTER the driver accepts the order
+  const showLiveMap = Boolean(
+    isTransport &&
+    isDriverAssigned &&
+    booking?.status &&
+    ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(booking.status)
+  );
 
   const pickupCoords = useMemo(() => {
-    const lower = (booking.pickupAddress || '').toLowerCase();
-    const found = CURATED_LOCATIONS.find((c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase()));
+    if (!booking?.pickupAddress) return { lat: 18.5679, lng: 73.9143 };
+    const lower = booking.pickupAddress.toLowerCase();
+    const found = CURATED_LOCATIONS.find(
+      (c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase())
+    );
     return found ? { lat: found.lat, lng: found.lng } : { lat: 18.5679, lng: 73.9143 };
-  }, [booking.pickupAddress]);
+  }, [booking?.pickupAddress]);
 
   const dropCoords = useMemo(() => {
-    const lower = (booking.dropAddress || '').toLowerCase();
-    const found = CURATED_LOCATIONS.find((c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase()));
-    return found ? { lat: found.lat, lng: found.lng } : { lat: 18.5590, lng: 73.7868 };
-  }, [booking.dropAddress]);
+    if (!booking?.dropAddress) return { lat: 18.559, lng: 73.7868 };
+    const lower = booking.dropAddress.toLowerCase();
+    const found = CURATED_LOCATIONS.find(
+      (c) => lower.includes(c.mainText.toLowerCase()) || lower.includes(c.city.toLowerCase())
+    );
+    return found ? { lat: found.lat, lng: found.lng } : { lat: 18.559, lng: 73.7868 };
+  }, [booking?.dropAddress]);
 
   const truckCoords = useMemo(() => {
     if (telemetry?.latitude && telemetry?.longitude) {
@@ -185,8 +182,11 @@ export default function BookingTrackScreen() {
   }, [telemetry, pickupCoords, dropCoords]);
 
   const liveMapHtml = useMemo(() => {
+    if (!showLiveMap) return '';
     const mapsScript = GOOGLE_MAPS_API_KEY
-      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&loading=async&callback=initMap"></script>`
+      ? `<script async src="https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
+          GOOGLE_MAPS_API_KEY
+        )}&loading=async&callback=initMap"></script>`
       : '';
     return `<!DOCTYPE html>
 <html>
@@ -301,713 +301,1074 @@ export default function BookingTrackScreen() {
     ${mapsScript}
   </body>
 </html>`;
-  }, [pickupCoords, dropCoords, truckCoords]);
+  }, [showLiveMap, pickupCoords, dropCoords, truckCoords]);
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={Colors.marigoldDark} />
+        <Text style={styles.loadingText}>Fetching live move details...</Text>
+      </View>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <View style={styles.centerContainer}>
+        <AlertCircle size={44} color={Colors.error} />
+        <Text style={styles.errorTitle}>Booking Not Found</Text>
+        <Text style={styles.errorSub}>{error || `Unable to locate booking #${id}`}</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.88}
+        >
+          <Text style={styles.backButtonText}>Return to Bookings</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const currentStep =
+    !isDriverAssigned && booking.status === 'CONFIRMED'
+      ? 1
+      : STATUS_PROGRESS[booking.status] ?? 0;
+
+  const driverName = booking.vendor?.name || '';
+  const driverPhone = booking.vendor?.phone || '';
+  const vehicleName = booking.vehicle?.type || '';
+  const vehicleReg = booking.vehicle?.registrationNumber || '';
+  const isCancellable = booking.status === 'CONFIRMED' || booking.status === 'ASSIGNED';
+  const isInTransit = ['IN_PROGRESS', 'EN_ROUTE', 'ARRIVED'].includes(booking.status);
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Live Map Display Graphic */}
-      <View style={styles.mapContainer}>
-        {Platform.OS === 'web' ? (
-          <iframe
-            srcDoc={liveMapHtml}
-            style={{
-              width: '100%',
-              height: 200,
-              border: 'none',
-              background: '#091524',
-            }}
-            title="Triveni Live Tracking Map"
-          />
-        ) : (
-          <WebView
-            source={{ html: liveMapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
-            applicationNameForUserAgent="TriveniTransports/1.0.0"
-            style={{
-              width: '100%',
-              height: 200,
-              backgroundColor: '#091524',
-            }}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            originWhitelist={['*']}
-            mixedContentMode="always"
-            allowFileAccess={true}
-            allowUniversalAccessFromFileURLs={true}
-            scrollEnabled={false}
-            bounces={false}
-          />
-        )}
-
-        {/* Floating Live GPS badge */}
-        <View style={styles.gpsLiveBadge}>
-          <Radio size={12} color={['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status) ? Colors.success : Colors.marigoldDark} />
-          <Text style={styles.gpsLiveText}>
-            {['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status)
-              ? telemetry?.latitude
-                ? `GPS LIVE · ${telemetry.latitude.toFixed(3)}, ${telemetry.longitude.toFixed(3)}`
-                : 'GPS CONNECTING...'
-              : 'ROUTE PREVIEW'}
-          </Text>
-        </View>
-
-        {/* Floating Transit Speed Pill (Only shown when active in transit) */}
-        {['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status) && (
-          <View style={styles.speedFloatingPill}>
-            <Truck size={12} color={Colors.marigoldDark} />
-            <Text style={styles.speedFloatingText}>
-              {telemetry?.speedKmh ? `${telemetry.speedKmh} km/h` : 'In Transit'}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Booking Overview Card (Pure White Card) */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoCardHeader}>
-          <View>
-            <Text style={styles.bookingIdLabel}>TRACKING CODE</Text>
-            <Text style={styles.bookingId}>#{booking.id.slice(-6).toUpperCase()}</Text>
-          </View>
-          <View style={styles.transitBadge}>
-            <PulsingDot color={!isDriverAssigned ? Colors.warning : Colors.success} size={6} />
-            <Text style={styles.transitBadgeText}>
-              {!isDriverAssigned ? 'ASSIGNING SHORTLY' : booking.status.replace('_', ' ')}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.routeRow}>
-          <MapPin size={15} color={Colors.marigold} />
-          <Text style={styles.routeText} numberOfLines={1}>{booking.pickupAddress}</Text>
-          <ArrowRight size={13} color={Colors.textMuted} />
-          <Home size={15} color={Colors.text} />
-          <Text style={styles.routeText} numberOfLines={1}>{booking.dropAddress}</Text>
-        </View>
-
-        <View style={styles.etaBar}>
-          <View style={styles.etaItem}>
-            <Calendar size={14} color={Colors.text} />
-            <Text style={styles.etaLabel}>Scheduled</Text>
-          </View>
-          <Text style={styles.etaValue}>
-            {new Date(booking.scheduledDate).toLocaleDateString('en-IN', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })} · {booking.scheduledSlot || 'Morning Slot'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Driver Assignment Section: Assigning shortly vs Real Driver Contact */}
-      {!isDriverAssigned ? (
-        <View style={styles.assigningCard}>
-          <View style={styles.assigningHeader}>
-            <View style={styles.assigningAvatar}>
-              <Truck size={22} color={Colors.marigold} strokeWidth={2.4} />
+    <>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Service Type Banner */}
+        <View style={styles.serviceBanner}>
+          <View style={styles.serviceBannerLeft}>
+            <View
+              style={[
+                styles.serviceIconBox,
+                { backgroundColor: isTransport ? Colors.navySubtle : Colors.marigoldSubtle },
+              ]}
+            >
+              <Truck
+                size={18}
+                color={isTransport ? Colors.text : Colors.marigoldDark}
+                strokeWidth={2.2}
+              />
             </View>
-            <View style={styles.assigningInfo}>
-              <View style={styles.assigningBadgeRow}>
-                <View style={styles.pulseMarigold} />
-                <Text style={styles.assigningBadgeText}>Assigning shortly</Text>
+            <View>
+              <Text style={styles.serviceBannerTitle}>
+                {isTransport ? 'Truck & Freight Delivery' : 'Packers & Movers Relocation'}
+              </Text>
+              <Text style={styles.serviceBannerSub}>
+                {isTransport
+                  ? `${booking.configurationType?.toUpperCase()} · Commercial Goods Carrier`
+                  : `${booking.configurationType?.toUpperCase()} Household Relocation`}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.serviceBadgePill}>
+            <Text style={styles.serviceBadgeText}>
+              {booking.status.replace('_', ' ')}
+            </Text>
+          </View>
+        </View>
+
+        {/* ── MAP VIEWPORT (ONLY SHOWN FOR TRUCKS AFTER DRIVER ACCEPTS) ──────── */}
+        {showLiveMap ? (
+          <View style={styles.mapContainer}>
+            {Platform.OS === 'web' ? (
+              <iframe
+                srcDoc={liveMapHtml}
+                style={{
+                  width: '100%',
+                  height: 220,
+                  border: 'none',
+                  background: '#091524',
+                }}
+                title="Triveni Live Tracking Map"
+              />
+            ) : (
+              <WebView
+                source={{ html: liveMapHtml, baseUrl: 'https://www.trivenitransport.online/' }}
+                applicationNameForUserAgent="TriveniTransports/1.0.0"
+                style={{
+                  width: '100%',
+                  height: 220,
+                  backgroundColor: '#091524',
+                }}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                originWhitelist={['*']}
+                mixedContentMode="always"
+                allowFileAccess={true}
+                allowUniversalAccessFromFileURLs={true}
+                scrollEnabled={false}
+                bounces={false}
+              />
+            )}
+
+            {/* Floating Live GPS badge */}
+            <View style={styles.gpsLiveBadge}>
+              <Radio
+                size={12}
+                color={
+                  ['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status)
+                    ? Colors.success
+                    : Colors.marigoldDark
+                }
+              />
+              <Text style={styles.gpsLiveText}>
+                {['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status)
+                  ? telemetry?.latitude
+                    ? `GPS LIVE · ${telemetry.latitude.toFixed(3)}, ${telemetry.longitude.toFixed(3)}`
+                    : 'GPS CONNECTING...'
+                  : 'DRIVER DISPATCHED'}
+              </Text>
+            </View>
+
+            {/* Floating Transit Speed Pill */}
+            {['IN_PROGRESS', 'EN_ROUTE'].includes(booking.status) && (
+              <View style={styles.speedFloatingPill}>
+                <Truck size={12} color={Colors.marigoldDark} />
+                <Text style={styles.speedFloatingText}>
+                  {telemetry?.speedKmh ? `${telemetry.speedKmh} km/h` : 'In Transit'}
+                </Text>
               </View>
-              <Text style={styles.assigningTitle}>Pairing Driver Captain</Text>
-              <Text style={styles.assigningSubtitle}>
-                Finding the nearest verified Triveni Captain and commercial vehicle for your move slot.
+            )}
+          </View>
+        ) : null}
+
+        {/* Booking Overview Card */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardHeader}>
+            <View>
+              <Text style={styles.bookingIdLabel}>TRACKING REFERENCE</Text>
+              <Text style={styles.bookingId}>#{booking.id.slice(-6).toUpperCase()}</Text>
+            </View>
+            <View
+              style={[
+                styles.transitBadge,
+                {
+                  backgroundColor: !isDriverAssigned ? Colors.warningLight : Colors.successLight,
+                  borderColor: !isDriverAssigned ? Colors.warningBorder : Colors.successBorder,
+                },
+              ]}
+            >
+              <PulsingDot color={!isDriverAssigned ? Colors.warning : Colors.success} size={6} />
+              <Text
+                style={[
+                  styles.transitBadgeText,
+                  { color: !isDriverAssigned ? Colors.warning : Colors.success },
+                ]}
+              >
+                {!isDriverAssigned ? 'DRIVER ASSIGNING' : booking.status.replace('_', ' ')}
               </Text>
             </View>
           </View>
 
-          <View style={styles.assigningPillRow}>
-            <View style={styles.assigningPill}>
-              <ShieldCheck size={12} color={Colors.success} />
-              <Text style={styles.assigningPillText}>Verified Partner Fleet</Text>
-            </View>
-            <View style={styles.assigningPill}>
-              <Radio size={12} color={Colors.text} />
-              <Text style={styles.assigningPillText}>Auto-Unlocks When Accepted</Text>
-            </View>
-          </View>
-          <Text style={styles.assigningFootnote}>
-            Driver phone number and vehicle registration plate will unlock here automatically as soon as accepted.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.driverCard}>
-          <View style={styles.driverAvatar}>
-            <User size={22} color={Colors.text} strokeWidth={2.4} />
-          </View>
-          <View style={styles.driverInfo}>
-            <View style={styles.driverNameRow}>
-              <Text style={styles.driverName}>{driverName}</Text>
-              <View style={styles.driverVerifyBadge}>
-                <ShieldCheck size={11} color={Colors.success} />
-                <Text style={styles.driverVerifyText}>Verified</Text>
-              </View>
-            </View>
-            <View style={styles.driverMetaRow}>
-              <Star size={12} color={Colors.marigold} fill={Colors.marigold} />
-              <Text style={styles.driverRating}>4.9 (Captain)</Text>
-              <Text style={styles.driverVehicle}>· {vehicleName} {vehicleReg ? `(${vehicleReg})` : ''}</Text>
-            </View>
-          </View>
-          {driverPhone ? (
-            <TouchableOpacity
-              style={styles.callBtn}
-              onPress={() => Linking.openURL(`tel:${driverPhone}`)}
-              activeOpacity={0.85}
-              accessibilityLabel={`Call driver ${driverName}`}
-            >
-              <PhoneCall size={18} color={Colors.white} strokeWidth={2.4} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      )}
-
-      {/* Milestone Timeline Card (Pure White Card) */}
-      <View style={styles.timelineCard}>
-        <View style={styles.timelineHeader}>
-          <Compass size={17} color={Colors.text} />
-          <Text style={styles.timelineTitle}>Live Move Timeline</Text>
-        </View>
-
-        {MILESTONE_DEFINITIONS.map((m, i) => {
-          const MilestoneIcon = m.icon;
-          const isDone = i <= currentStep;
-          const isLast = i === MILESTONE_DEFINITIONS.length - 1;
-          return (
-            <View key={m.key} style={styles.timelineRow}>
-              <View style={styles.timelineNodeColumn}>
-                <View
-                  style={[
-                    styles.milestoneCircle,
-                    isDone && styles.milestoneCircleDone,
-                  ]}
-                >
-                  <MilestoneIcon
-                    size={14}
-                    color={isDone ? Colors.white : Colors.textMuted}
-                    strokeWidth={isDone ? 2.3 : 1.8}
-                  />
-                </View>
-                {!isLast && (
-                  <View
-                    style={[
-                      styles.milestoneLine,
-                      isDone && styles.milestoneLineDone,
-                    ]}
-                  />
+          {/* Route details */}
+          <View style={styles.routeBox}>
+            <View style={styles.routeItem}>
+              <View style={[styles.routeDot, { backgroundColor: Colors.success }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routeLabel}>PICKUP DOORSTEP</Text>
+                <Text style={styles.routeText}>{booking.pickupAddress}</Text>
+                {!isTransport && booking.floorNumber !== undefined && (
+                  <Text style={styles.routeSubtext}>
+                    Floor {booking.floorNumber} · {booking.liftAvailable ? 'Lift Available' : 'No Lift (Stairs)'}
+                  </Text>
                 )}
               </View>
+            </View>
 
-              <View style={styles.milestoneContent}>
-                <Text
-                  style={[
-                    styles.milestoneLabel,
-                    isDone && styles.milestoneLabelDone,
-                  ]}
-                >
-                  {m.label}
-                </Text>
-                <Text style={styles.milestoneDesc}>{m.desc}</Text>
+            <View style={styles.routeConnectorLine} />
+
+            <View style={styles.routeItem}>
+              <View style={[styles.routeDot, { backgroundColor: Colors.marigoldDark }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routeLabel}>DESTINATION</Text>
+                <Text style={styles.routeText}>{booking.dropAddress}</Text>
               </View>
             </View>
-          );
-        })}
-      </View>
+          </View>
 
-      {/* Quick Action Buttons */}
-      <View style={styles.actionsRow}>
-        <PressableScale
-          style={styles.invoiceBtn}
-          onPress={() => router.push(`/booking/${booking.id}/invoice`)}
-        >
-          <FileText size={16} color={Colors.white} />
-          <Text style={styles.invoiceBtnText}>View Move Invoice</Text>
-        </PressableScale>
+          <View style={styles.etaBar}>
+            <View style={styles.etaItem}>
+              <Calendar size={14} color={Colors.text} />
+              <Text style={styles.etaLabel}>Scheduled Date &amp; Slot</Text>
+            </View>
+            <Text style={styles.etaValue}>
+              {new Date(booking.scheduledDate).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}{' '}
+              · {booking.scheduledSlot || 'Morning Slot'}
+            </Text>
+          </View>
+        </View>
 
-        <PressableScale
-          style={styles.supportBtn}
-          onPress={() => Linking.openURL('tel:8828647785')}
-        >
-          <PhoneCall size={16} color={Colors.text} />
-          <Text style={styles.supportBtnText}>Call Helpline</Text>
-        </PressableScale>
-      </View>
-    </ScrollView>
+        {/* Driver / Moving Crew Assignment Section */}
+        {!isDriverAssigned ? (
+          <View style={styles.assigningCard}>
+            <View style={styles.assigningHeader}>
+              <View style={styles.assigningAvatar}>
+                <Truck size={22} color={Colors.marigold} strokeWidth={2.4} />
+              </View>
+              <View style={styles.assigningInfo}>
+                <View style={styles.assigningBadgeRow}>
+                  <View style={styles.pulseMarigold} />
+                  <Text style={styles.assigningBadgeText}>
+                    {isTransport ? 'Locating Nearest Truck Captain' : 'Assigning Moving Crew & Captain'}
+                  </Text>
+                </View>
+                <Text style={styles.assigningTitle}>
+                  {isTransport ? 'Pairing Commercial Vehicle' : 'Allotting Relocation Captain'}
+                </Text>
+                <Text style={styles.assigningSubtitle}>
+                  {isTransport
+                    ? 'Matching verified driver captains in your pickup zone. Real-time GPS map tracking will unlock automatically when accepted.'
+                    : 'Your verified packing team and moving captain are reserved for this slot. Details unlock 2-4 hours prior to scheduled time.'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.assigningPillRow}>
+              <View style={styles.assigningPill}>
+                <ShieldCheck size={12} color={Colors.success} />
+                <Text style={styles.assigningPillText}>Verified Partner Fleet</Text>
+              </View>
+              <View style={styles.assigningPill}>
+                <Radio size={12} color={Colors.text} />
+                <Text style={styles.assigningPillText}>Auto-Updates on Acceptance</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.driverCard}>
+            <View style={styles.driverAvatar}>
+              <User size={22} color={Colors.text} strokeWidth={2.4} />
+            </View>
+            <View style={styles.driverInfo}>
+              <View style={styles.driverNameRow}>
+                <Text style={styles.driverName}>{driverName}</Text>
+                <View style={styles.driverVerifyBadge}>
+                  <ShieldCheck size={11} color={Colors.success} />
+                  <Text style={styles.driverVerifyText}>Verified Captain</Text>
+                </View>
+              </View>
+              <View style={styles.driverMetaRow}>
+                <Star size={12} color={Colors.marigold} fill={Colors.marigold} />
+                <Text style={styles.driverRating}>4.9</Text>
+                <Text style={styles.driverVehicle}>
+                  · {vehicleName} {vehicleReg ? `(${vehicleReg})` : ''}
+                </Text>
+              </View>
+            </View>
+            {driverPhone ? (
+              <TouchableOpacity
+                style={styles.callBtn}
+                onPress={() => Linking.openURL(`tel:${driverPhone}`)}
+                activeOpacity={0.85}
+                accessibilityLabel={`Call driver ${driverName}`}
+              >
+                <PhoneCall size={18} color={Colors.white} strokeWidth={2.4} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
+
+        {/* Move Items Summary (Packers & Movers inventory) */}
+        {!isTransport && booking.items && booking.items.length > 0 && (
+          <View style={styles.itemsCard}>
+            <View style={styles.itemsCardHeader}>
+              <Package size={16} color={Colors.text} />
+              <Text style={styles.itemsCardTitle}>
+                Relocation Inventory ({booking.items.length} items)
+              </Text>
+            </View>
+            <View style={styles.itemsList}>
+              {booking.items.map((item: any, idx: number) => (
+                <View key={item.id || idx} style={styles.itemRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName}>
+                      {item.customName || `Item #${idx + 1}`}
+                    </Text>
+                    <Text style={styles.itemTier}>
+                      Packing: {item.packingTier?.toUpperCase() || 'STANDARD'}
+                    </Text>
+                  </View>
+                  <View style={styles.itemQuantityBadge}>
+                    <Text style={styles.itemQuantityText}>× {item.quantity}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Milestone Timeline Card */}
+        <View style={styles.timelineCard}>
+          <View style={styles.timelineHeader}>
+            <Compass size={17} color={Colors.text} />
+            <Text style={styles.timelineTitle}>Current Move Milestones</Text>
+          </View>
+
+          {MILESTONE_DEFINITIONS.map((m, i) => {
+            const MilestoneIcon = m.icon;
+            const isDone = i <= currentStep;
+            const isLast = i === MILESTONE_DEFINITIONS.length - 1;
+            return (
+              <View key={m.key} style={styles.timelineRow}>
+                <View style={styles.timelineNodeColumn}>
+                  <View
+                    style={[
+                      styles.milestoneCircle,
+                      isDone && styles.milestoneCircleDone,
+                    ]}
+                  >
+                    <MilestoneIcon
+                      size={14}
+                      color={isDone ? Colors.white : Colors.textMuted}
+                      strokeWidth={isDone ? 2.3 : 1.8}
+                    />
+                  </View>
+                  {!isLast && (
+                    <View
+                      style={[
+                        styles.milestoneLine,
+                        isDone && styles.milestoneLineDone,
+                      ]}
+                    />
+                  )}
+                </View>
+
+                <View style={styles.milestoneContent}>
+                  <Text
+                    style={[
+                      styles.milestoneLabel,
+                      isDone && styles.milestoneLabelDone,
+                    ]}
+                  >
+                    {m.label}
+                  </Text>
+                  <Text style={styles.milestoneDesc}>{m.desc}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Payment Summary Box */}
+        <View style={styles.paymentCard}>
+          <View style={styles.paymentCardHeader}>
+            <CreditCard size={16} color={Colors.text} />
+            <Text style={styles.paymentCardTitle}>Payment &amp; Quote Summary</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Payment Mode</Text>
+            <Text style={styles.paymentValue}>
+              {booking.pricingSnapshot?.paymentMethod === 'online'
+                ? 'Paid Online (Razorpay)'
+                : 'Cash on Delivery (Pay on Move Day)'}
+            </Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Total Amount</Text>
+            <Text style={styles.paymentAmount}>
+              ₹{booking.finalAmount?.toLocaleString('en-IN') || '0'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick Action Buttons */}
+        <View style={styles.actionsRow}>
+          <PressableScale
+            style={styles.invoiceBtn}
+            onPress={() => router.push(`/booking/${booking.id}/invoice`)}
+          >
+            <FileText size={16} color={Colors.white} />
+            <Text style={styles.invoiceBtnText}>View Move Invoice</Text>
+          </PressableScale>
+
+          {isCancellable ? (
+            <PressableScale
+              style={styles.cancelBtn}
+              onPress={() => setShowCancelModal(true)}
+            >
+              <XCircle size={16} color={Colors.error} />
+              <Text style={styles.cancelBtnText}>Cancel Order</Text>
+            </PressableScale>
+          ) : (
+            <PressableScale
+              style={styles.supportBtn}
+              onPress={() => Linking.openURL('tel:8828647785')}
+            >
+              <PhoneCall size={16} color={Colors.text} />
+              <Text style={styles.supportBtnText}>Call Helpline</Text>
+            </PressableScale>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Cancellation Protocol Modal */}
+      <CancellationProtocolModal
+        visible={showCancelModal}
+        bookingId={booking.id}
+        bookingStatus={booking.status as BookingStatus}
+        onClose={() => setShowCancelModal(false)}
+        onSuccess={() => fetchDetails(false)}
+      />
+    </>
   );
 }
 
-const createStyles = (Colors: ThemeColors) => StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: Colors.background },
-  container: { gap: Spacing.md, paddingBottom: Spacing.xxl },
+const createStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    scroll: { flex: 1, backgroundColor: Colors.background },
+    container: { gap: Spacing.md, paddingBottom: Spacing.xxl },
 
-  // Map Canvas Graphic
-  mapContainer: {
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.xs,
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    height: 200,
-    backgroundColor: '#091524',
-    position: 'relative',
-    ...Shadow.sm,
-  },
-  gpsLiveBadge: {
-    position: 'absolute',
-    top: Spacing.sm,
-    left: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: Colors.navyBorder,
-    zIndex: 10,
-    ...Shadow.sm,
-  },
-  gpsLiveText: {
-    color: Colors.text,
-    fontSize: 9.5,
-    fontWeight: FontWeight.bold,
-    letterSpacing: 0.5,
-  },
-  speedFloatingPill: {
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    zIndex: 10,
-    ...Shadow.sm,
-  },
-  speedFloatingText: {
-    color: Colors.text,
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-  },
+    centerContainer: {
+      flex: 1,
+      backgroundColor: Colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: Spacing.xl,
+      gap: Spacing.sm,
+    },
+    loadingText: {
+      color: Colors.textSecondary,
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.medium,
+      marginTop: Spacing.xs,
+    },
+    errorTitle: {
+      fontSize: FontSize.lg,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+      marginTop: Spacing.xs,
+    },
+    errorSub: {
+      fontSize: FontSize.xs,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+    },
+    backButton: {
+      marginTop: Spacing.md,
+      backgroundColor: Colors.brandSurface,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 10,
+      borderRadius: BorderRadius.md,
+    },
+    backButtonText: {
+      color: Colors.white,
+      fontSize: FontSize.xs + 1,
+      fontWeight: FontWeight.bold,
+    },
 
-  // Info Card
-  infoCard: {
-    marginHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: Spacing.md + 2,
-    gap: Spacing.sm,
-    ...Shadow.sm,
-  },
-  infoCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bookingIdLabel: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xxs,
-    fontWeight: FontWeight.bold,
-    letterSpacing: 0.8,
-  },
-  bookingId: {
-    color: Colors.text,
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.extrabold,
-  },
-  transitBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Colors.warningLight,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.warningBorder,
-  },
-  pulseGreen: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.warning,
-  },
-  transitBadgeText: {
-    color: Colors.warning,
-    fontSize: FontSize.xxs,
-    fontWeight: FontWeight.bold,
-  },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.surfaceSubtle,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm + 2,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  routeText: {
-    color: Colors.text,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-  },
-  etaBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.xs,
-  },
-  etaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  etaLabel: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
-  },
-  etaValue: {
-    color: Colors.text,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-  },
+    // Service Banner
+    serviceBanner: {
+      marginHorizontal: Spacing.md,
+      marginTop: Spacing.sm,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      ...Shadow.sm,
+    },
+    serviceBannerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      flex: 1,
+    },
+    serviceIconBox: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    serviceBannerTitle: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    serviceBannerSub: {
+      fontSize: FontSize.xxs + 1,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    serviceBadgePill: {
+      backgroundColor: Colors.surfaceSubtle,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+    },
+    serviceBadgeText: {
+      fontSize: 10,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+      letterSpacing: 0.4,
+    },
 
-  pulseMarigold: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.marigold,
-  },
+    // Map Canvas Graphic
+    mapContainer: {
+      marginHorizontal: Spacing.md,
+      borderRadius: BorderRadius.xl,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      height: 220,
+      backgroundColor: '#091524',
+      position: 'relative',
+      ...Shadow.sm,
+    },
+    gpsLiveBadge: {
+      position: 'absolute',
+      top: Spacing.sm,
+      left: Spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: 'rgba(255, 255, 255, 0.94)',
+      borderRadius: BorderRadius.full,
+      paddingHorizontal: Spacing.sm + 2,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: Colors.navyBorder,
+      zIndex: 10,
+      ...Shadow.sm,
+    },
+    gpsLiveText: {
+      color: Colors.text,
+      fontSize: 9.5,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.5,
+    },
+    speedFloatingPill: {
+      position: 'absolute',
+      top: Spacing.sm,
+      right: Spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.full,
+      paddingHorizontal: Spacing.sm + 2,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      zIndex: 10,
+      ...Shadow.sm,
+    },
+    speedFloatingText: {
+      color: Colors.text,
+      fontSize: 10,
+      fontWeight: FontWeight.bold,
+    },
 
-  // Assigning Driver Card
-  assigningCard: {
-    marginHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1.5,
-    borderColor: Colors.marigoldBorder,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-    ...Shadow.sm,
-  },
-  assigningHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  assigningAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.marigoldSubtle,
-    borderWidth: 1.5,
-    borderColor: Colors.marigoldBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  assigningInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  assigningBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.marigoldSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.marigoldBorder,
-    marginBottom: 2,
-  },
-  assigningBadgeText: {
-    fontSize: 9.5,
-    fontWeight: FontWeight.extrabold,
-    color: Colors.marigoldDark,
-    letterSpacing: 0.3,
-  },
-  assigningTitle: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Colors.text,
-  },
-  assigningSubtitle: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-  },
-  assigningPillRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 2,
-  },
-  assigningPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.surfaceSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  assigningPillText: {
-    fontSize: 10,
-    fontWeight: FontWeight.semibold,
-    color: Colors.text,
-  },
-  assigningFootnote: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
+    // Info Card
+    infoCard: {
+      marginHorizontal: Spacing.md,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md + 2,
+      gap: Spacing.sm,
+      ...Shadow.sm,
+    },
+    infoCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    bookingIdLabel: {
+      color: Colors.textMuted,
+      fontSize: FontSize.xxs,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.8,
+    },
+    bookingId: {
+      color: Colors.text,
+      fontSize: FontSize.md,
+      fontWeight: FontWeight.extrabold,
+    },
+    transitBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: Spacing.sm + 2,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+    },
+    transitBadgeText: {
+      fontSize: FontSize.xxs,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 0.3,
+    },
 
-  // Driver Card
-  driverCard: {
-    marginHorizontal: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: Spacing.md + 2,
-    ...Shadow.sm,
-  },
-  driverAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: Colors.navySubtle,
-    borderWidth: 1,
-    borderColor: Colors.navyBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  driverInfo: { flex: 1, gap: 2 },
-  driverNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  driverName: {
-    color: Colors.text,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-  },
-  driverVerifyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: Colors.successLight,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: BorderRadius.full,
-  },
-  driverVerifyText: {
-    color: Colors.success,
-    fontSize: 9,
-    fontWeight: FontWeight.bold,
-  },
-  driverMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  driverRating: {
-    color: Colors.text,
-    fontSize: 11,
-    fontWeight: FontWeight.bold,
-  },
-  driverVehicle: {
-    color: Colors.textSecondary,
-    fontSize: 11,
-  },
-  callBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.brandSurface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadow.sm,
-  },
+    routeBox: {
+      backgroundColor: Colors.surfaceSubtle,
+      borderRadius: BorderRadius.lg,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+    },
+    routeItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+    },
+    routeDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginTop: 4,
+    },
+    routeLabel: {
+      fontSize: 9.5,
+      fontWeight: FontWeight.bold,
+      color: Colors.textMuted,
+      letterSpacing: 0.6,
+      marginBottom: 2,
+    },
+    routeText: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.semibold,
+      color: Colors.text,
+      lineHeight: 18,
+    },
+    routeSubtext: {
+      fontSize: FontSize.xxs + 1,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    routeConnectorLine: {
+      width: 1,
+      height: 14,
+      backgroundColor: Colors.cardBorder,
+      marginLeft: 3.5,
+    },
 
-  // Timeline
-  timelineCard: {
-    marginHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: Spacing.md + 2,
-    gap: Spacing.md,
-    ...Shadow.sm,
-  },
-  timelineHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingBottom: Spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
-  },
-  timelineTitle: {
-    color: Colors.text,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.extrabold,
-    letterSpacing: 0.2,
-  },
-  timelineRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  timelineNodeColumn: {
-    alignItems: 'center',
-    width: 28,
-  },
-  milestoneCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  milestoneCircleDone: {
-    backgroundColor: Colors.brandSurface,
-    borderColor: Colors.brandSurface,
-  },
-  milestoneLine: {
-    width: 2,
-    flex: 1,
-    minHeight: 22,
-    backgroundColor: Colors.cardBorder,
-    marginVertical: 3,
-  },
-  milestoneLineDone: {
-    backgroundColor: Colors.brandSurface,
-  },
-  milestoneContent: {
-    flex: 1,
-    gap: 2,
-    paddingBottom: Spacing.xs,
-  },
-  milestoneLabel: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
-  },
-  milestoneLabelDone: {
-    color: Colors.text,
-    fontWeight: FontWeight.bold,
-  },
-  milestoneDesc: {
-    color: Colors.textSecondary,
-    fontSize: 11,
-    lineHeight: 15,
-  },
+    etaBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: Colors.cardBorder,
+      paddingTop: Spacing.sm,
+    },
+    etaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    etaLabel: {
+      fontSize: FontSize.xs,
+      color: Colors.textMuted,
+      fontWeight: FontWeight.medium,
+    },
+    etaValue: {
+      fontSize: FontSize.xs,
+      color: Colors.text,
+      fontWeight: FontWeight.bold,
+    },
 
-  // Bottom action buttons
-  actionsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
-  },
-  invoiceBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.brandSurface,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
-    ...Shadow.sm,
-  },
-  invoiceBtnText: {
-    color: Colors.white,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-  },
-  supportBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    paddingVertical: Spacing.md,
-    ...Shadow.sm,
-  },
-  supportBtnText: {
-    color: Colors.text,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xl,
-    gap: Spacing.sm,
-  },
-  loadingText: {
-    color: Colors.text,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    marginTop: Spacing.sm,
-  },
-  errorTitle: {
-    color: Colors.text,
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    marginTop: Spacing.sm,
-  },
-  errorSub: {
-    color: Colors.textSecondary,
-    fontSize: FontSize.xs,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  backButton: {
-    marginTop: Spacing.md,
-    backgroundColor: Colors.brandSurface,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: BorderRadius.md,
-  },
-  backButtonText: {
-    color: Colors.white,
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-  },
-});
+    // Assigning Card
+    assigningCard: {
+      marginHorizontal: Spacing.md,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md + 2,
+      gap: Spacing.sm,
+      ...Shadow.sm,
+    },
+    assigningHeader: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+    },
+    assigningAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: Colors.marigoldSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: Colors.marigoldBorder,
+    },
+    assigningInfo: {
+      flex: 1,
+      gap: 3,
+    },
+    assigningBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    pulseMarigold: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: Colors.marigold,
+    },
+    assigningBadgeText: {
+      fontSize: 10,
+      fontWeight: FontWeight.bold,
+      color: Colors.marigoldDark,
+      letterSpacing: 0.4,
+    },
+    assigningTitle: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    assigningSubtitle: {
+      fontSize: FontSize.xs,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
+    assigningPillRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginTop: Spacing.xs,
+    },
+    assigningPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: Colors.surfaceSubtle,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 4,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+    },
+    assigningPillText: {
+      fontSize: 10,
+      fontWeight: FontWeight.medium,
+      color: Colors.textSecondary,
+    },
+
+    // Driver Card
+    driverCard: {
+      marginHorizontal: Spacing.md,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md + 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      ...Shadow.sm,
+    },
+    driverAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: Colors.surfaceSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+    },
+    driverInfo: {
+      flex: 1,
+      gap: 2,
+    },
+    driverNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs + 2,
+    },
+    driverName: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    driverVerifyBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: Colors.successLight,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.full,
+    },
+    driverVerifyText: {
+      fontSize: 9.5,
+      fontWeight: FontWeight.bold,
+      color: Colors.success,
+    },
+    driverMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    driverRating: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    driverVehicle: {
+      fontSize: FontSize.xs,
+      color: Colors.textSecondary,
+    },
+    callBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: Colors.brandSurface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...Shadow.sm,
+    },
+
+    // Items card
+    itemsCard: {
+      marginHorizontal: Spacing.md,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+      ...Shadow.sm,
+    },
+    itemsCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    itemsCardTitle: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    itemsList: {
+      gap: Spacing.xs,
+    },
+    itemRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.cardBorder,
+    },
+    itemName: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.semibold,
+      color: Colors.text,
+    },
+    itemTier: {
+      fontSize: 10,
+      color: Colors.textMuted,
+      marginTop: 1,
+    },
+    itemQuantityBadge: {
+      backgroundColor: Colors.surfaceSubtle,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: BorderRadius.full,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+    },
+    itemQuantityText: {
+      fontSize: 10.5,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+
+    // Timeline Card
+    timelineCard: {
+      marginHorizontal: Spacing.md,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md + 2,
+      gap: Spacing.sm,
+      ...Shadow.sm,
+    },
+    timelineHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: Spacing.xs,
+    },
+    timelineTitle: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    timelineRow: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+    },
+    timelineNodeColumn: {
+      alignItems: 'center',
+      width: 24,
+    },
+    milestoneCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: Colors.surfaceSubtle,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    milestoneCircleDone: {
+      backgroundColor: Colors.marigold,
+      borderColor: Colors.marigold,
+    },
+    milestoneLine: {
+      width: 2,
+      flex: 1,
+      minHeight: 24,
+      backgroundColor: Colors.cardBorder,
+      marginVertical: 2,
+    },
+    milestoneLineDone: {
+      backgroundColor: Colors.marigold,
+    },
+    milestoneContent: {
+      flex: 1,
+      paddingBottom: Spacing.sm + 2,
+    },
+    milestoneLabel: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.semibold,
+      color: Colors.textMuted,
+    },
+    milestoneLabelDone: {
+      color: Colors.text,
+      fontWeight: FontWeight.bold,
+    },
+    milestoneDesc: {
+      fontSize: 10.5,
+      color: Colors.textSecondary,
+      marginTop: 1,
+    },
+
+    // Payment Card
+    paymentCard: {
+      marginHorizontal: Spacing.md,
+      backgroundColor: Colors.surface,
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      padding: Spacing.md,
+      gap: Spacing.xs + 2,
+      ...Shadow.sm,
+    },
+    paymentCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: Spacing.xs,
+    },
+    paymentCardTitle: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.bold,
+      color: Colors.text,
+    },
+    paymentRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    paymentLabel: {
+      fontSize: FontSize.xs,
+      color: Colors.textSecondary,
+    },
+    paymentValue: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.semibold,
+      color: Colors.text,
+    },
+    paymentAmount: {
+      fontSize: FontSize.md,
+      fontWeight: FontWeight.extrabold,
+      color: Colors.marigoldDark,
+    },
+
+    // Actions Row
+    actionsRow: {
+      marginHorizontal: Spacing.md,
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginTop: Spacing.xs,
+    },
+    invoiceBtn: {
+      flex: 1,
+      height: 44,
+      backgroundColor: Colors.brandSurface,
+      borderRadius: BorderRadius.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      ...Shadow.sm,
+    },
+    invoiceBtnText: {
+      color: Colors.white,
+      fontSize: FontSize.xs + 1,
+      fontWeight: FontWeight.bold,
+    },
+    supportBtn: {
+      flex: 1,
+      height: 44,
+      backgroundColor: Colors.surfaceSubtle,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: Colors.cardBorder,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    supportBtnText: {
+      color: Colors.text,
+      fontSize: FontSize.xs + 1,
+      fontWeight: FontWeight.bold,
+    },
+    cancelBtn: {
+      flex: 1,
+      height: 44,
+      backgroundColor: Colors.errorLight,
+      borderRadius: BorderRadius.md,
+      borderWidth: 1,
+      borderColor: Colors.errorBorder,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    cancelBtnText: {
+      color: Colors.error,
+      fontSize: FontSize.xs + 1,
+      fontWeight: FontWeight.bold,
+    },
+  });

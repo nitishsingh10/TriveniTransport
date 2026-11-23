@@ -12,6 +12,7 @@ router.post('/transport', requireRole('customer'), BookingController.createTrans
 router.post('/', requireRole('customer'), BookingController.createDraft);
 router.post('/:id/hold', requireRole('customer'), BookingController.holdSlot);
 router.post('/:id/cancel', requireRole('customer'), BookingController.cancel);
+router.delete('/:id', requireRole('customer'), BookingController.deleteDraft);
 router.post('/:id/confirm-cod', requireRole('customer'), BookingController.confirmCod);
 
 // Webhook / admin confirmation

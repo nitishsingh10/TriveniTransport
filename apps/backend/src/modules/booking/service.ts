@@ -351,21 +351,99 @@ export class BookingService {
   }
 
   /**
-   * Cancels a booking
+   * Deletes a draft booking (REQUESTED or QUOTED status only).
    */
-  static async cancelBooking(bookingId: string, customerId: string) {
+  static async deleteDraftBooking(bookingId: string, customerId: string) {
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) throw { statusCode: 404, message: 'Booking not found' };
     if (booking.customerId !== customerId) throw { statusCode: 403, message: 'Forbidden' };
 
-    const uncancelable: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'];
-    if (uncancelable.includes(booking.status as BookingStatus)) {
-      throw { statusCode: 400, message: `Cannot cancel a booking in ${booking.status} state` };
+    if (booking.status !== 'REQUESTED' && booking.status !== 'QUOTED') {
+      throw {
+        statusCode: 400,
+        message: `Only draft bookings can be deleted. Booking #${bookingId.slice(0, 6)} is in ${booking.status} state. Please use the cancellation option.`,
+      };
     }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingItem.deleteMany({ where: { bookingId } });
+      await tx.bookingStatusHistory.deleteMany({ where: { bookingId } });
+      await tx.payment.deleteMany({ where: { bookingId } });
+      await tx.notification.deleteMany({ where: { bookingId } });
+      await tx.booking.delete({ where: { id: bookingId } });
+    });
+
+    return { success: true, message: 'Draft order deleted successfully' };
+  }
+
+  /**
+   * Cancels a booking with protocol enforcement
+   */
+  static async cancelBooking(bookingId: string, customerId: string, reason?: string) {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) throw { statusCode: 404, message: 'Booking not found' };
+    if (booking.customerId !== customerId) throw { statusCode: 403, message: 'Forbidden' };
+
+    // Cancellation Protocol:
+    if (booking.status === 'COMPLETED') {
+      throw {
+        statusCode: 400,
+        code: 'ORDER_ALREADY_COMPLETED',
+        message: 'This move has already been completed and delivered.',
+      };
+    }
+
+    if (booking.status === 'CANCELLED') {
+      throw {
+        statusCode: 400,
+        code: 'ORDER_ALREADY_CANCELLED',
+        message: 'This booking has already been cancelled.',
+      };
+    }
+
+    // In-transit moves: vehicle en route, arrived at doorstep, or cargo loaded
+    const inTransitStates: BookingStatus[] = ['EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'];
+    if (inTransitStates.includes(booking.status as BookingStatus)) {
+      throw {
+        statusCode: 400,
+        code: 'IN_TRANSIT_CANCELLATION_FORBIDDEN',
+        message:
+          'Move is already in progress/en-route. In-transit orders cannot be cancelled directly in the app. Please contact 24x7 customer support (+91 88286 47785) for emergency dispatch assistance.',
+      };
+    }
+
+    // Assigned moves: driver partner is reserved. Reason is mandatory.
+    if (booking.status === 'ASSIGNED' && !reason?.trim()) {
+      throw {
+        statusCode: 400,
+        code: 'CANCELLATION_REASON_REQUIRED',
+        message:
+          'A driver partner is already assigned to this move. As per cancellation protocol, please select a reason to cancel.',
+      };
+    }
+
+    // Release Redis hold lock if present
+    const dateStr = booking.scheduledDate.toISOString().split('T')[0];
+    const lockKey = booking.vehicleId || `slot:${dateStr}:${booking.scheduledSlot}`;
+    await releaseSlotLock(lockKey, dateStr).catch(() => {});
+
+    const snapshot = (booking.pricingSnapshot as any) || {};
+    const cancellationMeta = {
+      cancelledAt: new Date().toISOString(),
+      cancelledBy: 'customer',
+      reason: reason || 'Cancelled by customer',
+      previousStatus: booking.status,
+    };
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'CANCELLED' },
+      data: {
+        status: 'CANCELLED',
+        pricingSnapshot: {
+          ...snapshot,
+          cancellation: cancellationMeta,
+        },
+      },
     });
 
     await prisma.bookingStatusHistory.create({
@@ -378,12 +456,45 @@ export class BookingService {
       }
     });
 
-    return updated;
+    return {
+      ...updated,
+      message: 'Booking cancelled according to cancellation protocol.',
+      cancellation: cancellationMeta,
+    };
   }
 
   static async listBookings(customerId: string) {
+    // Purge expired draft orders older than 24 hours (1 day)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    try {
+      const expiredDrafts = await prisma.booking.findMany({
+        where: {
+          customerId,
+          status: { in: ['REQUESTED', 'QUOTED'] },
+          createdAt: { lt: oneDayAgo },
+        },
+        select: { id: true },
+      });
+      if (expiredDrafts.length > 0) {
+        const expiredIds = expiredDrafts.map((d) => d.id);
+        await prisma.bookingItem.deleteMany({ where: { bookingId: { in: expiredIds } } });
+        await prisma.bookingStatusHistory.deleteMany({ where: { bookingId: { in: expiredIds } } });
+        await prisma.payment.deleteMany({ where: { bookingId: { in: expiredIds } } });
+        await prisma.notification.deleteMany({ where: { bookingId: { in: expiredIds } } });
+        await prisma.booking.deleteMany({ where: { id: { in: expiredIds } } });
+      }
+    } catch (purgeErr) {
+      console.warn('Draft auto-cleanup warning:', purgeErr);
+    }
+
     return prisma.booking.findMany({
-      where: { customerId },
+      where: {
+        customerId,
+        NOT: {
+          status: { in: ['REQUESTED', 'QUOTED'] },
+          createdAt: { lt: oneDayAgo },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         vendor: { select: { id: true, name: true, phone: true } },

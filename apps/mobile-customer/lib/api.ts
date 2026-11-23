@@ -488,6 +488,9 @@ export interface BookingItem {
   finalAmount: number;
   baseQuoteAmount: number;
   createdAt: string;
+  updatedAt?: string;
+  pricingSnapshot?: any;
+  alternateContactPhone?: string;
   vendor?: { id: string; name: string; phone: string } | null;
   vehicle?: { id: string; type: string; registrationNumber: string } | null;
   items?: any[];
@@ -573,9 +576,16 @@ export const bookingApi = {
     });
   },
 
-  async cancel(bookingId: string) {
+  async deleteDraft(bookingId: string) {
+    return request<{ success: boolean; message: string }>(`/bookings/${bookingId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async cancel(bookingId: string, reason?: string) {
     return request<BookingItem>(`/bookings/${bookingId}/cancel`, {
       method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   },
 };
