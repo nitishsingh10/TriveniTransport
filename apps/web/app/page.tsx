@@ -23,6 +23,8 @@ import {
   Home as HomeIcon,
   Briefcase,
   Car,
+  Layers,
+  Compass,
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -83,31 +85,51 @@ const faqJsonLd = {
 
 const HOME_SERVICES = [
   {
+    category: 'Packers & Movers',
     icon: HomeIcon,
     title: 'Household Shifting',
-    desc: 'Full-service apartment and villa moving in Mumbai & Thane. 3-layer bubble packaging, furniture dismantling, and careful handling of fragile crockeries.',
+    desc: 'Full-service apartment and villa moving in Mumbai & Thane. 3-layer protective packaging, furniture dismantling, and careful handling of fragile crockeries.',
     features: ['1BHK, 2BHK, 3BHK flats', 'Doorstep reassembly', 'Itemised pricing'],
     link: '/services',
   },
   {
+    category: 'Direct Transport',
+    icon: Truck,
+    title: 'Dedicated Pickup & Trucks',
+    desc: 'On-demand mini-trucks and commercial tempos (Tata Ace, 14ft, 17ft) for direct goods movement with verified commercial drivers and zero shared cargo.',
+    features: ['Tata Ace to 20ft trucks', 'Dedicated point-to-point', 'Volume-matched capacity'],
+    link: '/services',
+  },
+  {
+    category: 'Corporate Relocation',
     icon: Briefcase,
     title: 'Office Relocation',
     desc: 'Seamless commercial moving for workstations, server racks, electronics, and archives with scheduled night and weekend shifts to prevent downtime.',
-    features: ['Zero business downtime', 'Anti-static electronics wrap', 'Clear booking amount'],
+    features: ['Zero business downtime', 'Anti-static electronics wrap', 'Clear booking summary'],
     link: '/services',
   },
   {
-    icon: Truck,
+    category: 'Intercity Highway',
+    icon: Compass,
     title: 'Intercity Corridors',
     desc: 'Direct point-to-point transport from Mumbai & Thane to Pune, Gujarat, and nationwide without transshipment or mixed cargo.',
-    features: ['Express same-day Pune transit', 'Live GPS truck radar', 'Dedicated vehicle seal'],
+    features: ['Express same-day Pune transit', 'Live milestone updates', 'Dedicated vehicle seal'],
     link: '/services',
   },
   {
+    category: 'Vehicle Transport',
     icon: Car,
     title: 'Vehicle Transport',
     desc: 'Dedicated enclosed car and two-wheeler carriers. Scratch-free wheel-locking harnesses and comprehensive inspection report.',
     features: ['Doorstep pickup & drop', 'Hydraulic ramp loading', 'Verified transport partners'],
+    link: '/services',
+  },
+  {
+    category: 'Protective Packaging',
+    icon: Layers,
+    title: '3-Layer Protective Packing',
+    desc: 'Virgin bubble wrap, 5-ply cartons, and high-density foam corners engineered for delicate household electronics, furniture, and glassware.',
+    features: ['Fragile crating support', 'Wardrobe carton boxes', 'Unpacking & debris clearing'],
     link: '/services',
   },
 ];
@@ -454,8 +476,13 @@ export default function Home() {
                 const Icon = service.icon;
                 return (
                   <motion.div key={service.title} variants={scrollReveal} className={styles.serviceBox}>
-                    <div className={styles.serviceIconBox}>
-                      <Icon size={22} strokeWidth={2} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+                      <div className={styles.serviceIconBox} style={{ marginBottom: 0 }}>
+                        <Icon size={22} strokeWidth={2} />
+                      </div>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'rgba(13, 31, 55, 0.05)', color: '#17365d', border: '1px solid rgba(13, 31, 55, 0.08)' }}>
+                        {service.category}
+                      </span>
                     </div>
                     <h3 className={styles.serviceTitle}>{service.title}</h3>
                     <p className={styles.serviceDesc}>{service.desc}</p>

@@ -4,22 +4,25 @@ import {
   Home,
   Briefcase,
   Car,
-  Package,
-  ShieldCheck,
   Truck,
-  CheckCircle2,
-  ArrowRight,
   Layers,
   Sparkles,
+  CheckCircle2,
+  ArrowRight,
+  Phone,
+  ShieldCheck,
+  FileCheck2,
+  Clock,
+  Compass,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Packing & Moving Services — Household, Office & Vehicle Relocation',
+  title: 'Packers & Movers and Goods Transport Services — Triveni Transports',
   description:
-    'Comprehensive shifting services by Triveni Transports across Mumbai & Thane. 1BHK, 2BHK, 3BHK home relocation, office shifting, vehicle transit, and 3-layer protective packing.',
+    'Comprehensive shifting and transport services by Triveni Transports across Mumbai & Thane. Full-service home relocation, dedicated pickup & moving trucks, corporate shifting, vehicle transit, and multi-layer protective packaging.',
   alternates: {
     canonical: '/services',
   },
@@ -27,70 +30,100 @@ export const metadata: Metadata = {
 
 const SERVICES = [
   {
+    category: 'Packers & Movers',
     icon: Home,
-    title: 'Household & Home Shifting',
-    desc: 'From cozy 1 RK studios to spacious luxury villas. We handle everything from dismantling double beds and wardrobes to careful wrapping of glassware, crockeries, and LED screens.',
+    title: 'Household & Apartment Shifting',
+    desc: 'End-to-end home relocation for 1 RK flats to luxury multi-floor villas across Mumbai, Navi Mumbai, and Thane. Complete dismantling, delicate wrapping, safe transit, and room-by-room reassembly.',
     features: [
-      'Dedicated moving captain on site',
-      'Mattress and sofa dust-proof covers',
-      'Electrical appliances unmounting & mounting support',
+      'Assigned moving supervisor & trained packing crew',
+      'Mattress and sofa dust-proof protective covers',
+      'Electrical appliances unmounting & wall-mount support',
       'Careful handling by verified moving partners',
     ],
+    highlight: 'Full Packing & Reassembly',
   },
   {
-    icon: Briefcase,
-    title: 'Office & Corporate Relocation',
-    desc: 'Minimal downtime commercial moves. We pack and transport modular workstations, IT server racks, executive seating, and business archives with systematic labeling.',
+    category: 'Direct Transport',
+    icon: Truck,
+    title: 'Dedicated Pickup & Moving Trucks',
+    desc: 'On-demand commercial tempos and closed-container trucks (Tata Ace, 8ft, 14ft, 17ft, 19ft). Ideal for moving self-packed items, business inventory, or direct door-to-door goods carriage.',
     features: [
-      'Weekend and after-hours shifting availability',
-      'Anti-static bubble wrap for desktop PCs and servers',
-      'Color-coded department and employee boxing',
-      'Booking amount and service details',
+      'Verified commercial drivers with active permits, fitness & motor policy',
+      'Dedicated point-to-point vehicles with zero co-loading',
+      'Volume-matched truck capacity to eliminate split-trip confusion',
+      'Direct dispatch confirmation and live delivery milestones',
     ],
+    highlight: 'Commercial Fleet on Demand',
   },
   {
+    category: 'Corporate Relocation',
+    icon: Briefcase,
+    title: 'Office & Business Relocation',
+    desc: 'Minimal-downtime commercial moves for modular workstations, IT server racks, executive cabins, and sensitive business archives with structured inventory labeling.',
+    features: [
+      'Overnight and weekend shifting to avoid business interruption',
+      'Anti-static bubble wrap for desktop PCs, monitors & servers',
+      'Color-coded department and employee workstation boxing',
+      'Transparent line-by-line commercial booking summary',
+    ],
+    highlight: 'Zero Business Downtime',
+  },
+  {
+    category: 'Intercity Corridors',
+    icon: Compass,
+    title: 'Intercity Corridors (Pan-India)',
+    desc: 'Express highway freight along western corridors and nationwide routes. Dedicated sealed container trucks running point-to-point without depot transshipment or mixed cargo.',
+    features: [
+      'Guaranteed transit timelines on Mumbai–Pune, Gujarat & major routes',
+      'Direct contact with assigned vehicle captain',
+      'All toll clearances and highway transit documentation managed',
+      'Digital trip tracking and delivery sign-off',
+    ],
+    highlight: 'Zero Transshipment',
+  },
+  {
+    category: 'Vehicle Transport',
     icon: Car,
-    title: 'Vehicle Transport (Cars & Bikes)',
-    desc: 'Safe, scratch-free automobile transit. Specially equipped closed car carrier trailers and custom bike stands with wheel locks for interstate and intrastate moves.',
+    title: 'Automobile & Two-Wheeler Transit',
+    desc: 'Safe, scratch-free transit for motorcycles, scooters, and cars. Specially fitted closed carriers and customized bike racks with high-tensile wheel locks.',
     features: [
       'Comprehensive pre-transit photographic condition report',
       'Door-to-door vehicle pickup and delivery',
-      'Wheel chocks & hydraulic ramp loading',
-      'Pickup and delivery by verified transport partners',
+      'Hydraulic ramp loading & soft wheel-locking harnesses',
+      'Handled exclusively by verified vehicle transport partners',
     ],
+    highlight: 'Scratch-Free Handling',
   },
   {
+    category: 'Protective Packaging',
     icon: Layers,
-    title: 'Specialized 3-Layer Packing',
-    desc: 'Superior protection using virgin bubble sheets, 5-ply corrugated cartons, high-density edge foam, and cling film wrap to ensure zero transit scuffs or moisture ingress.',
+    title: 'Multi-Layer Protective Packing',
+    desc: 'Heavy-duty packing engineered to withstand rough transit conditions. Utilizes virgin air bubble sheets, 5-ply corrugated cartons, high-density edge foam, and moisture-barrier stretch wrap.',
     features: [
-      'Fragile item crates for chinaware and marble tabletops',
-      'Wardrobe carton boxes for wrinkle-free clothes',
-      'Heavy-duty industrial adhesive tapes',
-      'Unpacking and debris removal assistance',
+      'Custom wooden crating for glassware, chinaware & marble tabletops',
+      'Wardrobe carton boxes to move clothes on hangers without wrinkles',
+      'Industrial-grade moisture-seal adhesive tapes and strapping',
+      'Unpacking assistance and complete packing debris removal',
     ],
+    highlight: '3-Layer Damage Shield',
   },
+];
+
+const TRUST_PILLARS = [
   {
-    icon: Truck,
-    title: 'Intercity Moving (Mumbai – Pune – Pan-India)',
-    desc: 'Express relocation along Western corridors and nationwide. Dedicated point-to-point trucks with zero transshipment or co-loading with random commercial cargo.',
-    features: [
-      'Guaranteed delivery timeline commitment',
-      'Real-time truck radar tracking on mobile app',
-      'Direct contact with assigned vehicle captain',
-      'Toll clearances and interstate transit documentation',
-    ],
+    icon: FileCheck2,
+    title: '100% Upfront Itemised Pricing',
+    desc: 'Your quote is calculated based on exact item volume (CFT), road distance, and floor elevations. Zero hidden charges or surprise demands on moving day.',
   },
   {
     icon: ShieldCheck,
-    title: 'Short & Long Term Secure Storage',
-    desc: 'Pest-controlled, 24/7 CCTV-monitored warehouse facilities across Thane and MMR. Perfect for between-home gaps, home renovations, or extended relocations.',
-    features: [
-      'Fire-safe, waterproof facility',
-      'Palletized storage with shrink-wrapping',
-      'Flexible monthly or quarterly rental plans',
-      'Complete inventory documentation',
-    ],
+    title: 'Verified Partners Only',
+    desc: 'All moving partners submit verified business credentials, signed service contracts, approved commercial schedules, and valid driver vehicle compliance.',
+  },
+  {
+    icon: Clock,
+    title: 'Live Booking Milestones',
+    desc: 'Clear status updates from confirmation through partner dispatch, arrival, transit, and safe completion on both the web and mobile apps.',
   },
 ];
 
@@ -99,18 +132,31 @@ export default function ServicesPage() {
     <>
       <Navbar />
       <main className={styles.servicesPage}>
-        {/* Header */}
+        {/* Ambient Top Glow */}
+        <div className={styles.ambientGlow} aria-hidden="true" />
+
+        {/* Hero Section */}
         <section className={styles.hero}>
           <div className={styles.badge}>
             <Sparkles size={14} />
-            <span>End-to-End Relocation Solutions</span>
+            <span>Verified Relocation &amp; Transport Network</span>
           </div>
           <h1 className={styles.title}>
-            Our Packing &amp; Moving <span className={styles.accent}>Services</span>
+            Our Moving &amp; Transport <span className={styles.accent}>Services</span>
           </h1>
           <p className={styles.subtitle}>
-            Engineered for safety, speed, and 100% price transparency. Choose the service tailored to your home or business.
+            Engineered for reliability, safety, and 100% price transparency. Choose full-service Packers &amp; Movers with trained crews or dedicated pickup trucks for direct goods transport.
           </p>
+
+          {/* Service Pillar Tabs / Tags */}
+          <div className={styles.heroPills}>
+            <span className={styles.heroPill}>🏠 Household Shifting</span>
+            <span className={styles.heroPill}>🚚 Commercial Truck Hire</span>
+            <span className={styles.heroPill}>🏢 Office Moves</span>
+            <span className={styles.heroPill}>🛣️ Intercity Highway</span>
+            <span className={styles.heroPill}>🏍️ Vehicle Shifting</span>
+            <span className={styles.heroPill}>📦 3-Layer Packing</span>
+          </div>
         </section>
 
         {/* Services Grid */}
@@ -120,34 +166,79 @@ export default function ServicesPage() {
               const Icon = s.icon;
               return (
                 <div key={s.title} className={styles.serviceCard}>
-                  <div className={styles.iconWrap}>
-                    <Icon size={26} strokeWidth={1.9} />
+                  <div className={styles.cardHeader}>
+                    <div className={styles.iconWrap}>
+                      <Icon size={24} strokeWidth={2} />
+                    </div>
+                    <span className={styles.categoryBadge}>{s.category}</span>
                   </div>
+
                   <h2 className={styles.serviceTitle}>{s.title}</h2>
                   <p className={styles.serviceDesc}>{s.desc}</p>
+
                   <ul className={styles.featureList}>
                     {s.features.map((f) => (
                       <li key={f} className={styles.featureItem}>
-                        <CheckCircle2 size={16} className={styles.checkIcon} />
+                        <CheckCircle2 size={15} className={styles.checkIcon} />
                         <span>{f}</span>
                       </li>
                     ))}
                   </ul>
+
+                  <div className={styles.cardFooter}>
+                    <span className={styles.highlightPill}>{s.highlight}</span>
+                    <Link href="/quote" className={styles.cardActionLink}>
+                      <span>Get Quote</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
                 </div>
               );
             })}
           </div>
 
+          {/* Trust Pillars */}
+          <div className={styles.trustSection}>
+            <div className={styles.trustHeader}>
+              <span className={styles.trustEyebrow}>THE TRIVENI TRANSPORTS STANDARD</span>
+              <h2 className={styles.trustTitle}>Relocation Without the Guesswork</h2>
+            </div>
+            <div className={styles.trustGrid}>
+              {TRUST_PILLARS.map((pillar) => {
+                const PillarIcon = pillar.icon;
+                return (
+                  <div key={pillar.title} className={styles.trustCard}>
+                    <div className={styles.trustIconWrap}>
+                      <PillarIcon size={22} strokeWidth={2} />
+                    </div>
+                    <h3 className={styles.trustCardTitle}>{pillar.title}</h3>
+                    <p className={styles.trustCardDesc}>{pillar.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* CTA Box */}
           <div className={styles.ctaSection}>
-            <h2 className={styles.ctaTitle}>Ready to Plan Your Next Move?</h2>
-            <p className={styles.ctaDesc}>
-              Get a line-by-line itemised price quotation in 30 seconds with our online instant calculation engine.
-            </p>
-            <Link href="/quote" className={styles.ctaBtn}>
-              <span>Calculate Your Price Now</span>
-              <ArrowRight size={17} />
-            </Link>
+            <div className={styles.ctaGlow} aria-hidden="true" />
+            <div className={styles.ctaContent}>
+              <span className={styles.ctaBadge}>INSTANT CALCULATION ENGINE</span>
+              <h2 className={styles.ctaTitle}>Ready to Plan Your Next Move?</h2>
+              <p className={styles.ctaDesc}>
+                Get an exact, itemised price quotation in 30 seconds. Choose items, enter pickup and drop addresses, and schedule your move with zero hidden fees.
+              </p>
+              <div className={styles.ctaActions}>
+                <Link href="/quote" className={styles.ctaPrimaryBtn}>
+                  <span>Calculate Your Price Now</span>
+                  <ArrowRight size={17} />
+                </Link>
+                <a href="tel:8828647785" className={styles.ctaSecondaryBtn}>
+                  <Phone size={16} />
+                  <span>Call 88286 47785</span>
+                </a>
+              </div>
+            </div>
           </div>
         </section>
       </main>
@@ -155,4 +246,3 @@ export default function ServicesPage() {
     </>
   );
 }
-
