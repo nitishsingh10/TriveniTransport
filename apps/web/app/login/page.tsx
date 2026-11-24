@@ -98,8 +98,13 @@ export default function LoginPage() {
       const res = await auth.verifyOtp(resolvedIdentifier, otp, 'customer');
       token.set(res.accessToken, res.refreshToken);
       token.setRole('customer');
-      if (res.user) token.setUser(res.user);
-      router.replace(getRoleSafeDestination('customer'));
+      const signedInUser = res.user ? { ...res.user, role: 'customer' } : null;
+      if (signedInUser) token.setUser(signedInUser);
+      if (res.user?.profileCompleted === false || (method === 'email' && !res.user?.phone)) {
+        router.replace('/complete-profile');
+      } else {
+        router.replace(getRoleSafeDestination('customer'));
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -116,7 +121,8 @@ export default function LoginPage() {
   }
 
   if (isLoggedIn) {
-    const destination = getRoleSafeDestination(role);
+    const needsProfile = role === 'customer' && (user?.profileCompleted === false || !user?.phone);
+    const destination = needsProfile ? '/complete-profile' : getRoleSafeDestination(role);
 
     return (
       <main className={styles.main}>
@@ -145,7 +151,7 @@ export default function LoginPage() {
 
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
                 <Link href={destination} className={styles.submitBtn}>
-                  Continue to {role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →
+                  {needsProfile ? 'Complete your profile →' : `Continue to ${role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →`}
                 </Link>
                 <button
                   type="button"

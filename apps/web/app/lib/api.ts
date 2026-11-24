@@ -185,7 +185,7 @@ export const auth = {
       accessToken: string;
       refreshToken: string;
       userId: string;
-      user?: { id: string; role: string; name: string; phone?: string; email?: string };
+      user?: { id: string; role: string; name: string; phone?: string; email?: string; profileCompleted?: boolean };
     }>('/auth/otp/verify', {
       method: 'POST',
       body: JSON.stringify({
@@ -220,6 +220,27 @@ export interface VendorProfile {
   _count?: { bookings: number };
   documents?: Array<{ documentType: string; fileName: string; status: string; uploadedAt: string }>;
 }
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  profileCompleted: boolean;
+}
+
+export const customer = {
+  getProfile: () => apiFetch<CustomerProfile>('/customer/me'),
+  updateProfile: (body: { name?: string }) => apiFetch<CustomerProfile>('/customer/me', {
+    method: 'PATCH', body: JSON.stringify(body),
+  }),
+  requestPhoneOtp: (phone: string) => apiFetch<{ message: string; destination: string }>('/customer/me/phone/otp/request', {
+    method: 'POST', body: JSON.stringify({ phone }),
+  }),
+  verifyPhoneOtp: (phone: string, code: string) => apiFetch<CustomerProfile>('/customer/me/phone/otp/verify', {
+    method: 'POST', body: JSON.stringify({ phone, code }),
+  }),
+};
 
 export interface PartnerContract {
   version: string;

@@ -98,8 +98,19 @@ export default function SignupPage() {
       const res = await auth.verifyOtp(resolvedIdentifier, otp, 'customer', name.trim(), true);
       token.set(res.accessToken, res.refreshToken);
       token.setRole('customer');
-      if (res.user) token.setUser(res.user);
-      router.replace(getRoleSafeDestination('customer'));
+      const signedUpUser = {
+        ...(res.user || {}),
+        id: res.user?.id || res.userId,
+        role: 'customer',
+        name: res.user?.name || name.trim(),
+        phone: res.user?.phone || '',
+      };
+      token.setUser(signedUpUser);
+      if (!signedUpUser.phone || res.user?.profileCompleted === false) {
+        router.replace('/complete-profile');
+      } else {
+        router.replace(getRoleSafeDestination('customer'));
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -116,7 +127,8 @@ export default function SignupPage() {
   }
 
   if (isLoggedIn) {
-    const destination = getRoleSafeDestination(role);
+    const needsProfile = role === 'customer' && (user?.profileCompleted === false || !user?.phone);
+    const destination = needsProfile ? '/complete-profile' : getRoleSafeDestination(role);
 
     return (
       <main className={styles.main}>
@@ -145,7 +157,7 @@ export default function SignupPage() {
 
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
                 <Link href={destination} className={styles.submitBtn}>
-                  Continue to {role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →
+                  {needsProfile ? 'Complete your profile →' : `Continue to ${role === 'vendor' ? 'Fleet Portal' : role === 'admin' ? 'Admin Console' : 'My Bookings'} →`}
                 </Link>
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { token, auth } from './api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { token, auth, customer } from './api';
 
 export interface AuthUser {
   id?: string;
@@ -9,6 +9,7 @@ export interface AuthUser {
   name?: string;
   phone?: string;
   email?: string;
+  profileCompleted?: boolean;
 }
 
 export interface UseAuthReturn {
@@ -41,6 +42,7 @@ export function useAuth(): UseAuthReturn {
   const [role, setRole] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const customerProfileHydrationStarted = useRef(false);
 
   const syncAuth = useCallback(() => {
     const logged = token.isLoggedIn();
@@ -96,6 +98,29 @@ export function useAuth(): UseAuthReturn {
       window.removeEventListener('storage', handleAuthChange);
     };
   }, [syncAuth]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      customerProfileHydrationStarted.current = false;
+      return;
+    }
+    if (role !== 'customer' || customerProfileHydrationStarted.current) return;
+
+    customerProfileHydrationStarted.current = true;
+    customer.getProfile().then((profile) => {
+      token.setUser({
+        ...(token.getUser() || {}),
+        id: profile.id,
+        role: 'customer',
+        name: profile.name,
+        phone: profile.phone || '',
+        email: profile.email || undefined,
+        profileCompleted: profile.profileCompleted,
+      });
+    }).catch(() => {
+      // Keep the cached session usable while the profile service is unavailable.
+    });
+  }, [isLoggedIn, role]);
 
   const logout = useCallback(async () => {
     try {
