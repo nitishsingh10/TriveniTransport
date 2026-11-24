@@ -55,9 +55,9 @@ export class CustomerController {
         return next({ statusCode: 404, code: 'NOT_FOUND', message: 'Customer account not found' });
       }
 
-      // Completion is derived from the persisted profile fields so it cannot
-      // drift from the name or phone number.
-      const profileCompleted = isCustomerProfileComplete(customer.name, customer.phone);
+      // The stored email exists only after its OTP was verified. A valid name
+      // plus verified email or phone completes the customer profile.
+      const profileCompleted = isCustomerProfileComplete(customer.name, customer.phone, customer.email);
 
       res.status(200).json({
         ...customer,
@@ -83,7 +83,7 @@ export class CustomerController {
     try {
       const { phone, code } = PhoneChangeSchema.extend({ code: z.string().trim().regex(/^\d{6}$/) }).parse(req.body);
       const customer = await AuthService.verifyPhoneChangeOtp(req.user!.id, phone, code!);
-      res.status(200).json({ ...customer, profileCompleted: isCustomerProfileComplete(customer.name, customer.phone) });
+      res.status(200).json({ ...customer, profileCompleted: isCustomerProfileComplete(customer.name, customer.phone, customer.email) });
     } catch (e: any) {
       if (e instanceof z.ZodError) return next({ statusCode: 400, code: 'VALIDATION_ERROR', message: e.errors[0]?.message || 'Invalid verification code.' });
       next(e);
@@ -182,7 +182,7 @@ export class CustomerController {
 
       res.status(200).json({
         ...updated,
-        profileCompleted: isCustomerProfileComplete(updated.name, updated.phone),
+        profileCompleted: isCustomerProfileComplete(updated.name, updated.phone, updated.email),
       });
     } catch (e: any) {
       if (e instanceof z.ZodError) {

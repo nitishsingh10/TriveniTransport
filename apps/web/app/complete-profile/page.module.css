@@ -32,21 +32,52 @@
 
 .brand {
   display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 30px;
   color: #0d1f37;
-  font-size: 17px;
-  font-weight: 900;
-  letter-spacing: .08em;
   text-decoration: none;
 }
 
-.brand span {
+.brand img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.brandName {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.brandName small {
   color: #a66b00;
   font-size: 9px;
   letter-spacing: .2em;
 }
+
+.verifiedEmail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #d9e8dc;
+  border-radius: 12px;
+  background: #f2faf4;
+  color: #286b3a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.verifiedEmail span { flex: 1; line-height: 1.5; }
+.verifiedEmail strong { color: #174d29; font-size: 12px; }
+.verifiedEmail svg { flex: 0 0 auto; }
 
 .icon {
   width: 48px;

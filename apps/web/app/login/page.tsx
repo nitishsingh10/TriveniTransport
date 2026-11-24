@@ -100,7 +100,7 @@ export default function LoginPage() {
       token.setRole('customer');
       const signedInUser = res.user ? { ...res.user, role: 'customer' } : null;
       if (signedInUser) token.setUser(signedInUser);
-      if (res.user?.profileCompleted === false || (method === 'email' && !res.user?.phone)) {
+      if (res.user?.profileCompleted === false || (method === 'email' && !res.user?.phone && !res.user?.email)) {
         router.replace('/complete-profile');
       } else {
         router.replace(getRoleSafeDestination('customer'));
@@ -121,7 +121,7 @@ export default function LoginPage() {
   }
 
   if (isLoggedIn) {
-    const needsProfile = role === 'customer' && (user?.profileCompleted === false || !user?.phone);
+    const needsProfile = role === 'customer' && (user?.profileCompleted === false || (!user?.phone && !user?.email));
     const destination = needsProfile ? '/complete-profile' : getRoleSafeDestination(role);
 
     return (

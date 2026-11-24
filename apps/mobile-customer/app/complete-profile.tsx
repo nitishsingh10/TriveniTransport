@@ -84,14 +84,17 @@ export default function CompleteProfileScreen() {
   const cleanPhone = phone.replace(/\D/g, '');
   const isNameValid = name.trim().length >= 2;
   const isPhoneValid = /^[6-9]\d{9}$/.test(cleanPhone);
-  const canSubmit = (otpSent ? otp.length === 6 : isNameValid && isPhoneValid) && !loading;
+  const hasVerifiedEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user?.email?.trim() || '');
+  const phoneUnchanged = normalizeIndianPhone(user?.phone) === cleanPhone;
+  const canSkipPhoneOtp = hasVerifiedEmail && (!isEditMode || phoneUnchanged);
+  const canSubmit = (otpSent ? otp.length === 6 : isNameValid && (canSkipPhoneOtp || isPhoneValid)) && !loading;
 
   const handleSave = async () => {
     if (!isNameValid) {
       setErrorMsg('Please enter your full name (minimum 2 characters).');
       return;
     }
-    if (!isPhoneValid) {
+    if (!canSkipPhoneOtp && !isPhoneValid) {
       setErrorMsg('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
@@ -100,6 +103,19 @@ export default function CompleteProfileScreen() {
     setErrorMsg('');
 
     try {
+      if (canSkipPhoneOtp) {
+        const res = await customerApi.updateProfile({ name: name.trim() });
+        await updateUser({
+          name: res.name,
+          phone: res.phone || user?.phone,
+          profileCompleted: res.profileCompleted ?? true,
+        });
+        showToast({ title: isEditMode ? 'Profile updated' : 'Profile completed', message: 'Your verified email is enough to continue. You can add a mobile number later.', variant: 'success' });
+        if (isEditMode) router.back();
+        else router.replace('/(tabs)');
+        return;
+      }
+
       if (!otpSent && normalizeIndianPhone(user?.phone) !== cleanPhone) {
         await customerApi.requestPhoneChangeOtp(cleanPhone);
         setOtpSent(true);
@@ -170,7 +186,11 @@ export default function CompleteProfileScreen() {
 
             <Text style={styles.title}>{isEditMode ? 'Edit Your Profile' : 'Complete Your Profile'}</Text>
             <Text style={styles.subtitle}>
-              {isEditMode ? 'Update your name or verify a new mobile number with a one-time password.' : 'To coordinate your move, pair verified drivers, and send live GPS tracking updates, we require your name and phone number.'}
+              {hasVerifiedEmail && !isEditMode
+                ? 'Your email is verified, so you can continue without a mobile OTP. You can add a phone number later.'
+                : isEditMode
+                  ? 'Update your name or verify a new mobile number with a one-time password.'
+                  : 'Add your name and mobile number so we can coordinate your move and share booking updates.'}
             </Text>
 
             {!!errorMsg && (
@@ -234,8 +254,8 @@ export default function CompleteProfileScreen() {
               </View>
             )}
 
-            {/* Phone Input */}
-            <View style={styles.inputGroup}>
+            {/* A verified email is sufficient to complete a customer profile. */}
+            {!(hasVerifiedEmail && !isEditMode) && <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Mobile Number (for Driver & SMS Updates)</Text>
               <View style={styles.inputWrapper}>
                 <View style={styles.countryCodeBox}>
@@ -264,7 +284,7 @@ export default function CompleteProfileScreen() {
               <Text style={styles.inputHelpText}>
                 We will send booking updates and partner contact details by SMS & WhatsApp after assignment.
               </Text>
-            </View>
+            </View>}
 
             {/* Submit Button */}
             <TouchableOpacity

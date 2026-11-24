@@ -106,7 +106,7 @@ export default function SignupPage() {
         phone: res.user?.phone || '',
       };
       token.setUser(signedUpUser);
-      if (!signedUpUser.phone || res.user?.profileCompleted === false) {
+      if ((!signedUpUser.phone && !signedUpUser.email) || res.user?.profileCompleted === false) {
         router.replace('/complete-profile');
       } else {
         router.replace(getRoleSafeDestination('customer'));
@@ -127,7 +127,7 @@ export default function SignupPage() {
   }
 
   if (isLoggedIn) {
-    const needsProfile = role === 'customer' && (user?.profileCompleted === false || !user?.phone);
+    const needsProfile = role === 'customer' && (user?.profileCompleted === false || (!user?.phone && !user?.email));
     const destination = needsProfile ? '/complete-profile' : getRoleSafeDestination(role);
 
     return (

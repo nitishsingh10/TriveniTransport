@@ -372,7 +372,7 @@ export class AuthService {
           userName = customer.name;
           userPhone = customer.phone || undefined;
           userEmail = customer.email || undefined;
-          userProfileCompleted = isCustomerProfileComplete(customer.name, customer.phone);
+          userProfileCompleted = isCustomerProfileComplete(customer.name, customer.phone, customer.email);
         } catch (error) {
           if (isUniqueConstraintError(error)) throw accountExists('customer', target.type);
           throw error;
@@ -383,7 +383,7 @@ export class AuthService {
         userName = existing.name;
         userPhone = existing.phone || undefined;
         userEmail = existing.email || undefined;
-        userProfileCompleted = isCustomerProfileComplete(existing.name, existing.phone);
+        userProfileCompleted = isCustomerProfileComplete(existing.name, existing.phone, existing.email);
       }
     } else if (role === 'vendor') {
       const existing = target.type === 'email'

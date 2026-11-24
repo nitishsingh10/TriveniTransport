@@ -8,15 +8,16 @@ export function normalizeIndianPhone(phone?: string | null): string {
 }
 
 export function isCustomerProfileComplete(
-  user?: Pick<AuthUser, 'name' | 'phone' | 'profileCompleted'> | null,
+  user?: Pick<AuthUser, 'name' | 'phone' | 'email' | 'profileCompleted'> | null,
 ): boolean {
   const name = user?.name?.trim() || '';
   const phone = normalizeIndianPhone(user?.phone);
+  const verifiedEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user?.email?.trim() || '');
 
   const fieldsAreComplete = (
     name.length >= 2 &&
     !PROFILE_PLACEHOLDER_NAMES.has(name.toLowerCase()) &&
-    /^[6-9]\d{9}$/.test(phone)
+    (verifiedEmail || /^[6-9]\d{9}$/.test(phone))
   );
 
   // The persisted profile fields are authoritative. A stale cached completion
