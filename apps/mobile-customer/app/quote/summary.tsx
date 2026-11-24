@@ -39,7 +39,10 @@ interface SelectedItem {
   quantity: number;
   defaultCft: number;
   baseRate: number;
+  packingTier?: PackingTier;
 }
+
+type PackingTier = 'lite' | 'standard' | 'premium';
 
 const FALLBACK_ITEMS = new Map(
   DEFAULT_CATALOG.flatMap((section) => section.items.map((item) => [item.id, item] as const))
@@ -89,6 +92,10 @@ export default function SummaryScreen() {
       });
   }, [params.selectedItems, quantities]);
 
+  const [packingTiers, setPackingTiers] = useState<Record<string, PackingTier>>(() =>
+    Object.fromEntries(selectedItems.map((item) => [item.id, item.packingTier ?? 'standard']))
+  );
+
   const itemLines = useMemo(
     () => selectedItems.map((item) => ({
       id: item.itemId || item.id,
@@ -98,17 +105,18 @@ export default function SummaryScreen() {
       cft: item.defaultCft,
       unitPrice: item.baseRate,
       total: item.quantity * item.baseRate,
+      packingTier: packingTiers[item.id] ?? item.packingTier ?? 'standard',
     })),
-    [selectedItems]
+    [selectedItems, packingTiers]
   );
 
   const [scheduledDate, setScheduledDate] = useState(() => {
     const date = new Date(); date.setDate(date.getDate() + 1); return date.toISOString().slice(0, 10);
   });
   const [scheduledSlot, setScheduledSlot] = useState('morning');
-  const [packingTier, setPackingTier] = useState<'lite' | 'standard' | 'premium'>('standard');
   const [technicalWork, setTechnicalWork] = useState<string[]>([]);
-  const goodsSubtotal = itemLines.reduce((s, l) => s + l.total, 0) * (packingTier === 'lite' ? 0.8 : packingTier === 'premium' ? 1.35 : 1);
+  const packingMultipliers: Record<PackingTier, number> = { lite: 0.8, standard: 1, premium: 1.35 };
+  const goodsSubtotal = itemLines.reduce((sum, line) => sum + line.total * packingMultipliers[line.packingTier], 0);
   const liftDiscount = params.lift === '1' ? 0 : 400;
   const floorCharge = parseInt(params.floor ?? '0', 10) > 0 ? 300 : 0;
   const labourCharge = LABOUR_RATE + floorCharge + liftDiscount;
@@ -143,12 +151,12 @@ export default function SummaryScreen() {
         parkingClose,
         scheduledDate,
         scheduledSlot,
-        items: itemLines.map((line) => ({ ...(line.itemId ? { itemId: line.itemId } : { customName: line.label, customCft: line.cft }), quantity: line.qty, packingTier })),
+        items: itemLines.map((line) => ({ ...(line.itemId ? { itemId: line.itemId } : { customName: line.label, customCft: line.cft }), quantity: line.qty, packingTier: line.packingTier })),
         addons: technicalWork,
       }).then(setQuoteEstimate).catch(() => setQuoteEstimate(null));
     }, 400);
     return () => clearTimeout(timer);
-  }, [pickupAddress, dropAddress, params.alternateContactPhone, configType, floorNumber, liftAvailable, parkingClose, scheduledDate, scheduledSlot, itemLines, packingTier, technicalWork]);
+  }, [pickupAddress, dropAddress, params.alternateContactPhone, configType, floorNumber, liftAvailable, parkingClose, scheduledDate, scheduledSlot, itemLines, technicalWork]);
 
   const estimatedTotal = quoteEstimate?.quoteAmount ?? totalAmount;
 
@@ -158,7 +166,7 @@ export default function SummaryScreen() {
       const itemsPayload = itemLines.map((line) => ({
         ...(line.itemId ? { itemId: line.itemId } : { customName: line.label, customCft: line.cft }),
         quantity: line.qty,
-        packingTier,
+        packingTier: line.packingTier,
       }));
 
       if (itemsPayload.length === 0) {
@@ -268,17 +276,28 @@ export default function SummaryScreen() {
       </View>
 
       <View style={styles.linesCard}>
-        <View style={styles.receiptHeader}><Package size={16} color={Colors.text} /><Text style={styles.receiptTitle}>PACKING TYPE</Text></View>
-        {([
-          ['lite', 'Basic', 'Protective wrap for everyday items'],
-          ['standard', 'Standard', 'Layered protection for furniture and fragile goods'],
-          ['premium', 'Premium', 'Enhanced protection for delicate and valuable items'],
-        ] as const).map(([tier, label, detail]) => (
-          <TouchableOpacity key={tier} style={[styles.packingOption, packingTier === tier && styles.optionSelected]} onPress={() => setPackingTier(tier)}>
-            <View style={{ flex: 1 }}><Text style={[styles.packingTitle, packingTier === tier && styles.selectedOptionText]}>{label}</Text><Text style={styles.packingDesc}>{detail}</Text></View>
-            <Text style={[styles.packingTick, packingTier === tier && styles.selectedOptionText]}>{packingTier === tier ? '✓' : '○'}</Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.receiptHeader}><Package size={16} color={Colors.text} /><Text style={styles.receiptTitle}>PACKING TYPE BY ITEM</Text></View>
+        <Text style={styles.packingDesc}>Choose the protection level for each selected item.</Text>
+        {itemLines.map((line) => {
+          const selectedItem = selectedItems.find((item) => (item.itemId || item.id) === line.id);
+          const tierKey = selectedItem?.id ?? line.id;
+          return (
+            <View key={line.id} style={styles.itemPackingRow}>
+              <Text style={styles.packingTitle}>{line.label} × {line.qty}</Text>
+              <View style={styles.choiceRow}>
+                {([
+                  ['lite', 'Basic'],
+                  ['standard', 'Standard'],
+                  ['premium', 'Premium'],
+                ] as const).map(([tier, label]) => (
+                  <TouchableOpacity key={tier} style={[styles.choiceChip, line.packingTier === tier && styles.optionSelected]} onPress={() => setPackingTiers((current) => ({ ...current, [tierKey]: tier }))}>
+                    <Text style={[styles.choiceText, line.packingTier === tier && styles.selectedOptionText]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          );
+        })}
       </View>
 
       <View style={styles.linesCard}>
@@ -544,6 +563,7 @@ const createStyles = (Colors: ThemeColors) => StyleSheet.create({
   dateValue: { color: Colors.text, fontSize: 10, fontWeight: FontWeight.bold },
   fieldLabel: { color: Colors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold, marginTop: 3 },
   choiceRow: { flexDirection: 'row', gap: 7 },
+  itemPackingRow: { gap: 7, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
   choiceChip: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.cardBorder, backgroundColor: Colors.surfaceSubtle },
   choiceText: { color: Colors.textSecondary, fontSize: 10, fontWeight: FontWeight.semibold },
   optionSelected: { borderColor: Colors.marigold, backgroundColor: Colors.marigoldSubtle },

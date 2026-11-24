@@ -59,6 +59,10 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'mandir_small', name: 'Mandir / Pooja Unit (Small)', icon: DoorClosed, defaultCft: 12, baseRate: 300 },
       { id: 'mandir_medium', name: 'Mandir / Pooja Unit (Medium)', icon: DoorClosed, defaultCft: 24, baseRate: 500 },
       { id: 'mandir_large', name: 'Mandir / Pooja Unit (Large)', icon: DoorClosed, defaultCft: 40, baseRate: 800 },
+      { id: 'pillow_set', name: 'Pillow Set', icon: Bed, defaultCft: 4, baseRate: 80 },
+      { id: 'blanket', name: 'Blanket / Comforter', icon: Bed, defaultCft: 6, baseRate: 100 },
+      { id: 'full_mirror', name: 'Full-Length Mirror', icon: MirrorRectangular, defaultCft: 12, baseRate: 250 },
+      { id: 'curtains', name: 'Curtains (per pair)', icon: DoorClosed, defaultCft: 5, baseRate: 100 },
     ],
   },
   {
@@ -88,6 +92,9 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'water_purifier', name: 'Water Purifier', icon: Box, defaultCft: 6, baseRate: 150 },
       { id: 'kitchen_island', name: 'Kitchen Cabinet / Island', icon: DoorClosed, defaultCft: 45, baseRate: 650 },
       { id: 'small_appliance', name: 'Air Fryer / Small Appliance', icon: CookingPot, defaultCft: 4, baseRate: 100 },
+      { id: 'kitchen_utensils', name: 'Kitchen Utensils / Cookware Box', icon: CookingPot, defaultCft: 8, baseRate: 180 },
+      { id: 'crockery_box', name: 'Crockery / Glassware Box', icon: UtensilsCrossed, defaultCft: 6, baseRate: 200 },
+      { id: 'water_dispenser', name: 'Water Dispenser', icon: CookingPot, defaultCft: 15, baseRate: 350 },
     ],
   },
   {
@@ -102,6 +109,9 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'air_cooler', name: 'Air Cooler', icon: Fan, defaultCft: 25, baseRate: 350 },
       { id: 'inverter', name: 'Inverter / UPS', icon: ShieldCheck, defaultCft: 12, baseRate: 250 },
       { id: 'ceiling_fan', name: 'Ceiling Fan', icon: Fan, defaultCft: 5, baseRate: 120 },
+      { id: 'desktop_cpu', name: 'Desktop CPU', icon: Monitor, defaultCft: 5, baseRate: 180 },
+      { id: 'gaming_console', name: 'Gaming Console', icon: Monitor, defaultCft: 3, baseRate: 120 },
+      { id: 'soundbar', name: 'Soundbar', icon: Speaker, defaultCft: 5, baseRate: 150 },
     ],
   },
   {
@@ -110,6 +120,7 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'dining_6', name: 'Dining Table (6-seater)', icon: Table2, defaultCft: 55, baseRate: 700 },
       { id: 'dining_chair', name: 'Dining Chair', icon: Armchair, defaultCft: 6, baseRate: 100 },
       { id: 'bar_stool', name: 'Bar Stool', icon: Armchair, defaultCft: 5, baseRate: 90 },
+      { id: 'dining_cabinet', name: 'Dining Crockery Cabinet', icon: DoorClosed, defaultCft: 35, baseRate: 500 },
     ],
   },
   {
@@ -119,6 +130,8 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'boxes_lg', name: 'Carton Box (Large)', icon: PackagePlus, defaultCft: 8, baseRate: 200 },
       { id: 'suitcase', name: 'Suitcase / Travel Bag', icon: PackagePlus, defaultCft: 8, baseRate: 140 },
       { id: 'storage_crate', name: 'Plastic Storage Crate', icon: Box, defaultCft: 6, baseRate: 120 },
+      { id: 'clothes_box', name: 'Clothes / Linen Box', icon: Package, defaultCft: 8, baseRate: 160 },
+      { id: 'plastic_drawer', name: 'Plastic Drawer Unit', icon: Package, defaultCft: 10, baseRate: 180 },
     ],
   },
   {
@@ -127,6 +140,8 @@ export const DEFAULT_CATALOG: RoomSection[] = [
       { id: 'filing_cabinet', name: 'Filing Cabinet', icon: BriefcaseBusiness, defaultCft: 25, baseRate: 400 },
       { id: 'workstation', name: 'Office Desk / Workstation', icon: BriefcaseBusiness, defaultCft: 45, baseRate: 600 },
       { id: 'safe', name: 'Safe / Locker', icon: ShieldCheck, defaultCft: 12, baseRate: 700 },
+      { id: 'conference_table', name: 'Conference Table', icon: Table2, defaultCft: 60, baseRate: 750 },
+      { id: 'office_partition', name: 'Office Partition (per panel)', icon: BriefcaseBusiness, defaultCft: 20, baseRate: 300 },
     ],
   },
   {
