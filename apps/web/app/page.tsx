@@ -30,6 +30,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AnimatedCounter from './components/AnimatedCounter';
 import { useAuth } from './lib/useAuth';
+import { isCustomerProfileComplete } from './lib/customerProfile';
 import styles from './page.module.css';
 
 const scrollReveal: Variants = {
@@ -333,6 +334,7 @@ function PricingGuideSection() {
 
 export default function Home() {
   const { isLoggedIn, role, user } = useAuth();
+  const isProfileIncomplete = isLoggedIn && role === 'customer' && !isCustomerProfileComplete(user);
   return (
     <>
       <Navbar />
@@ -367,8 +369,8 @@ export default function Home() {
               </motion.p>
 
               <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.38 }} className={styles.heroActions}>
-                <Link href="/quote" className={styles.heroQuoteBtn}>
-                  <span>Get a quote</span>
+                <Link href={isProfileIncomplete ? '/complete-profile' : '/quote'} className={styles.heroQuoteBtn}>
+                  <span>{isProfileIncomplete ? 'Complete Profile' : 'Get a quote'}</span>
                   <ArrowRight size={19} strokeWidth={2.5} />
                 </Link>
               </motion.div>
@@ -382,28 +384,62 @@ export default function Home() {
                   className={styles.loggedInHeroBanner}
                 >
                   <div className={styles.loggedInHeroHeader}>
-                    <div className={styles.loggedInHeroAvatar}>
-                      {user?.name ? user.name.trim().charAt(0).toUpperCase() : 'C'}
-                      <span className={styles.loggedInOnlineDot} />
+                    <div
+                      className={styles.loggedInHeroAvatar}
+                      style={
+                        isProfileIncomplete
+                          ? { background: '#F59E0B', color: '#78350F' }
+                          : undefined
+                      }
+                    >
+                      {isProfileIncomplete ? '!' : (user?.name ? user.name.trim().charAt(0).toUpperCase() : 'C')}
+                      <span
+                        className={styles.loggedInOnlineDot}
+                        style={isProfileIncomplete ? { background: '#D97706' } : undefined}
+                      />
                     </div>
                     <div>
-                      <span className={styles.loggedInRoleBadge}>
-                        {role === 'vendor' ? 'Fleet Partner' : role === 'admin' ? 'Administrator' : 'Logged In Customer'}
+                      <span
+                        className={styles.loggedInRoleBadge}
+                        style={
+                          isProfileIncomplete
+                            ? { background: '#FEF3C7', color: '#92400E', borderColor: '#FDE68A' }
+                            : undefined
+                        }
+                      >
+                        {isProfileIncomplete
+                          ? 'Action Required'
+                          : role === 'vendor'
+                          ? 'Fleet Partner'
+                          : role === 'admin'
+                          ? 'Administrator'
+                          : 'Logged In Customer'}
                       </span>
-                      <h2 className={styles.loggedInGreeting}>
-                        Welcome back, {user?.name || (role === 'vendor' ? 'Partner' : role === 'admin' ? 'Admin' : 'Valued Customer')}!
+                      <h2
+                        className={styles.loggedInGreeting}
+                        style={isProfileIncomplete ? { color: '#78350F' } : undefined}
+                      >
+                        {isProfileIncomplete
+                          ? 'Please add your mobile number'
+                          : `Welcome back, ${user?.name || (role === 'vendor' ? 'Partner' : role === 'admin' ? 'Admin' : 'Valued Customer')}!`}
                       </h2>
                     </div>
                   </div>
-                  <p className={styles.loggedInSubtext}>
-                    {role === 'vendor'
+                  <p className={styles.loggedInSubtext} style={isProfileIncomplete ? { color: '#92400E' } : undefined}>
+                    {isProfileIncomplete
+                      ? 'A valid 10-digit mobile number is required to complete your account setup and access move bookings or quotes.'
+                      : role === 'vendor'
                       ? 'Access your active vehicle assignments, dispatch status, and duty logs.'
                       : role === 'admin'
                       ? 'Manage platform fleet dispatch, relocations manifest, and live status.'
                       : 'Track active relocations, view booked moves, or book another shifting with itemised pricing.'}
                   </p>
                   <div className={styles.loggedInActions}>
-                    {role === 'vendor' ? (
+                    {isProfileIncomplete ? (
+                      <Link href="/complete-profile" className="btn btn-primary btn-sm">
+                        <Shield size={15} /> Complete Profile Now
+                      </Link>
+                    ) : role === 'vendor' ? (
                       <Link href="/vendor/portal" className="btn btn-primary btn-sm">
                         <Truck size={15} /> Open Fleet Portal
                       </Link>
@@ -602,8 +638,8 @@ export default function Home() {
                 Get an accurate, itemised quote in under 2 minutes. Transparent rates, verified captains, and zero hidden surprises on moving day.
               </p>
               <div className={styles.ctaBtnGroup}>
-                <Link href="/quote" className={styles.ctaBtn}>
-                  <span>Get Your Free Quote</span>
+                <Link href={isProfileIncomplete ? '/complete-profile' : '/quote'} className={styles.ctaBtn}>
+                  <span>{isProfileIncomplete ? 'Complete Profile' : 'Get Your Free Quote'}</span>
                   <ArrowRight size={18} />
                 </Link>
                 <a href="tel:8828647785" className={styles.ctaPhoneBtn}>

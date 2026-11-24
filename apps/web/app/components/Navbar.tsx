@@ -14,6 +14,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
+import { isCustomerProfileComplete } from '../lib/customerProfile';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -91,6 +92,7 @@ export default function Navbar() {
       : 'Customer';
 
   const displayName = user?.name || (role === 'vendor' ? 'Partner' : role === 'admin' ? 'Admin' : 'Customer');
+  const isProfileIncomplete = isLoggedIn && role === 'customer' && !isCustomerProfileComplete(user);
 
   return (
     <>
@@ -134,9 +136,19 @@ export default function Navbar() {
             {/* My Bookings in Nav: Shown directly when logged in as Customer */}
             {isLoggedIn && role === 'customer' && (
               <li>
-                <Link href="/bookings" onClick={closeMenu} style={{ color: 'var(--brand-900)', fontWeight: 700 }}>
-                  My Bookings
-                  <span className={styles.bookingsNavDot} />
+                <Link
+                  href={isProfileIncomplete ? '/complete-profile' : '/bookings'}
+                  onClick={closeMenu}
+                  style={{
+                    color: isProfileIncomplete ? '#B45309' : 'var(--brand-900)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isProfileIncomplete ? 'Complete Profile' : 'My Bookings'}
+                  <span
+                    className={styles.bookingsNavDot}
+                    style={isProfileIncomplete ? { background: '#F59E0B' } : undefined}
+                  />
                 </Link>
               </li>
             )}
@@ -235,8 +247,12 @@ export default function Navbar() {
             )}
 
             <li className={styles.mobileActions}>
-              <Link href="/quote" className={`btn btn-accent ${styles.mobileCta}`} onClick={closeMenu}>
-                Get Instant Quote <ArrowRight size={16} />
+              <Link
+                href={isProfileIncomplete ? '/complete-profile' : '/quote'}
+                className={`btn btn-accent ${styles.mobileCta}`}
+                onClick={closeMenu}
+              >
+                {isProfileIncomplete ? 'Complete Profile' : 'Get Instant Quote'} <ArrowRight size={16} />
               </Link>
               <div className={styles.mobileSupport}>
                 <PhoneCall size={14} className={styles.mobileSupportIcon} />
@@ -255,9 +271,17 @@ export default function Navbar() {
               /* Logged In State */
               <div className={styles.authActions}>
                 {role === 'customer' && (
-                  <Link href="/bookings" className={styles.bookingsLinkBtn}>
-                    <Package size={15} />
-                    <span>My Bookings</span>
+                  <Link
+                    href={isProfileIncomplete ? '/complete-profile' : '/bookings'}
+                    className={styles.bookingsLinkBtn}
+                    style={
+                      isProfileIncomplete
+                        ? { background: '#FEF3C7', borderColor: '#F59E0B', color: '#92400E' }
+                        : undefined
+                    }
+                  >
+                    {isProfileIncomplete ? <ShieldCheck size={15} /> : <Package size={15} />}
+                    <span>{isProfileIncomplete ? 'Complete Profile' : 'My Bookings'}</span>
                   </Link>
                 )}
 
@@ -304,16 +328,27 @@ export default function Navbar() {
                             {user.phone || user.email}
                           </div>
                         )}
-                        <span className={styles.dropdownBadge}>{roleLabel}</span>
+                        <span
+                          className={styles.dropdownBadge}
+                          style={
+                            isProfileIncomplete
+                              ? { background: '#FEF3C7', color: '#92400E', borderColor: '#FDE68A' }
+                              : undefined
+                          }
+                        >
+                          {isProfileIncomplete ? 'Profile Incomplete' : roleLabel}
+                        </span>
                       </div>
 
                       {role === 'customer' && (
                         <Link
-                          href="/bookings"
+                          href={isProfileIncomplete ? '/complete-profile' : '/bookings'}
                           className={styles.dropdownItem}
                           onClick={() => setUserDropdownOpen(false)}
+                          style={isProfileIncomplete ? { color: '#B45309', fontWeight: 600 } : undefined}
                         >
-                          <Package size={16} /> My Bookings
+                          {isProfileIncomplete ? <ShieldCheck size={16} /> : <Package size={16} />}{' '}
+                          {isProfileIncomplete ? 'Complete Profile (Required)' : 'My Bookings'}
                         </Link>
                       )}
 
@@ -338,7 +373,7 @@ export default function Navbar() {
                       )}
 
                       <Link
-                        href="/quote"
+                        href={isProfileIncomplete ? '/complete-profile' : '/quote'}
                         className={styles.dropdownItem}
                         onClick={() => setUserDropdownOpen(false)}
                       >

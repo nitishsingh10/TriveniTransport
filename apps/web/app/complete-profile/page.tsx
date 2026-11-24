@@ -148,10 +148,10 @@ export default function CompleteProfilePage() {
     <main className={styles.page}>
       <div className={styles.glow} />
       <section className={styles.card} aria-busy={checking}>
-        <Link href="/" className={styles.brand} aria-label="Triveni Transports home">
+        <div className={styles.brand} aria-label="Triveni Transports">
           <img src="/logo-cropped.png" alt="" width="42" height="42" />
           <span className={styles.brandName}>TRIVENI <small>TRANSPORTS</small></span>
-        </Link>
+        </div>
         {checking ? <p className={styles.subtitle}>Loading your profile…</p> : (
           <>
             <div className={styles.icon}><CheckCircle2 size={26} /></div>

@@ -30,6 +30,8 @@ import type { ThemeColors } from '@/constants/theme';
 import { useAppTheme, useThemedStyles } from '@/components/ThemeProvider';
 import { Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@/constants/theme';
 import { bookingApi, quoteApi } from '@/lib/api';
+import { isCustomerProfileComplete } from '@/lib/customerProfile';
+import { useAuthStore } from '@/store/authStore';
 import { DEFAULT_CATALOG } from '@/constants/inventory';
 
 interface SelectedItem {
@@ -161,6 +163,16 @@ export default function SummaryScreen() {
   const estimatedTotal = quoteEstimate?.quoteAmount ?? totalAmount;
 
   const handleConfirmBooking = async () => {
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      router.push('/(auth)/login' as any);
+      return;
+    }
+    if (!isCustomerProfileComplete(user)) {
+      router.push('/complete-profile' as any);
+      return;
+    }
+
     setLoading(true);
     try {
       const itemsPayload = itemLines.map((line) => ({
@@ -200,6 +212,10 @@ export default function SummaryScreen() {
       }
     } catch (e: any) {
       console.warn('Backend createBooking failed:', e?.message || e);
+      if (e?.code === 'PHONE_NUMBER_REQUIRED' || e?.message?.includes('mobile number is required')) {
+        router.push('/complete-profile' as any);
+        return;
+      }
       Alert.alert(
         'Booking not placed',
         e?.message || 'We could not place your booking. Please check your connection and try again.'

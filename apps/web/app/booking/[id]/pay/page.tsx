@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Banknote, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Navbar from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
-import { bookings, token, type Booking } from '../../../lib/api';
+import { bookings, token, ApiError, type Booking } from '../../../lib/api';
+import { isCustomerProfileComplete } from '../../../lib/customerProfile';
 
 export default function BookingPaymentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -20,7 +21,18 @@ export default function BookingPaymentPage({ params }: { params: Promise<{ id: s
       router.replace(`/login?next=/booking/${id}/pay`);
       return;
     }
-    bookings.get(id).then(setBooking).catch(() => setError('We could not load this booking. Please try again.')).finally(() => setLoading(false));
+    const storedUser = token.getUser();
+    if (!isCustomerProfileComplete(storedUser)) {
+      router.replace('/complete-profile');
+      return;
+    }
+    bookings.get(id).then(setBooking).catch((err) => {
+      if (err instanceof ApiError && (err.status === 403 || err.code === 'PHONE_NUMBER_REQUIRED')) {
+        router.replace('/complete-profile');
+        return;
+      }
+      setError('We could not load this booking. Please try again.');
+    }).finally(() => setLoading(false));
   }, [id, router]);
 
   const confirmPaymentMethod = async () => {

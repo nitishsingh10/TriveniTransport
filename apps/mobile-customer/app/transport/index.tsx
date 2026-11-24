@@ -43,6 +43,8 @@ import {
 } from '@/lib/api';
 import { showToast } from '@/components/ToastHost';
 import { PressableScale } from '@/components/PressableScale';
+import { isCustomerProfileComplete } from '@/lib/customerProfile';
+import { useAuthStore } from '@/store/authStore';
 import { FadeInUp } from '@/components/FadeInUp';
 
 const DEFAULT_VEHICLES: TransportVehicleConfig[] = [
@@ -266,6 +268,16 @@ export default function TransportBookingScreen() {
       return;
     }
 
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      router.push('/(auth)/login' as any);
+      return;
+    }
+    if (!isCustomerProfileComplete(user)) {
+      router.push('/complete-profile' as any);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await bookingApi.createTransportBooking({
@@ -290,6 +302,10 @@ export default function TransportBookingScreen() {
         throw new Error('Booking could not be created');
       }
     } catch (e: any) {
+      if (e?.code === 'PHONE_NUMBER_REQUIRED' || e?.message?.includes('mobile number is required')) {
+        router.push('/complete-profile' as any);
+        return;
+      }
       Alert.alert(
         'Could not place booking',
         e?.message || 'Please check your connection and try again.'

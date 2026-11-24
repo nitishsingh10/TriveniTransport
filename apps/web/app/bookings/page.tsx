@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import Link from 'next/link';
 import { bookings, token, Booking, ApiError } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
+import { isCustomerProfileComplete } from '../lib/customerProfile';
 import styles from './page.module.css';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -36,12 +37,20 @@ export default function BookingsPage() {
       return;
     }
 
+    const storedUser = token.getUser();
+    if (!isCustomerProfileComplete(storedUser)) {
+      router.replace('/complete-profile');
+      return;
+    }
+
     bookings
       .list()
       .then(setList)
       .catch(err => {
         if (err instanceof ApiError && err.status === 401) {
           router.replace('/login?next=/bookings');
+        } else if (err instanceof ApiError && (err.status === 403 || err.code === 'PHONE_NUMBER_REQUIRED')) {
+          router.replace('/complete-profile');
         } else {
           setError(err instanceof ApiError ? err.message : 'Failed to load bookings.');
         }

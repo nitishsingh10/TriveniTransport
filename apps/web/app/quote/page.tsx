@@ -9,6 +9,7 @@ import WebMapModal from '../components/WebMapModal';
 import WebRouteCard from '../components/WebRouteCard';
 import { quotes, bookings, token, ApiError } from '../lib/api';
 import { useAuth } from '../lib/useAuth';
+import { isCustomerProfileComplete } from '../lib/customerProfile';
 import { getBrowserLocation, type LocationBias } from '../lib/location';
 import styles from './page.module.css';
 
@@ -354,6 +355,11 @@ export default function QuotePage() {
 
   const createBooking = async () => {
     if (!token.isLoggedIn()) { router.push(`/login?next=/quote`); return; }
+    const storedUser = token.getUser();
+    if (!isCustomerProfileComplete(storedUser)) {
+      router.push('/complete-profile');
+      return;
+    }
     setError('');
     setBookingCreating(true);
     try {
@@ -371,7 +377,11 @@ export default function QuotePage() {
         addons: technicalWork,
       });
       router.push(`/booking/${res.booking.id}/pay`);
-    } catch (err) {
+    } catch (err: any) {
+      if (err instanceof ApiError && (err.status === 403 || err.code === 'PHONE_NUMBER_REQUIRED')) {
+        router.push('/complete-profile');
+        return;
+      }
       setError(err instanceof ApiError ? err.message : 'Failed to create booking. Please try again.');
     } finally {
       setBookingCreating(false);

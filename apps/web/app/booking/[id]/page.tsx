@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { bookings, token, Booking, ApiError } from '../../lib/api';
+import { isCustomerProfileComplete } from '../../lib/customerProfile';
 import styles from './page.module.css';
 
 const STATUSES = ['REQUESTED', 'QUOTED', 'CONFIRMED', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
@@ -37,6 +38,11 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       router.replace(`/login?next=/booking/${id}`);
       return;
     }
+    const storedUser = token.getUser();
+    if (!isCustomerProfileComplete(storedUser)) {
+      router.replace('/complete-profile');
+      return;
+    }
 
     const loadData = (silent = false) => {
       bookings
@@ -45,6 +51,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
         .catch(err => {
           if (err instanceof ApiError && err.status === 401) {
             router.replace(`/login?next=/booking/${id}`);
+          } else if (err instanceof ApiError && (err.status === 403 || err.code === 'PHONE_NUMBER_REQUIRED')) {
+            router.replace('/complete-profile');
           } else if (!silent) {
             setError(err instanceof ApiError ? err.message : 'Failed to load booking.');
           }

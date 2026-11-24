@@ -7,6 +7,7 @@ import { VendorService } from '../vendor-assign/service';
 import { acquireSlotLock, releaseSlotLock } from '../../config/redis';
 import { BookingStatus } from '@triveni/shared-types';
 import { EmailService } from '../../services/resend';
+import { assertCustomerCanBook } from '../customer/profile';
 
 function utcDayStart(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -74,6 +75,8 @@ export class BookingService {
     customerId: string,
     input: ItemizedQuoteInput & { paymentMethod?: 'cash_on_delivery' | 'online' }
   ) {
+    await assertCustomerCanBook(customerId);
+
     // 1. Calculate real route distance and resolve zones from DB
     const route = await GeocodingService.calculateDistanceKm(input.pickupAddress, input.dropAddress);
     const distanceKm = route.distanceKm || 15.0;
@@ -159,6 +162,7 @@ export class BookingService {
     customerId: string,
     input: TransportQuoteInput
   ) {
+    await assertCustomerCanBook(customerId);
     const quote = await PricingService.calculateTransportQuote(input);
 
     const pickupZone = await ZoneService.resolveZoneForAddress(input.pickupAddress);
@@ -233,6 +237,7 @@ export class BookingService {
    * Holds slot in Redis for 10 minutes
    */
   static async holdSlot(bookingId: string, customerId: string) {
+    await assertCustomerCanBook(customerId);
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     
     if (!booking) throw { statusCode: 404, message: 'Booking not found' };
@@ -272,6 +277,9 @@ export class BookingService {
     customerId?: string,
     paymentMethod: 'cash_on_delivery' | 'online' = 'cash_on_delivery'
   ) {
+    if (customerId) {
+      await assertCustomerCanBook(customerId);
+    }
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: { customer: true },
@@ -486,6 +494,8 @@ export class BookingService {
   }
 
   static async listBookings(customerId: string) {
+    await assertCustomerCanBook(customerId);
+
     // Purge expired draft orders older than 24 hours (1 day)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     try {
@@ -528,6 +538,7 @@ export class BookingService {
   }
 
   static async getBookingDetails(bookingId: string, customerId: string) {
+    await assertCustomerCanBook(customerId);
     const booking = await prisma.booking.findFirst({
       where: { id: bookingId, customerId },
       include: {
