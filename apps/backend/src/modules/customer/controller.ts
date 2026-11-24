@@ -146,7 +146,8 @@ export class CustomerController {
           throw { statusCode: 404, code: 'NOT_FOUND', message: 'Customer account not found' };
         }
 
-        if (data.phone && data.phone !== (current.phone || '').replace(/\D/g, '').slice(-10)) {
+        const currentPhoneDigits = (current.phone || '').replace(/\D/g, '').slice(-10);
+        if (data.phone && currentPhoneDigits && data.phone !== currentPhoneDigits) {
           throw { statusCode: 403, code: 'PHONE_VERIFICATION_REQUIRED', message: 'Verify the new mobile number with OTP before saving it.' };
         }
 

@@ -231,7 +231,7 @@ export interface CustomerProfile {
 
 export const customer = {
   getProfile: () => apiFetch<CustomerProfile>('/customer/me'),
-  updateProfile: (body: { name?: string }) => apiFetch<CustomerProfile>('/customer/me', {
+  updateProfile: (body: { name?: string; phone?: string }) => apiFetch<CustomerProfile>('/customer/me', {
     method: 'PATCH', body: JSON.stringify(body),
   }),
   requestPhoneOtp: (phone: string) => apiFetch<{ message: string; destination: string }>('/customer/me/phone/otp/request', {

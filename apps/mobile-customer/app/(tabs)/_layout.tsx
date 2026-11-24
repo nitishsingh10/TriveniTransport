@@ -89,8 +89,8 @@ export default function TabLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  // If user signed up with email but has not completed their profile with name & phone
-  if (user?.email && !isCustomerProfileComplete(user)) {
+  // If user has not completed their profile with name & phone
+  if (!isCustomerProfileComplete(user)) {
     return <Redirect href={'/complete-profile' as any} />;
   }
 

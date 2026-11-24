@@ -148,7 +148,7 @@ export default function OtpScreen() {
       }
       setLoading(false);
 
-      const isProfileIncomplete = isEmail && !isCustomerProfileComplete(profileUser);
+      const isProfileIncomplete = !isCustomerProfileComplete(profileUser);
       if (isProfileIncomplete) {
         router.replace('/complete-profile' as any);
       } else {

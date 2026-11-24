@@ -12,6 +12,6 @@ export function isCustomerProfileComplete(
   return (
     normalizedName.length >= 2 &&
     !['customer', 'valued customer'].includes(normalizedName.toLowerCase()) &&
-    (hasVerifiedEmail || /^[6-9]\d{9}$/.test(normalizedPhone))
+    /^[6-9]\d{9}$/.test(normalizedPhone)
   );
 }

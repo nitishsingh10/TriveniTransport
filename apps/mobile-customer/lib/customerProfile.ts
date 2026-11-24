@@ -17,7 +17,7 @@ export function isCustomerProfileComplete(
   const fieldsAreComplete = (
     name.length >= 2 &&
     !PROFILE_PLACEHOLDER_NAMES.has(name.toLowerCase()) &&
-    (verifiedEmail || /^[6-9]\d{9}$/.test(phone))
+    /^[6-9]\d{9}$/.test(phone)
   );
 
   // The persisted profile fields are authoritative. A stale cached completion
